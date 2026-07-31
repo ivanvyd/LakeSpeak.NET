@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>LakeSpeak.Cli</RootNamespace>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>lakespeak</ToolCommandName>
+    <PackageId>LakeSpeak.Cli</PackageId>
+    <Description>Interactive and scriptable terminal client for Databricks Genie Agents. Ask questions, inspect generated SQL, export results, and run version-controlled Question Packs. Independent open-source project, not affiliated with Databricks.</Description>
+
+    <!-- A tool package bundles its published closure, so the internal projects
+         referenced below ship inside this package without being published as
+         NuGet packages of their own. v0.1 commits to exactly two public
+         packages; each extra one is a public API to support indefinitely. -->
+    <RollForward>latestMinor</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
+    <ProjectReference Include="..\LakeSpeak.Application\LakeSpeak.Application.csproj" />
+    <ProjectReference Include="..\LakeSpeak.Configuration\LakeSpeak.Configuration.csproj" />
+    <ProjectReference Include="..\LakeSpeak.QuestionPacks\LakeSpeak.QuestionPacks.csproj" />
+    <ProjectReference Include="..\LakeSpeak.Rendering\LakeSpeak.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\..\NOTICE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LakeSpeak.Cli.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="JsonSchema.Net" />
+    <ProjectReference Include="..\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
+    <ProjectReference Include="..\LakeSpeak.Application\LakeSpeak.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LakeSpeak.QuestionPacks.Tests" />
+  </ItemGroup>
+
+</Project>

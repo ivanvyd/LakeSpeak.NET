@@ -1,0 +1,20 @@
+* text=auto eol=lf
+
+*.cs        text diff=csharp
+*.csproj    text
+*.slnx      text
+*.props     text
+*.targets   text
+*.json      text
+*.yml       text
+*.yaml      text
+*.md        text
+
+# Checked-in API fixtures are compared byte for byte by the contract tests.
+# Line-ending translation would make a fixture pass on one platform and fail on
+# the other.
+tests/**/fixtures/**  -text
+
+*.png       binary
+*.gif       binary
+*.ico       binary

@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Build and attest, but do not publish to NuGet'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write      # provenance attestation
+      attestations: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "building $v"
+
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore -c Release -p:Version=${{ steps.version.outputs.version }}
+      - run: dotnet test --no-build -c Release --filter "Category!=Live"
+
+      - name: Pack
+        run: dotnet pack --no-build -c Release -p:Version=${{ steps.version.outputs.version }} -o artifacts
+
+      # Self-contained binaries for people who do not have the .NET SDK. macOS
+      # is built but is listed as untested in the compatibility matrix until
+      # someone has actually run it on a Mac.
+      - name: Publish binaries
+        run: |
+          for rid in win-x64 linux-x64 osx-arm64; do
+            dotnet publish src/LakeSpeak.Cli/LakeSpeak.Cli.csproj \
+              -c Release -r "$rid" --self-contained true \
+              -p:Version=${{ steps.version.outputs.version }} \
+              -p:PublishSingleFile=true \
+              -o "publish/$rid"
+            ( cd "publish/$rid" && zip -qr "../../artifacts/lakespeak-${{ steps.version.outputs.version }}-$rid.zip" . )
+          done
+
+      - name: Checksums
+        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      # An SBOM is the vendor list an adopter's SOC 2 vendor-risk review asks
+      # for. Generated from the restored graph, not hand-maintained.
+      - name: SBOM
+        run: |
+          dotnet tool install --global CycloneDX
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet CycloneDX LakeSpeak.slnx -o artifacts --json --filename sbom.json
+
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v2
+        with:
+          subject-path: 'artifacts/*.nupkg'
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # A protected environment turns publishing into a decision someone makes,
+    # rather than a side effect of pushing a tag.
+    environment: nuget
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-artifacts
+          path: artifacts
+
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::NUGET_API_KEY is not configured; refusing to publish."
+            exit 1
+          fi
+          dotnet nuget push "artifacts/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2
+        with:
+          files: |
+            artifacts/*.zip
+            artifacts/SHA256SUMS.txt
+            artifacts/sbom.json
+          generate_release_notes: true

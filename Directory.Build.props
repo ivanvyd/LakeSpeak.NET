@@ -1,0 +1,61 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <!-- LakeSpeak.Genie is meant to be read by people integrating it, so the XML
+         doc file ships. CS1591 is suppressed rather than enforced: with
+         warnings-as-errors it demands a comment on every ToString() and Parse(),
+         and a comment written to satisfy a compiler restates the signature.
+         Document what is not obvious; leave the rest bare. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Lock files are what make locked-mode restore in CI mean anything: without
+         them a yanked or compromised transitive package changes silently between
+         the run that passed review and the run that produced the artifact. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Deterministic output so a published package can be rebuilt and compared
+         against the artifact on nuget.org. Required for the provenance
+         attestation in .github/workflows/release.yml to mean anything. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>LakeSpeak.NET contributors</Authors>
+    <Product>LakeSpeak.NET</Product>
+    <RepositoryUrl>https://github.com/ivanvyd/lakespeak</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ivanvyd/lakespeak</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>Copyright (c) LakeSpeak.NET contributors</Copyright>
+    <PackageTags>databricks;genie;cli;analytics;conversational</PackageTags>
+  </PropertyGroup>
+
+  <!-- Nothing is packable unless it opts in. Without this, adding a project
+       silently adds a NuGet package to the release. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

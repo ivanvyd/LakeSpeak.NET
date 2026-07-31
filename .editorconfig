@@ -1,0 +1,51 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,md,props,targets,csproj,slnx}]
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:error
+csharp_style_namespace_declarations = file_scoped:error
+csharp_prefer_braces = true:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
+dotnet_style_readonly_field = true:error
+csharp_style_prefer_primary_constructors = true:suggestion
+
+# Nullability is the point of enabling it; a warning here is a bug waiting.
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8603.severity = error
+dotnet_diagnostic.CS8618.severity = error
+
+# Every outbound call in this codebase is cancellable by design: a Genie question
+# can run for minutes and Ctrl+C has to work.
+dotnet_diagnostic.CA2016.severity = error
+
+# ConfigureAwait(false) in library code.
+dotnet_diagnostic.CA2007.severity = error
+
+# Exceptions carrying a Databricks response must not be constructed from a raw
+# string that could contain a token; these push toward the typed failure model.
+dotnet_diagnostic.CA1031.severity = suggestion
+
+[tests/**/*.cs]
+# Test methods are named as sentences, and a test asserting on a disposed or
+# awaited-without-ConfigureAwait path is not a library concern.
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1707.severity = none

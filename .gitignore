@@ -1,0 +1,47 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+*.coverlet.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# Agent tooling. The adapter records the verification workspace and its
+# identifiers; this repository is public, so it must never be committed.
+.claude/
+
+# Credentials. Nothing here is ever legitimate to commit.
+.databrickscfg
+*.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.snk
+
+# Question Pack output. Reports contain answers and query results drawn from
+# governed data, so the default output directory is ignored rather than trusted
+# to be scrubbed before a commit.
+/reports/
+
+# NuGet
+*.nupkg
+*.snupkg
+.packages/
+
+# OS
+.DS_Store
+Thumbs.db

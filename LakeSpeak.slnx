@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LakeSpeak.Application/LakeSpeak.Application.csproj" />
+    <Project Path="src/LakeSpeak.Cli/LakeSpeak.Cli.csproj" />
+    <Project Path="src/LakeSpeak.Configuration/LakeSpeak.Configuration.csproj" />
+    <Project Path="src/LakeSpeak.Genie/LakeSpeak.Genie.csproj" />
+    <Project Path="src/LakeSpeak.QuestionPacks/LakeSpeak.QuestionPacks.csproj" />
+    <Project Path="src/LakeSpeak.Rendering/LakeSpeak.Rendering.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LakeSpeak.Application.Tests/LakeSpeak.Application.Tests.csproj" />
+    <Project Path="tests/LakeSpeak.Cli.Tests/LakeSpeak.Cli.Tests.csproj" />
+    <Project Path="tests/LakeSpeak.ContractTests/LakeSpeak.ContractTests.csproj" />
+    <Project Path="tests/LakeSpeak.Genie.Tests/LakeSpeak.Genie.Tests.csproj" />
+    <Project Path="tests/LakeSpeak.LiveIntegrationTests/LakeSpeak.LiveIntegrationTests.csproj" />
+    <Project Path="tests/LakeSpeak.QuestionPacks.Tests/LakeSpeak.QuestionPacks.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per ecosystem-wide bump rather than a dozen. The Microsoft.Extensions
+      # packages move in lockstep and reviewing them separately finds nothing.
+      microsoft-extensions:
+        patterns: ['Microsoft.Extensions.*']
+      test:
+        patterns: ['xunit*', 'Microsoft.NET.Test.Sdk', 'coverlet*', 'Shouldly', 'NSubstitute', 'Verify*', 'WireMock*']
+
+  # Actions are SHA-pinned, so without this they never move and the pins rot.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
