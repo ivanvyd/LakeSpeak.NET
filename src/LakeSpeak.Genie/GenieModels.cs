@@ -53,7 +53,15 @@ public sealed record GenieQuery(
 
 public sealed record GenieQueryParameter(string? Keyword, string? SqlType, string? Value);
 
-public sealed record GenieColumn(string Name, string? DataType);
+/// <param name="Name">Column name as returned by the query.</param>
+/// <param name="DataType">
+/// The rendered SQL type, for example <c>DECIMAL(10,2)</c>. Best for display.
+/// </param>
+/// <param name="BaseType">
+/// The base type without precision or scale, for example <c>DECIMAL</c>. Use this to decide how
+/// to convert a cell; <paramref name="DataType"/> is a display string and its shape varies.
+/// </param>
+public sealed record GenieColumn(string Name, string? DataType, string? BaseType = null);
 
 /// <summary>
 /// A tabular result.

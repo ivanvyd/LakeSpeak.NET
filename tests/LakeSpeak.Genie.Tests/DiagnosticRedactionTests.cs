@@ -52,6 +52,18 @@ public class DiagnosticRedactionTests
         DiagnosticRedaction.Scrub(payload).ShouldNotContain("c2VjcmV0LXNpZ25hdHVyZQ");
     }
 
+    // The message-level query_result summary carries statement_id_signature, which is a JWT
+    // guarding access to the result rows. It is a different field from download_id_signature
+    // and was missed by the first version of the scrubber.
+    [Fact]
+    public void Redacts_statement_id_signature()
+    {
+        var payload =
+            """{"statement_id":"01ef","statement_id_signature":"c3RhdGVtZW50LXNpZw=="}""";
+
+        DiagnosticRedaction.Scrub(payload).ShouldNotContain("c3RhdGVtZW50LXNpZw");
+    }
+
     [Fact]
     public void Leaves_ordinary_text_alone()
     {

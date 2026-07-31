@@ -53,6 +53,28 @@ public class GenieMessageStateTests
     public void Unknown_is_not_terminal() =>
         GenieMessageState.Unknown.IsTerminal().ShouldBeFalse();
 
+    // Genie spells it CANCELLED; the SQL Statement Execution API spells its own state CANCELED.
+    // The two must never share a parser: feeding the SQL spelling in here has to fall through
+    // to Unknown rather than quietly resolving to Cancelled, which would end polling early.
+    [Fact]
+    public void Does_not_accept_the_SQL_APIs_single_L_spelling()
+    {
+        GenieMessageStateExtensions.FromWire("CANCELED").ShouldBe(GenieMessageState.Unknown);
+        GenieMessageStateExtensions.FromWire("CANCELLED").ShouldBe(GenieMessageState.Cancelled);
+    }
+
+    // Published Databricks documentation shows a status of IN_PROGRESS, which appears in no
+    // SDK. A client that threw on unrecognised values would compile, pass its mocks, and fail
+    // against the real service.
+    [Fact]
+    public void Tolerates_a_status_that_appears_only_in_documentation()
+    {
+        var state = GenieMessageStateExtensions.FromWire("IN_PROGRESS");
+
+        state.ShouldBe(GenieMessageState.Unknown);
+        state.IsTerminal().ShouldBeFalse();
+    }
+
     [Fact]
     public void Every_state_has_progress_text()
     {

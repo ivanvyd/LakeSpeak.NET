@@ -89,7 +89,7 @@ public static partial class DiagnosticRedaction
     // The optional quote after the key name matters: in JSON the key is `"name":"value"`, so a
     // pattern that jumps straight from the name to the separator never matches, and the secret
     // survives. A test with a realistic JSON payload caught exactly that.
-    [GeneratedRegex(@"(?i)\b(authorization|bearer|x-databricks-[\w-]*token|access_token|refresh_token|client_secret|download_id_signature)\b[""']?\s*[:=]?\s*[""']?([^\s""',}]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"(?i)\b(authorization|bearer|x-databricks-[\w-]*token|access_token|refresh_token|client_secret|download_id_signature|statement_id_signature)\b[""']?\s*[:=]?\s*[""']?([^\s""',}]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NamedSecret();
 
     /// <summary>Replaces credential-shaped substrings with <see cref="Placeholder"/>.</summary>

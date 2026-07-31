@@ -79,6 +79,11 @@ internal sealed record MessageWire
     [JsonPropertyName("message_id")]
     public string? MessageId { get; init; }
 
+    // A duplicate of message_id. Published examples have omitted message_id even though the
+    // SDK marks it required, so it is read as a fallback rather than trusted to be absent.
+    [JsonPropertyName("id")]
+    public string? Id { get; init; }
+
     // The question that was asked, not the answer. The answer is in
     // attachments[].text.content. Mislabelling this is the easiest mistake to make
     // against this API, so the name says what it is.
@@ -240,8 +245,14 @@ internal sealed record ColumnWire
     [JsonPropertyName("name")]
     public string? Name { get; init; }
 
+    // Both exist. type_text renders precision and scale ("DECIMAL(10,2)"); type_name is the
+    // base type ("DECIMAL"). Callers converting a cell need the base type; callers printing a
+    // header want the rendered one.
     [JsonPropertyName("type_text")]
     public string? TypeText { get; init; }
+
+    [JsonPropertyName("type_name")]
+    public string? TypeName { get; init; }
 
     [JsonPropertyName("position")]
     public int? Position { get; init; }

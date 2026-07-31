@@ -127,7 +127,7 @@ public sealed partial class GenieClient : IGenieClient
             new StartConversationRequestWire { Content = question },
             cancellationToken).ConfigureAwait(false);
 
-        return wire.MessageId
+        return wire.MessageId ?? wire.Id
             ?? throw new GenieException(GenieFailureKind.MalformedResponse, "Message response contained no message_id.");
     }
 
@@ -328,7 +328,7 @@ public sealed partial class GenieClient : IGenieClient
         }
 
         var cols = columns
-            .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText))
+            .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName))
             .ToList();
 
         var rows = statement.Result?.DataArray ?? [];

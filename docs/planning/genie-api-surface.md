@@ -1,9 +1,14 @@
 # Genie Conversation API surface
 
-Every field name and path below was read from the generated Databricks Python SDK
-(`databricks/sdk/service/dashboards.py`, `databricks-sdk-py@main`), which is the most reliable
+Every field name and path below was read from the generated Databricks SDKs
+(`databricks-sdk-py@main`, corroborated against `databricks-sdk-go`), which are the most reliable
 published record of the wire contract. Prose documentation was not treated as authoritative where
 the two could disagree.
+
+One caveat on that corroboration: the Python, Go and Java SDKs are all generated from a single
+internal specification. Their agreement is one source in three forms, not three independent
+confirmations. It is still a far better source than the prose docs, which contain at least one
+example that would have broken this client (see Contradictions).
 
 Anything marked UNVERIFIED was not confirmed from that source. The client tolerates those rather
 than hard-coding them.
@@ -53,6 +58,10 @@ EXECUTING_QUERY  COMPLETED  FAILED  CANCELLED  QUERY_RESULT_EXPIRED
 ```
 
 Terminal: `COMPLETED`, `FAILED`, `CANCELLED`. Polling stops on these.
+
+**Spelling trap.** Genie spells it `CANCELLED`, with two Ls. The SQL Statement Execution API
+spells its own `StatementState.CANCELED` with one. The two must never share a parser; a test
+asserts the SQL spelling falls through to `Unknown` here rather than quietly ending a poll.
 
 `QUERY_RESULT_EXPIRED` is **not** a failure. The message succeeded; its cached SQL result aged out.
 Recovery is `execute-query` on the attachment, not re-asking the question.
@@ -113,7 +122,18 @@ must be fetched **without** the `Authorization` header.
 - `QueryAttachmentParameter`: `keyword`, `sql_type`, `value`
 - `GenieGenerateDownloadFullQueryResultResponse`: `download_id`, `download_id_signature`
 
-`download_id_signature` is a bearer-equivalent secret. It is redacted in all diagnostic output.
+### Secrets in response bodies
+
+Two fields are bearer-equivalent and both are redacted in all diagnostic output:
+
+- `download_id_signature` — the SDK documents it as "JWT signature for the download_id to ensure
+  secure access to query results".
+- `statement_id_signature` — carried on the message-level `query_result` summary. A different
+  field from the one above, and missed by the first version of the scrubber.
+
+The message-level `query_result` is a **summary only** — `is_truncated`, `row_count`,
+`statement_id`, `statement_id_signature`. It carries no rows. Rows come only from the
+query-result endpoint. This client does not read it.
 
 ## Corrections to the original specification
 
@@ -128,11 +148,49 @@ corrections, not preferences:
 | Generated SQL in `sql` | The field is `query`. |
 | Poll "every 1-5 seconds" | Consistent with the docs; the client defaults to 1s with backoff to 5s. |
 
+## Contradictions between the docs and the SDKs
+
+Trust the SDK in every case below.
+
+| Documentation says | Reality |
+|---|---|
+| A message status of `IN_PROGRESS` | Appears in no SDK. A client that threw on unrecognised statuses would compile, pass its mocks, and fail against the live service. This is the single strongest argument for the `Unknown` arm. |
+| Query result at `…/messages/{id}/query-result/{attachment_id}` | That is the deprecated `GetMessageQueryResultByAttachment`. Use `…/attachments/{attachment_id}/query-result`. The same split exists on execute-query. |
+| Reasoning traces live on `GenieQueryAttachments` | No such type. They are at `attachments[].query.thoughts[]`. |
+| `update-space` is POST | The SDK generates PATCH. |
+| The Conversation API is GA as of 2026-04-02 (claimed in this project's own plan) | Public Preview was announced 2025-03-11 and **no GA announcement was found** in the 2026 release notes. The README therefore does not claim GA. Visualization retrieval is explicitly Beta. |
+
+## Response envelope differences
+
+Three send paths, three shapes. Getting this wrong deserialises to an object of nulls rather
+than failing loudly:
+
+- `start-conversation` → `{ conversation, conversation_id, message, message_id }`
+- create follow-up message → a **bare `GenieMessage`**, unwrapped
+- `get-message` → a bare `GenieMessage`
+- `…/query-result` → **wrapped**: `{ "statement_response": { … } }`. The bare SQL Statement
+  Execution API is unwrapped; Genie wraps it.
+
+Request body for both send paths: `content` (required), plus optional `enable_visualization`.
+
+`message_id` is read as `message_id ?? id`: published examples omit `message_id` even though the
+SDK marks it required.
+
+Feedback returns an **empty response body**; nothing should try to parse it.
+
+## Documented limits
+
+10,000 conversations per Agent, 10,000 messages per conversation, 30 tables per Agent.
+
 ## Not established
 
 | Item | Status |
 |---|---|
 | Rate-limit response shape and retry-after semantics | UNVERIFIED. Client treats HTTP 429 as retryable and honours `Retry-After` when present. |
 | Error body JSON shape (`error_code` / `message`) | UNVERIFIED for Genie specifically. Client parses defensively and falls back to the raw status. |
-| `databricks auth token` output field names | UNVERIFIED from source. Parsed defensively; see the authentication ADR. |
+| `databricks auth token` emits `{ access_token, token_type, expiry }` | VERIFIED from the CLI reference. **U2M only — M2M is explicitly unsupported by this command**, which is why automation uses environment credentials instead. The `expiry` format is documented only as a placeholder, so it is parsed permissively. |
+| `created_timestamp` unit | UNVERIFIED. Typed `int64`, unit undocumented, and the one published example is 10 digits (seconds) while the field is named like milliseconds. Detected by magnitude rather than assumed. |
+| Whether `id` and `message_id` can ever differ | UNVERIFIED. Both exist and no documentation explains the relationship. |
+| Any numeric API rate limit | UNVERIFIED. A widely-repeated "5 requests/minute" figure does not appear on either candidate Databricks page, and Genie is absent from the per-endpoint RPS table. No number is hard-coded; HTTP 429 is backed off generically. |
+| `parameters` on a query attachment implying a trusted asset | UNVERIFIED inference, deliberately **not** modelled. It is the kind of signal that would be shown to a user as if Databricks had asserted it. |
 | Behaviour against AWS and GCP workspaces | Not tested. Paths are identical, which is not evidence. |
