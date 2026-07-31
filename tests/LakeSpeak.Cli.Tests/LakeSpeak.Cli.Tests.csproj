@@ -1,16 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <IsPackable>false</IsPackable>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit.v3" />
-    <PackageReference Include="xunit.runner.visualstudio" />
-    <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="Shouldly" />
+<ItemGroup>
     <PackageReference Include="Verify.XunitV3" />
     <ProjectReference Include="..\..\src\LakeSpeak.Cli\LakeSpeak.Cli.csproj" />
     <ProjectReference Include="..\..\src\LakeSpeak.Rendering\LakeSpeak.Rendering.csproj" />
