@@ -56,7 +56,7 @@ release is cheap.
 
 ### Prerequisites, once
 
-> **Configured as of 2026-08-01.** The trusted publishing policy exists on nuget.org, the
+> **Configured as of 2026-08-01, and re-checked after the repository rename.** The trusted publishing policy exists on nuget.org, the
 > `NUGET_USER` secret is set, and the `nuget` environment exists with `ivanvyd` as a required
 > reviewer. The steps below record what was done, so it can be rebuilt or audited.
 >
@@ -76,7 +76,7 @@ Log in to nuget.org → your username → **Trusted Publishing** → add a polic
 | Field | Value |
 |---|---|
 | Repository Owner | `ivanvyd` |
-| Repository | `lakespeak` |
+| Repository | `LakeSpeak.NET` |
 | Workflow File | `release.yml` — the file name only, **not** `.github/workflows/release.yml` |
 | Environment | `nuget` — set, so the policy only accepts tokens minted from that environment |
 
