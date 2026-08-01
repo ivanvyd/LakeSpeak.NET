@@ -65,9 +65,18 @@ internal static class AgentsCommand
 
                 break;
 
-            default:
+            // An Agent listing is the same table whichever human-facing format was asked for;
+            // there is no per-format prose to render. Named rather than defaulted so a new
+            // format has to be considered here instead of silently landing in this arm.
+            case OutputFormat.Text:
+            case OutputFormat.Table:
+            case OutputFormat.Markdown:
                 host.Renderer.WriteAgents(agents);
                 break;
+
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(host), host.Format, "No renderer is wired up for this output format.");
         }
 
         return ExitCode.Success;
