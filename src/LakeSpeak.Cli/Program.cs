@@ -7,6 +7,18 @@ internal static class Program
 {
     internal static async Task<int> Main(string[] args)
     {
+        // Windows consoles default to a legacy code page that cannot represent most non-ASCII
+        // characters, so a currency symbol or a non-Latin table value degrades to '?' on its way
+        // out. That is silent corruption of machine-readable output, so the encoding is pinned
+        // rather than inherited. Guarded because a redirected or closed handle throws here.
+        try
+        {
+            System.Console.OutputEncoding = System.Text.Encoding.UTF8;
+        }
+        catch (IOException)
+        {
+        }
+
         var root = new RootCommand(
             "LakeSpeak.NET — talk to governed Databricks data from your terminal.\n" +
             "An independent open-source project, not affiliated with Databricks.");

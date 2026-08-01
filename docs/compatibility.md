@@ -28,9 +28,32 @@ otherwise, please open an issue. Visualization retrieval is explicitly Beta and 
 
 | Cloud | Status |
 |---|---|
-| Azure Databricks | **Not yet verified against a live workspace** |
+| Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
 | AWS Databricks | Not tested |
 | GCP Databricks | Not tested |
+
+## Live verification, 2026-08-01
+
+Run against an Azure Databricks premium workspace in `eastus2`, on a serverless SQL warehouse,
+against a Genie Agent over a synthetic revenue table created for the purpose. Authentication was an
+Entra ID access token for resource `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d`, supplied through
+`DATABRICKS_TOKEN`.
+
+| Path | Result |
+|---|---|
+| `agents list` (table and json) | Listed the live Agent with its real id |
+| `ask` with `--show-sql` | Real answer, real result table, real generated SQL, exit 0 |
+| `ask --format json` | Valid UTF-8, versioned schema, on stdout only |
+| `ask --format csv` | Clean CSV on stdout with diagnostics on stderr, verified via `2>/dev/null` |
+| `ask` against an unknown Agent | Real listing lookup, exit 2 |
+| `pack run` | Two questions, Markdown report written, exit 0 |
+| Decimal fidelity | `4500000.00`, `3350000.50`, `1780000.25` reached CSV, JSON and Markdown byte-identical to what Databricks returned |
+| Column types | `DECIMAL(22,2)` — precision and scale preserved, which `type_name` alone would have lost |
+| Non-ASCII | `€` intact in a file-written report |
+
+What this did **not** exercise: `chat` (needs an interactive terminal), feedback submission,
+full-result downloads, visualizations, cancellation against a genuinely long-running query, and
+`QUERY_RESULT_EXPIRED` recovery. Those remain covered by contract tests only.
 
 ## What has been verified, and how
 

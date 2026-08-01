@@ -11,6 +11,22 @@ cancelled orders. The answer is still a confident sentence with a number in it.
 LakeSpeak preserves the generated SQL, the query result and the message identifiers precisely so a
 person can check. It has no way to judge correctness, and neither does any other client.
 
+## Genie may answer with a question
+
+Genie sometimes responds by asking for clarification rather than answering — for example, "Would
+you prefer to see the active customers for exactly the quarter '2026-Q1' instead of any quarter
+containing '2026-Q1'?" This is observed behaviour, not a hypothetical; it happened on the second
+question of the first Question Pack ever run against a live workspace.
+
+The message still completes successfully and the clarification arrives as the answer text, because
+that is genuinely what Genie returned. LakeSpeak does not try to detect it: distinguishing "a
+question back" from "an answer phrased as a question" is a judgement call, and guessing wrong in
+either direction is worse than reporting faithfully.
+
+The consequence for automation is worth planning around. An unattended Question Pack can produce a
+report whose answer is a request for clarification, and it will exit `0` because nothing failed.
+Phrase pack questions to be unambiguous, and read reports rather than trusting the exit code alone.
+
 ## It cannot see more than you can
 
 Every request carries your identity, and Unity Catalog decides what that identity sees. There is no

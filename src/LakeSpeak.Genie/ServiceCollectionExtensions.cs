@@ -37,6 +37,16 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IGenieTokenProvider>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<GenieClientOptions>>().Value;
+
+            // DATABRICKS_TOKEN wins when set. Unattended environments — CI, a container, a
+            // scheduled Question Pack — have no browser and often no Databricks CLI, so the
+            // environment has to be a real path rather than a documented one that silently
+            // falls through to a CLI that is not installed.
+            if (Environment.GetEnvironmentVariable(EnvironmentTokenProvider.TokenVariable) is { Length: > 0 })
+            {
+                return new EnvironmentTokenProvider();
+            }
+
             return new DatabricksCliTokenProvider(options.Profile);
         });
 

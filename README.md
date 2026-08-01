@@ -125,7 +125,7 @@ spec:
 lakespeak pack run daily-platform-brief.yaml
 ```
 
-See the [Question Pack guide](docs/question-packs/) for the schema and failure semantics.
+See the [Question Pack guide](docs/question-packs.md) for the schema and failure semantics.
 
 ## What it does not do
 
@@ -158,8 +158,9 @@ promise; it is a record of evidence.
 
 | Area | Status |
 |---|---|
-| Unit and contract tests (mocked) | See CI |
-| Azure Databricks, live workspace | See [docs/compatibility.md](docs/compatibility.md) |
+| Unit and contract tests | 89 tests, run on Windows and Linux in CI |
+| Azure Databricks, live workspace | `agents list`, `ask`, `pack run` and every output format verified against a real Genie Agent on 2026-08-01 |
+| `chat`, feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
 | AWS Databricks | Not tested |
 | GCP Databricks | Not tested |
 | Windows / Linux | Covered by the CI matrix |
@@ -170,13 +171,14 @@ Paths that have not been exercised against a real workspace are labelled as such
 
 ## Documentation
 
-- [Concepts](docs/concepts/) — Agents, conversations, attachments
-- [Commands](docs/commands/) — every command and flag
-- [Authentication](docs/authentication/) — profiles, U2M, M2M, and what is not supported
-- [Question Packs](docs/question-packs/)
-- [Architecture](docs/architecture/) and [decisions](docs/decisions/)
-- [Troubleshooting](docs/troubleshooting/)
-- [Limitations](docs/limitations.md)
+- [Commands](docs/commands.md) — every command, flag and exit code
+- [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
+- [Question Packs](docs/question-packs.md) — the schema and its failure semantics
+- [Troubleshooting](docs/troubleshooting.md)
+- [Limitations](docs/limitations.md) — read this one
+- [Decisions](docs/decisions/) — ADRs for the load-bearing choices
+- [Genie API surface](docs/planning/genie-api-surface.md) — every wire claim, labelled verified or not
+- [SOC 2 control mapping](docs/compliance/soc2-mapping.md)
 
 ## Contributing
 
