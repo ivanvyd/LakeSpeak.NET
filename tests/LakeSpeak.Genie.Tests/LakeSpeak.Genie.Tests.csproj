@@ -5,6 +5,7 @@
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="WireMock.Net" />
     <ProjectReference Include="..\..\src\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
+    <ProjectReference Include="..\..\src\LakeSpeak.Rendering\LakeSpeak.Rendering.csproj" />
   </ItemGroup>
 
 </Project>
