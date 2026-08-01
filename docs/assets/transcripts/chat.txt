@@ -1,0 +1,32 @@
+LakeSpeak.NET — independent, not a Databricks product
+Agent: Sales Intelligence
+Type /help for commands, /exit to leave.
+
+You: How did revenue change last quarter?
+
+Revenue increased by 14.2% compared with the previous quarter.
+
+╭────────────────────────┬───────────────────────────╮
+│ region                 │ total_revenue_eur         │
+├────────────────────────┼───────────────────────────┤
+│ Germany                │ 4500000.00                │
+│ France                 │ 3350000.50                │
+│ Spain                  │ 1780000.25                │
+╰────────────────────────┴───────────────────────────╯
+
+You: and break that down by product
+
+Electronics led in Germany; Home & Garden led in Spain.
+
+You: /sql
+
+╭─Generated SQL──────────────────────────────────────╮
+│ SELECT region, product_line, SUM(revenue_eur)      │
+│ FROM sales.public.regional_revenue                 │
+│ GROUP BY region, product_line                      │
+╰────────────────────────────────────────────────────╯
+
+You: /export q3-by-product.csv
+Wrote q3-by-product.csv (12 rows). It contains governed data; look after it.
+
+You: /exit

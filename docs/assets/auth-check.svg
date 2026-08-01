@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="472" height="146" viewBox="0 0 472 146" role="img" aria-label="lakespeak auth check">
+  <title>lakespeak auth check</title>
+  <rect x="0" y="0" width="472" height="146" rx="10" fill="#11151c"/>
+  <path d="M0 10a10 10 0 0 1 10-10h452a10 10 0 0 1 10 10v30H0z" fill="#1b212b"/>
+  <circle cx="22" cy="20" r="5.5" fill="#e06a5f"/><circle cx="40" cy="20" r="5.5" fill="#e0b341"/><circle cx="58" cy="20" r="5.5" fill="#5ec27a"/>
+  <text x="236.0" y="25" fill="#7c8899" font-size="12.5" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace">lakespeak auth check</text>
+  <g font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace" font-size="13.5">
+    <text x="22" y="46" fill="#c8d3e0" xml:space="preserve">Profiles in .databrickscfg: 0</text>
+    <text x="22" y="66" fill="#7c8899" xml:space="preserve">Requesting a token via DATABRICKS_TOKEN…</text>
+    <text x="22" y="86" fill="#5ec27a" xml:space="preserve">OK — obtained a token (3331 characters, not shown).</text>
+    <text x="22" y="106" fill="#5ec27a" xml:space="preserve">OK — the workspace answered; 1 Agent visible.</text>
+  </g>
+</svg>

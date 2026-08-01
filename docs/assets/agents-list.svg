@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="716" height="186" viewBox="0 0 716 186" role="img" aria-label="lakespeak agents list">
+  <title>lakespeak agents list</title>
+  <rect x="0" y="0" width="716" height="186" rx="10" fill="#11151c"/>
+  <path d="M0 10a10 10 0 0 1 10-10h696a10 10 0 0 1 10 10v30H0z" fill="#1b212b"/>
+  <circle cx="22" cy="20" r="5.5" fill="#e06a5f"/><circle cx="40" cy="20" r="5.5" fill="#e0b341"/><circle cx="58" cy="20" r="5.5" fill="#5ec27a"/>
+  <text x="358.0" y="25" fill="#7c8899" font-size="12.5" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace">lakespeak agents list</text>
+  <g font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace" font-size="13.5">
+    <text x="22" y="46" fill="#7c8899" xml:space="preserve">Listing Genie Agents…</text>
+    <text x="22" y="66" fill="#2a3240" xml:space="preserve">╭─────────────────────────┬────────────────────────────────────────────────────╮</text>
+    <text x="22" y="86"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> Agent                   </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> Id                                                 </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="106" fill="#2a3240" xml:space="preserve">├─────────────────────────┼────────────────────────────────────────────────────┤</text>
+    <text x="22" y="126"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> LakeSpeak Demo          </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> 01ef1234567890abcdef1234567890ab                   </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="146" fill="#2a3240" xml:space="preserve">╰─────────────────────────┴────────────────────────────────────────────────────╯</text>
+  </g>
+</svg>

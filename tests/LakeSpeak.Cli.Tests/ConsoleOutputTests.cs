@@ -76,6 +76,34 @@ public class ConsoleOutputTests
         actual.ShouldBe(known, ignoreOrder: true);
     }
 
+    [Theory]
+    [InlineData(0, "0 Agents")]
+    [InlineData(1, "1 Agent")]
+    [InlineData(2, "2 Agents")]
+    public void A_count_agrees_in_number_with_its_noun(int count, string expected)
+    {
+        // Arrange — `auth check` really did report "1 Agents visible", which is the first
+        // output a new user sees and reads as carelessness about everything underneath.
+
+        // Act
+        var rendered = Wording.Count(count, "Agent");
+
+        // Assert
+        rendered.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void An_irregular_plural_can_be_given_explicitly()
+    {
+        // Arrange — appending "s" is wrong often enough that the override has to exist.
+
+        // Act
+        var rendered = Wording.Count(2, "query", "queries");
+
+        // Assert
+        rendered.ShouldBe("2 queries");
+    }
+
     [Fact]
     public void Results_are_written_to_the_supplied_writer_not_the_process_stdout()
     {

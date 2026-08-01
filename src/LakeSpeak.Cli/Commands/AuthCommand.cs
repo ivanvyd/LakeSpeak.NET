@@ -1,4 +1,5 @@
 using System.CommandLine;
+using LakeSpeak.Cli.Console;
 using LakeSpeak.Configuration;
 using LakeSpeak.Genie.Authentication;
 using Spectre.Console;
@@ -60,7 +61,7 @@ internal static class AuthCommand
             agents++;
         }
 
-        host.Output.Error.MarkupLine($"[green]OK[/] — the workspace answered; [bold]{agents}[/] Agents visible.");
+        host.Output.Error.MarkupLine($"[green]OK[/] — the workspace answered; [bold]{Wording.Count(agents, "Agent")}[/] visible.");
         return ExitCode.Success;
     }
 

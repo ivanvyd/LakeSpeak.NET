@@ -57,6 +57,10 @@ LakeSpeak turns that into:
 lakespeak ask --agent sales "How did revenue change last month?"
 ```
 
+<img src="docs/assets/ask.svg" alt="lakespeak ask printing an answer, a result table, and the SQL Genie generated" width="790">
+
+The generated SQL is shown because the answer is only as trustworthy as the query behind it.
+
 It is deliberately narrow. It is not a Databricks SDK for .NET, not a replacement for the official
 CLI, and not another Genie MCP server — Databricks already ships [managed MCP endpoints for
 Genie](https://docs.databricks.com/aws/en/generative-ai/mcp/), and duplicating them would add
@@ -198,6 +202,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 - [Commands](docs/commands.md) — every command, flag and exit code
 - [Configuration](docs/configuration.md) — the config file, aliases and defaults
 - [`examples/`](examples/) — a runnable .NET console sample and a complete Question Pack
+- [Container image](docs/containers.md) — running a Question Pack on a schedule
 - [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
 - [Question Packs](docs/question-packs.md) — the schema and its failure semantics
 - [Troubleshooting](docs/troubleshooting.md)

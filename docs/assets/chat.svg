@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="682" height="706" viewBox="0 0 682 706" role="img" aria-label="lakespeak chat --agent sales">
+  <title>lakespeak chat --agent sales</title>
+  <rect x="0" y="0" width="682" height="706" rx="10" fill="#11151c"/>
+  <path d="M0 10a10 10 0 0 1 10-10h662a10 10 0 0 1 10 10v30H0z" fill="#1b212b"/>
+  <circle cx="22" cy="20" r="5.5" fill="#e06a5f"/><circle cx="40" cy="20" r="5.5" fill="#e0b341"/><circle cx="58" cy="20" r="5.5" fill="#5ec27a"/>
+  <text x="341.0" y="25" fill="#7c8899" font-size="12.5" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace">lakespeak chat --agent sales</text>
+  <g font-family="ui-monospace,'SF Mono',Menlo,'DejaVu Sans Mono',Consolas,monospace" font-size="13.5">
+    <text x="22" y="46" fill="#c8d3e0" xml:space="preserve">LakeSpeak.NET — independent, not a Databricks product</text>
+    <text x="22" y="66" fill="#c8d3e0" xml:space="preserve">Agent: Sales Intelligence</text>
+    <text x="22" y="86" fill="#c8d3e0" xml:space="preserve">Type /help for commands, /exit to leave.</text>
+    <text x="22" y="126"><tspan fill="#5ec27a" xml:space="preserve">You:</tspan><tspan fill="#c8d3e0" xml:space="preserve"> How did revenue change last quarter?</tspan></text>
+    <text x="22" y="166" fill="#c8d3e0" xml:space="preserve">Revenue increased by 14.2% compared with the previous quarter.</text>
+    <text x="22" y="206" fill="#2a3240" xml:space="preserve">╭────────────────────────┬───────────────────────────╮</text>
+    <text x="22" y="226"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> region                 </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> total_revenue_eur         </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="246" fill="#2a3240" xml:space="preserve">├────────────────────────┼───────────────────────────┤</text>
+    <text x="22" y="266"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> Germany                </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> 4500000.00                </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="286"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> France                 </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> 3350000.50                </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="306"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> Spain                  </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> 1780000.25                </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="326" fill="#2a3240" xml:space="preserve">╰────────────────────────┴───────────────────────────╯</text>
+    <text x="22" y="366"><tspan fill="#5ec27a" xml:space="preserve">You:</tspan><tspan fill="#c8d3e0" xml:space="preserve"> and break that down by product</tspan></text>
+    <text x="22" y="406" fill="#c8d3e0" xml:space="preserve">Electronics led in Germany; Home &amp; Garden led in Spain.</text>
+    <text x="22" y="446"><tspan fill="#5ec27a" xml:space="preserve">You:</tspan><tspan fill="#c8d3e0" xml:space="preserve"> /sql</tspan></text>
+    <text x="22" y="486" fill="#56b6c2" xml:space="preserve">╭─Generated SQL──────────────────────────────────────╮</text>
+    <text x="22" y="506"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> SELECT region, product_line, SUM(revenue_eur)      </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="526"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> FROM sales.public.regional_revenue                 </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="546"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> GROUP BY region, product_line                      </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="566" fill="#2a3240" xml:space="preserve">╰────────────────────────────────────────────────────╯</text>
+    <text x="22" y="606"><tspan fill="#5ec27a" xml:space="preserve">You:</tspan><tspan fill="#c8d3e0" xml:space="preserve"> /export q3-by-product.csv</tspan></text>
+    <text x="22" y="626" fill="#c8d3e0" xml:space="preserve">Wrote q3-by-product.csv (12 rows). It contains governed data; look after it.</text>
+    <text x="22" y="666"><tspan fill="#5ec27a" xml:space="preserve">You:</tspan><tspan fill="#c8d3e0" xml:space="preserve"> /exit</tspan></text>
+  </g>
+</svg>

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using LakeSpeak.Cli.Console;
 using LakeSpeak.Configuration;
 using LakeSpeak.Rendering;
 using Spectre.Console;
@@ -99,7 +100,7 @@ internal static class ExportCommand
         await File.WriteAllTextAsync(full, csv, cancellationToken).ConfigureAwait(false);
 
         host.Output.Error.MarkupLine(
-            $"[green]Wrote[/] {Markup.Escape(full)} [dim]({result.RowCount} rows). " +
+            $"[green]Wrote[/] {Markup.Escape(full)} [dim]({Wording.Count(result.RowCount, "row")}). " +
             "It contains governed data; look after it.[/]");
 
         if (result.IsTruncated)

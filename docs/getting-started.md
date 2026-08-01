@@ -77,20 +77,15 @@ This tells you which profiles exist, which workspace each resolves to, whether a
 be obtained, and whether the workspace answers. It prints the token's *length* and never any part
 of its value, so the output is safe to paste into an issue.
 
+<img src="assets/auth-check.svg" alt="lakespeak auth check reporting the credential source and that the workspace answered" width="470">
+
 ## 3. Find your Agent
 
 ```bash
 lakespeak agents list --profile my-workspace
 ```
 
-```
-╭─────────────────────────┬──────────────────────────────────────────╮
-│ Agent                   │ Id                                       │
-├─────────────────────────┼──────────────────────────────────────────┤
-│ Sales Intelligence      │ 01ef1234567890abcdef1234567890ab          │
-│ Platform Operations     │ 01effedcba0987654321fedcba098765          │
-╰─────────────────────────┴──────────────────────────────────────────╯
-```
+<img src="assets/agents-list.svg" alt="lakespeak agents list showing one Agent and its id" width="715">
 
 An empty list is not an error — it means no Genie Agent is shared with your identity. That is fixed
 in Databricks, not here.
@@ -101,21 +96,7 @@ in Databricks, not here.
 lakespeak ask --agent "Sales Intelligence" --show-sql "How did revenue change last quarter?"
 ```
 
-```
-Revenue increased by 14.2% compared with the previous quarter.
-
-╭───────────────────────────────┬──────────────────────────────────────────────╮
-│ region                        │ revenue_eur                                  │
-├───────────────────────────────┼──────────────────────────────────────────────┤
-│ Germany                       │ 4500000.00                                   │
-│ France                        │ 3350000.50                                   │
-│ Spain                         │ 1780000.25                                   │
-╰───────────────────────────────┴──────────────────────────────────────────────╯
-╭─Generated SQL────────────────────────────────────────────────────────────────╮
-│ SELECT region, SUM(revenue_eur) AS revenue_eur FROM sales.public.orders      │
-│ GROUP BY region ORDER BY 2 DESC                                              │
-╰──────────────────────────────────────────────────────────────────────────────╯
-```
+<img src="assets/ask.svg" alt="lakespeak ask printing an answer, a result table and the generated SQL" width="790">
 
 Note `4500000.00` — not `4.5E6`, not `4,500,000`. Cells reach you exactly as Databricks returned
 them; nothing is reparsed on the way out.
@@ -134,6 +115,8 @@ lakespeak chat --agent "Sales Intelligence"
 Follow-up questions keep their context, so "and break that down by product" works. Type `/help`
 for the slash commands, `/sql` to see the statement behind the last answer, `/export report.csv`
 to save the result, `/exit` to leave.
+
+<img src="assets/chat.svg" alt="a lakespeak chat session with follow-up questions, /sql and /export" width="680">
 
 `chat` needs a real terminal. For scripts, use `ask`.
 

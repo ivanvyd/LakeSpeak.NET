@@ -1,0 +1,22 @@
+Genie is analyzing your question…
+Waiting for a SQL warehouse…
+Preparing answer…
+The total revenue by region is as follows:
+- **Germany:** €4,500,000.00
+- **France:** €3,350,000.50
+- **Spain:** €1,780,000.25
+Germany generated the highest revenue among the listed regions.
+
+╭────────────────────────┬─────────────────────────────────────────────────────╮
+│ region                 │ total_revenue_eur                                   │
+├────────────────────────┼─────────────────────────────────────────────────────┤
+│ Germany                │ 4500000.00                                          │
+│ France                 │ 3350000.50                                          │
+│ Spain                  │ 1780000.25                                          │
+╰────────────────────────┴─────────────────────────────────────────────────────╯
+╭─Generated SQL─────────────────────────────────────────────╮
+│ SELECT `region`, SUM(`revenue_eur`) AS total_revenue_eur  │
+│ FROM `sales`.`public`.`regional_revenue` │
+│ WHERE `region` IS NOT NULL AND `revenue_eur` IS NOT NULL  │
+│ GROUP BY `region`                                         │
+╰───────────────────────────────────────────────────────────╯
