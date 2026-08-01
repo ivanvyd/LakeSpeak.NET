@@ -434,8 +434,8 @@
       "lakespeak.application": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Configuration": "[1.0.0, )",
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Configuration": "[0.1.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.10, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.10, )"
         }
@@ -443,7 +443,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
           "Microsoft.Extensions.Configuration": "[10.0.10, )",
           "Microsoft.Extensions.Configuration.Binder": "[10.0.10, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.10, )",
