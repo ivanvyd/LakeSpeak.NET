@@ -56,7 +56,11 @@ release is cheap.
 
 ### Prerequisites, once
 
-> **Configured as of 2026-08-01, and re-checked after the repository rename.** The trusted publishing policy exists on nuget.org, the
+> **Verified working on 2026-08-01** by publishing `0.1.0-preview.1`. Two fields were wrong on
+> the first attempt and each failed the token exchange *before* anything was pushed, which is the
+> behaviour to rely on: a mismatched policy costs a re-run, never a bad package. The failure was
+> `Workflow mismatch for policy 'LakeSpeak.NET': expected 'publish.yml', actual 'release.yml'` —
+> the error names both sides, so read it literally rather than guessing which field is wrong. The trusted publishing policy exists on nuget.org, the
 > `NUGET_USER` secret is set, and the `nuget` environment exists with `ivanvyd` as a required
 > reviewer. The steps below record what was done, so it can be rebuilt or audited.
 >

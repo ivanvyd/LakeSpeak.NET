@@ -163,3 +163,7 @@ jobs:
             artifacts/sbom.json
             artifacts/provenance.intoto.jsonl
           generate_release_notes: true
+          # SemVer says a hyphen in the version makes it a prerelease. Without this the action
+          # defaults to a full release, so 0.1.0-preview.1 published as "Latest" -- telling
+          # everyone arriving at the repo that a preview is the stable build.
+          prerelease: ${{ contains(needs.build.outputs.version, '-') }}
