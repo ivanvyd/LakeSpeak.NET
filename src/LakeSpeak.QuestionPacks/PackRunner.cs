@@ -169,25 +169,10 @@ public static class PackReportWriter
 
         if (response.Result is { Columns.Count: > 0 } table)
         {
-            builder.Append("| ")
-                .Append(string.Join(" | ", table.Columns.Select(c => EscapeCell(c.Name))))
-                .AppendLine(" |")
-                .Append('|')
-                .Append(string.Concat(Enumerable.Repeat("---|", table.Columns.Count)))
-                .AppendLine();
-
-            foreach (var row in table.Rows)
-            {
-                builder.Append("| ").Append(string.Join(" | ", row.Select(EscapeCell))).AppendLine(" |");
-            }
-
-            builder.AppendLine();
-
-            if (table.IsTruncated)
-            {
-                builder.AppendLine("_Databricks truncated this result; it is not the full set of rows._")
-                    .AppendLine();
-            }
+            // The canonical renderer, not a copy. A second implementation had already drifted:
+            // this report omitted the row counts that `ask --format markdown` states, so the
+            // same data made two different claims about how complete it was.
+            MarkdownWriter.WriteTable(builder, table);
         }
 
         if (pack.Behavior.IncludeGeneratedSql && response.Query?.Sql is { Length: > 0 } sql)
@@ -223,9 +208,4 @@ public static class PackReportWriter
     private static string Title(QuestionPack pack) =>
         string.Join(' ', pack.Name.Split('-').Select(w =>
             w.Length == 0 ? w : char.ToUpperInvariant(w[0]) + w[1..]));
-
-    private static string EscapeCell(string? value) =>
-        value is null
-            ? string.Empty
-            : TerminalSafety.SanitizeCell(value).Replace("|", "\\|", StringComparison.Ordinal);
 }

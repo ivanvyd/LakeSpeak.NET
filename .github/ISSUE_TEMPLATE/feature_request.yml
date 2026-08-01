@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose something LakeSpeak should do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project is deliberately narrow. Its promise is:
+
+        > a good .NET and terminal experience for stateful conversations with Databricks Genie Agents.
+
+        [GOVERNANCE.md](https://github.com/ivanvyd/lakespeak/blob/main/GOVERNANCE.md) lists what is
+        out of scope and why. A feature can be genuinely useful and still be declined for sitting
+        outside that sentence — worth reading before writing this up.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that you cannot do today? Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: The official Databricks CLI, the Genie MCP endpoints, a script of your own — and why each fell short.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I read GOVERNANCE.md and believe this fits the project's stated promise.
+          required: true
