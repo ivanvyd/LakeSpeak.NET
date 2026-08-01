@@ -243,7 +243,7 @@ internal sealed class ChatSession(CliHost host, GenieAgent agent)
             case "/sql":
                 if (_last?.Query?.Sql is { Length: > 0 } sql)
                 {
-                    host.Renderer.WriteSql(sql);
+                    host.Renderer.WriteSql(sql, _last?.Query?.Parameters);
                 }
                 else
                 {

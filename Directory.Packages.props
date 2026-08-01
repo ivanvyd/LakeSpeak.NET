@@ -39,6 +39,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
+    <PackageVersion Include="Spectre.Console.Testing" Version="0.57.2" />
     <PackageVersion Include="Verify.XunitV3" Version="31.28.0" />
     <PackageVersion Include="WireMock.Net" Version="2.13.0" />
     <!-- FakeTimeProvider. Polling is the component most worth testing and the one

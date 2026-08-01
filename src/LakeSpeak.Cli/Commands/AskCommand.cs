@@ -133,7 +133,7 @@ internal static class AskCommand
 
                 if (showSql && response.Query?.Sql is { Length: > 0 } sql)
                 {
-                    host.Renderer.WriteSql(sql);
+                    host.Renderer.WriteSql(sql, response.Query?.Parameters);
                 }
 
                 if (response.State == GenieMessageState.QueryResultExpired)

@@ -28,6 +28,15 @@
           "EmptyFiles": "4.4.0"
         }
       },
+      "Spectre.Console.Testing": {
+        "type": "Direct",
+        "requested": "[0.57.2, )",
+        "resolved": "0.57.2",
+        "contentHash": "X9d6yEgamanA2F+OU28l8c00WZW36ZWeeIzHJLuCFFI1aK+uieG4O4KbYlGfGpnB4jPF+EsTTdEeTSk1ril0MA==",
+        "dependencies": {
+          "Spectre.Console": "0.57.2"
+        }
+      },
       "Verify.XunitV3": {
         "type": "Direct",
         "requested": "[31.28.0, )",
@@ -494,7 +503,6 @@
         "type": "Project",
         "dependencies": {
           "JsonSchema.Net": "[9.4.0, )",
-          "LakeSpeak.Application": "[0.1.0, )",
           "LakeSpeak.Genie": "[0.1.0, )",
           "LakeSpeak.Rendering": "[0.1.0, )",
           "YamlDotNet": "[18.1.0, )"

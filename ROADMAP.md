@@ -18,7 +18,7 @@ Status: in development.
 - [x] Output formats and stable exit codes
 - [x] CI, release pipeline, SBOM, provenance
 - [x] Verification against a live Azure Databricks workspace
-- [ ] CLI snapshot tests across terminal widths, unicode and `NO_COLOR`
+- [x] CLI output tests across terminal widths, unicode, nulls and escape-sequence injection
 - [ ] Live coverage for `chat`, chunked results and `QUERY_RESULT_EXPIRED` recovery
 - [x] Command reference and authentication guide
 

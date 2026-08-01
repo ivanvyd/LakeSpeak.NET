@@ -73,13 +73,35 @@ public sealed class TerminalRenderer(IAnsiConsole console, int maxRows = 50)
         }
     }
 
-    public void WriteSql(string sql)
+    public void WriteSql(string sql, IReadOnlyList<GenieQueryParameter>? parameters = null)
     {
         var panel = new Panel(Markup.Escape(TerminalSafety.Sanitize(sql)))
             .Header("Generated SQL")
             .Border(BoxBorder.Rounded);
 
         console.Write(panel);
+
+        // Without these, a reader sees placeholders and has to guess what the statement ran
+        // with — which is half of what showing the SQL was for.
+        if (parameters is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[bold]Parameter[/]");
+        table.AddColumn("[bold]Type[/]");
+        table.AddColumn("[bold]Value[/]");
+
+        foreach (var parameter in parameters)
+        {
+            table.AddRow(
+                Markup.Escape(TerminalSafety.SanitizeCell(parameter.Keyword)),
+                Markup.Escape(TerminalSafety.SanitizeCell(parameter.SqlType)),
+                Markup.Escape(TerminalSafety.SanitizeCell(parameter.Value)));
+        }
+
+        console.Write(table);
     }
 
     public void WriteAgents(IReadOnlyList<GenieAgent> agents)
