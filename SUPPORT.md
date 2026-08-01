@@ -18,10 +18,10 @@ Neither prints any part of a credential, so both are safe to paste.
 
 | You have | Use |
 |---|---|
-| A bug — it behaves differently from the docs | [Bug report](https://github.com/ivanvyd/lakespeak/issues/new?template=bug_report.yml) |
-| A feature idea | [Feature request](https://github.com/ivanvyd/lakespeak/issues/new?template=feature_request.yml), after reading [GOVERNANCE.md](GOVERNANCE.md) |
-| A question | [Discussions](https://github.com/ivanvyd/lakespeak/discussions) |
-| A security vulnerability | [Private advisory](https://github.com/ivanvyd/lakespeak/security/advisories/new) — never a public issue |
+| A bug — it behaves differently from the docs | [Bug report](https://github.com/ivanvyd/LakeSpeak.NET/issues/new?template=bug_report.yml) |
+| A feature idea | [Feature request](https://github.com/ivanvyd/LakeSpeak.NET/issues/new?template=feature_request.yml), after reading [GOVERNANCE.md](GOVERNANCE.md) |
+| A question | [Discussions](https://github.com/ivanvyd/LakeSpeak.NET/discussions) |
+| A security vulnerability | [Private advisory](https://github.com/ivanvyd/LakeSpeak.NET/security/advisories/new) — never a public issue |
 
 ## What to expect
 

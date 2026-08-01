@@ -1,8 +1,8 @@
 # LakeSpeak.NET
 
-[![CI](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml)
+[![CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanvyd/LakeSpeak.NET/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/lakespeak/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/lakespeak)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/LakeSpeak.NET/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/LakeSpeak.NET)
 
 Talk to governed Databricks data from your terminal and .NET applications.
 
@@ -21,9 +21,14 @@ including what a Genie Agent is and how to tell whether you have one.
 
 ## Status
 
-**v0.1 development. Not yet released.** See [Verification status](#verification-status) for what has
-actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI surface and the
-`LakeSpeak.Genie` public API may both change.
+**v0.1.0-preview.1 — first published build.** See [Verification status](#verification-status) for
+what has actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI
+surface and the `LakeSpeak.Genie` public API may both change, and before `v1.0` a minor version is
+allowed to break them.
+
+```bash
+dotnet tool install --global LakeSpeak.Cli --prerelease
+```
 
 ## What this is, in one paragraph
 
@@ -217,7 +222,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), and see
 [GOVERNANCE.md](GOVERNANCE.md) for how decisions get made and what is deliberately out of scope.
 
-Good first issues are labelled [`good first issue`](https://github.com/ivanvyd/lakespeak/labels/good%20first%20issue).
+Good first issues are labelled [`good first issue`](https://github.com/ivanvyd/LakeSpeak.NET/labels/good%20first%20issue).
 Core authentication and security work is not labelled that way, on purpose.
 
 ## License

@@ -116,7 +116,7 @@ NuGet.
 **4. Verify all three before the first release.**
 
 ```bash
-gh api repos/ivanvyd/lakespeak/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
+gh api repos/ivanvyd/LakeSpeak.NET/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
 gh secret list
 ```
 

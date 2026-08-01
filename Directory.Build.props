@@ -52,13 +52,13 @@
   <PropertyGroup>
     <Authors>LakeSpeak.NET contributors</Authors>
     <Product>LakeSpeak.NET</Product>
-    <RepositoryUrl>https://github.com/ivanvyd/lakespeak</RepositoryUrl>
+    <RepositoryUrl>https://github.com/ivanvyd/LakeSpeak.NET</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/ivanvyd/lakespeak</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/ivanvyd/LakeSpeak.NET</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReleaseNotes>https://github.com/ivanvyd/lakespeak/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>https://github.com/ivanvyd/LakeSpeak.NET/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <Copyright>Copyright (c) LakeSpeak.NET contributors</Copyright>
     <PackageTags>databricks;genie;cli;analytics;conversational</PackageTags>
   </PropertyGroup>
