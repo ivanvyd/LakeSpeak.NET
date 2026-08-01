@@ -110,7 +110,16 @@ public static class MachineOutput
             // display name of a state changes.
             Status = r.State.ToString().ToLowerInvariant(),
             Answer = r.Text,
-            Query = r.Query is null ? null : new QueryRef { Sql = r.Query.Sql, Title = r.Query.Title },
+            Query = r.Query is null
+                ? null
+                : new QueryRef
+                {
+                    Sql = r.Query.Sql,
+                    Title = r.Query.Title,
+                    Parameters = r.Query.Parameters is { Count: > 0 } p
+                        ? p.Select(x => new ParameterRef { Name = x.Keyword, Type = x.SqlType, Value = x.Value }).ToList()
+                        : null,
+                },
             Result = r.Result is null ? null : ResultRef.From(r.Result),
             SuggestedQuestions = r.SuggestedQuestions.Count == 0 ? null : r.SuggestedQuestions,
             DurationMs = (long)r.Metadata.Duration.TotalMilliseconds,
@@ -133,6 +142,23 @@ public static class MachineOutput
 
         [JsonPropertyName("title")]
         public string? Title { get; init; }
+
+        // The values Genie bound into the SQL. Without these a reader sees the statement but not
+        // what it actually ran with, which is half the point of showing the SQL at all.
+        [JsonPropertyName("parameters")]
+        public IReadOnlyList<ParameterRef>? Parameters { get; init; }
+    }
+
+    private sealed record ParameterRef
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; init; }
+
+        [JsonPropertyName("type")]
+        public string? Type { get; init; }
+
+        [JsonPropertyName("value")]
+        public string? Value { get; init; }
     }
 
     private sealed record ResultRef

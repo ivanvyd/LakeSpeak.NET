@@ -68,8 +68,21 @@ internal static class ExportCommand
 
         if (result is null)
         {
+            // The cached result aged out. Re-running the attachment's query is the documented
+            // recovery, and it is the right call here specifically because the user asked to
+            // export: they want the rows, and re-executing costs warehouse time they have
+            // implicitly agreed to. `ask` deliberately does not do this on their behalf.
+            host.Output.Status("The cached result expired; re-running the query…");
+
+            result = await host.Client.ReExecuteQueryAsync(
+                recent.AgentId, recent.ConversationId, recent.MessageId, recent.AttachmentId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (result is null)
+        {
             throw new CliUsageException(
-                "Databricks no longer has that query result. Cached results expire; ask the question again.");
+                "Databricks returned no result for that query, even after re-running it. Ask the question again.");
         }
 
         var csv = CsvWriter.Write(result);

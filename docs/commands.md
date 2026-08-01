@@ -114,8 +114,11 @@ lakespeak export last                       # to stdout
 | `--force` | Overwrite the output file if it exists |
 
 The result is **re-fetched from Databricks** rather than cached locally: a local copy of governed
-data would have none of the governance, and Databricks is already the system of record. That means
-an expired cached result fails here rather than silently returning stale rows.
+data would have none of the governance, and Databricks is already the system of record.
+
+If the cached result has expired, this command re-runs the query rather than failing. That costs
+warehouse time, which is the right trade here because you explicitly asked to export the rows —
+`ask` deliberately does not re-run on your behalf.
 
 If the result is incomplete — truncated by Databricks, or continuing beyond the rows this version
 reads — the command says so on stderr. It never writes a partial export silently.
