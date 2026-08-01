@@ -12,7 +12,7 @@ authentication, the [Databricks CLI](https://docs.databricks.com/dev-tools/cli/i
 
 ```bash
 git clone https://github.com/ivanvyd/LakeSpeak.NET.git
-cd lakespeak
+cd LakeSpeak.NET
 dotnet restore
 dotnet build -c Release
 dotnet test -c Release --filter "Category!=Live"
