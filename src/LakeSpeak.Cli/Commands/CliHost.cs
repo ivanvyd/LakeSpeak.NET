@@ -82,6 +82,13 @@ internal sealed class CliHost : IDisposable
             host?.Output.Status("Cancelled.");
             return ExitCode.Timeout;
         }
+        catch (ArgumentException ex)
+        {
+            // A bad combination of arguments is the caller's mistake, so it exits as invalid
+            // usage rather than as an unexpected failure a script would treat as a crash.
+            host?.Output.Fail(ex.Message);
+            return ExitCode.InvalidUsage;
+        }
         catch (InvalidOperationException ex)
         {
             // Configuration problems surface as this: a malformed config file, or no host.

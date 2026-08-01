@@ -1,0 +1,139 @@
+using LakeSpeak.Genie;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+using WireMock.Server;
+
+namespace LakeSpeak.ContractTests;
+
+/// <summary>
+/// Two properties that are invisible when they break: a partial result that claims to be
+/// complete, and a non-idempotent request that quietly runs twice.
+/// </summary>
+public sealed class ResultCompletenessTests : IDisposable
+{
+    private const string Agent = "a";
+    private const string Conversation = "c";
+    private const string Message = "m";
+    private const string Attachment = "att";
+
+    private readonly WireMockServer _server = WireMockServer.Start();
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private GenieClient CreateClient()
+    {
+        var http = new HttpClient { BaseAddress = new Uri(_server.Url!) };
+        return new GenieClient(http, Options.Create(new GenieClientOptions
+        {
+            Host = new Uri("https://example.azuredatabricks.net"),
+        }));
+    }
+
+    private void StubQueryResult(string resultJson, string manifestExtra = "")
+    {
+        _server.Given(Request.Create()
+                .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}/attachments/{Attachment}/query-result")
+                .UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBody(
+                $$"""
+                {
+                  "statement_response": {
+                    "manifest": {
+                      "truncated": false{{manifestExtra}},
+                      "schema": { "columns": [ { "name": "region", "type_text": "STRING" } ] }
+                    },
+                    "result": {{resultJson}}
+                  }
+                }
+                """));
+    }
+
+    /// <summary>
+    /// The Statement Execution contract splits large results into chunks, and this client reads
+    /// only the first. `manifest.truncated` reports statement-level truncation by Databricks and
+    /// is false for a merely-chunked result, so relying on it alone hands back the first chunk
+    /// labelled complete — a partial export nobody knows is partial.
+    /// </summary>
+    [Fact]
+    public async Task A_chunked_result_is_reported_as_truncated()
+    {
+        StubQueryResult(
+            """{ "row_count": 2, "chunk_index": 0, "next_chunk_index": 1, "data_array": [["Germany"],["France"]] }""");
+
+        var result = await CreateClient()
+            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBe(2);
+        result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The same failure reached a different way: the manifest advertises more rows than arrived.
+    /// </summary>
+    [Fact]
+    public async Task A_short_read_against_the_manifest_row_count_is_reported_as_truncated()
+    {
+        StubQueryResult(
+            """{ "row_count": 1, "data_array": [["Germany"]] }""",
+            manifestExtra: """, "total_row_count": 5000""");
+
+        var result = await CreateClient()
+            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        result!.IsTruncated.ShouldBeTrue();
+        result.TotalRowCount.ShouldBe(5000);
+    }
+
+    [Fact]
+    public async Task A_complete_single_chunk_result_is_not_reported_as_truncated()
+    {
+        StubQueryResult(
+            """{ "row_count": 2, "chunk_index": 0, "data_array": [["Germany"],["France"]] }""",
+            manifestExtra: """, "total_row_count": 2""");
+
+        var result = await CreateClient()
+            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        result!.IsTruncated.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// start-conversation is not idempotent: a retry asks Genie the same question again, running
+    /// the SQL warehouse a second time and billing for it, and leaves an orphaned conversation
+    /// whose id the caller never receives. The resilience pipeline must not retry it.
+    /// </summary>
+    [Fact]
+    public async Task A_failed_start_conversation_is_never_retried()
+    {
+        _server.Given(Request.Create()
+                .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(503));
+
+        var services = new ServiceCollection();
+        services.AddGenieTokenProvider(_ => ValueTask.FromResult("token"));
+        services.AddLakeSpeak(o => o.Host = new Uri("https://example.azuredatabricks.net"));
+        using var provider = services.BuildServiceProvider();
+
+        // Point the configured client at the stub without disturbing the resilience pipeline.
+        var factory = provider.GetRequiredService<IHttpClientFactory>();
+        var http = factory.CreateClient(nameof(IGenieClient));
+        http.BaseAddress = new Uri(_server.Url!);
+
+        var client = new GenieClient(http, Options.Create(new GenieClientOptions
+        {
+            Host = new Uri("https://example.azuredatabricks.net"),
+        }));
+
+        await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
+
+        var attempts = _server.LogEntries.Count(e =>
+            e.RequestMessage?.Path?.EndsWith("start-conversation", StringComparison.Ordinal) == true);
+
+        attempts.ShouldBe(1);
+    }
+
+    public void Dispose() => _server.Dispose();
+}

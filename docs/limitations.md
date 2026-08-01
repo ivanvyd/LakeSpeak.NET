@@ -61,8 +61,21 @@ An exported CSV is an ordinary file containing governed data. LakeSpeak warns be
 refuses to overwrite without confirmation; it cannot protect the file afterwards. In CI, remember
 that job logs are usually readable by everyone with repository access.
 
+## Large results are returned as a first chunk, flagged
+
+The Statement Execution contract splits large results into chunks. v0.1 reads only the first one.
+
+What it does **not** do is pretend that is the whole result. A response carrying a
+`next_chunk_index`, or fewer rows than the manifest's total, is reported as **truncated** — in the
+terminal, in the JSON `truncated` field, and in Question Pack reports. So an export can be
+incomplete, but it is never *silently* incomplete.
+
+This was wrong until a post-ship review caught it: the client relied on `manifest.truncated`, which
+reports statement-level truncation by Databricks and is `false` for a merely-chunked result. A large
+result was returned as its first chunk labelled complete. Fetching remaining chunks is v0.2 work.
+
 ## Not implemented in v0.1
 
-Full-result downloads beyond the first page of rows, visualization rendering, conversation
-list and resume commands, OAuth M2M, and an MCP server mode. See [ROADMAP.md](../ROADMAP.md) for
-what is planned and [GOVERNANCE.md](../GOVERNANCE.md) for what is deliberately out of scope.
+Full-result downloads beyond the first chunk, visualization rendering, conversation list and resume
+commands, OAuth M2M, and an MCP server mode. See [ROADMAP.md](../ROADMAP.md) for what is planned and
+[GOVERNANCE.md](../GOVERNANCE.md) for what is deliberately out of scope.

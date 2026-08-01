@@ -34,6 +34,8 @@ internal static class Program
         root.Subcommands.Add(AuthCommand.Create());
         root.Subcommands.Add(ConfigCommand.Create());
         root.Subcommands.Add(PackCommand.Create());
+        root.Subcommands.Add(ExportCommand.Create());
+        root.Subcommands.Add(FeedbackCommand.Create());
 
         return await root.Parse(args).InvokeAsync().ConfigureAwait(false);
     }

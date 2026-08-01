@@ -178,6 +178,17 @@ SDK marks it required.
 
 Feedback returns an **empty response body**; nothing should try to parse it.
 
+## Undocumented constraint, found by calling the API
+
+`POST .../feedback` rejects a request carrying both `comment` and `rating: NONE`:
+
+> Feedback text cannot be provided when rating is NONE. Text feedback is only allowed with
+> POSITIVE or NEGATIVE ratings.
+
+This appears in no SDK and no documentation page. It was found by a live integration test, and the
+client now rejects the combination before the request rather than surfacing an HTTP 400 that reads
+like a transport fault.
+
 ## Documented limits
 
 10,000 conversations per Agent, 10,000 messages per conversation, 30 tables per Agent.
