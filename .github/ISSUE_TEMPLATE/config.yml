@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/ivanvyd/lakespeak/security/advisories/new
+    url: https://github.com/ivanvyd/LakeSpeak.NET/security/advisories/new
     about: Report privately. Never open a public issue for a vulnerability.
   - name: Question or idea
-    url: https://github.com/ivanvyd/lakespeak/discussions
+    url: https://github.com/ivanvyd/LakeSpeak.NET/discussions
     about: For anything that is not a bug report or a concrete feature request.

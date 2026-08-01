@@ -10,7 +10,7 @@ body:
         table names are sensitive. **Read what you paste.**
 
         For a security vulnerability, do not use this form — report it privately through
-        [Security Advisories](https://github.com/ivanvyd/lakespeak/security/advisories/new).
+        [Security Advisories](https://github.com/ivanvyd/LakeSpeak.NET/security/advisories/new).
 
   - type: textarea
     id: what-happened

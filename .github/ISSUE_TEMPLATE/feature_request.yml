@@ -9,7 +9,7 @@ body:
 
         > a good .NET and terminal experience for stateful conversations with Databricks Genie Agents.
 
-        [GOVERNANCE.md](https://github.com/ivanvyd/lakespeak/blob/main/GOVERNANCE.md) lists what is
+        [GOVERNANCE.md](https://github.com/ivanvyd/LakeSpeak.NET/blob/main/GOVERNANCE.md) lists what is
         out of scope and why. A feature can be genuinely useful and still be declined for sitting
         outside that sentence — worth reading before writing this up.
 

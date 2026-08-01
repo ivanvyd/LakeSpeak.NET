@@ -11,7 +11,7 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and, for anyth
 authentication, the [Databricks CLI](https://docs.databricks.com/dev-tools/cli/install.html).
 
 ```bash
-git clone https://github.com/ivanvyd/lakespeak.git
+git clone https://github.com/ivanvyd/LakeSpeak.NET.git
 cd lakespeak
 dotnet restore
 dotnet build -c Release

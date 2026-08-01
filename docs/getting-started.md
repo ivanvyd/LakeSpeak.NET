@@ -56,7 +56,7 @@ lakespeak --version
 
 Needs the [.NET 10 runtime or SDK](https://dotnet.microsoft.com/download). If you would rather not
 install .NET at all, each release also ships a self-contained binary for Windows, Linux and macOS —
-see the [releases page](https://github.com/ivanvyd/lakespeak/releases).
+see the [releases page](https://github.com/ivanvyd/LakeSpeak.NET/releases).
 
 ## 2. Log in
 

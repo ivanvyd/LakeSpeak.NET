@@ -11,7 +11,7 @@ Kubernetes CronJob, or an Airflow task, on a host where installing the .NET SDK 
 
 For everything else you probably do not want a container. Interactive use wants
 `dotnet tool install --global LakeSpeak.Cli`, and a machine with no .NET at all can use the
-self-contained binary from the [releases page](https://github.com/ivanvyd/lakespeak/releases).
+self-contained binary from the [releases page](https://github.com/ivanvyd/LakeSpeak.NET/releases).
 `lakespeak chat` will not work in a container at all — it needs an interactive terminal.
 
 ## Build and run

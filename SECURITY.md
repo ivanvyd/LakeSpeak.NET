@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Report privately through
-[GitHub Security Advisories](https://github.com/ivanvyd/lakespeak/security/advisories/new). Do not
+[GitHub Security Advisories](https://github.com/ivanvyd/LakeSpeak.NET/security/advisories/new). Do not
 open a public issue for a vulnerability.
 
 This is a solo-maintained project. Expect an acknowledgement within 5 working days and an initial
