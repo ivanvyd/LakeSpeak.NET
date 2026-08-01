@@ -57,8 +57,19 @@ public sealed class LakeSpeakConfig
 
         try
         {
-            return deserializer.Deserialize<LakeSpeakConfig>(File.ReadAllText(path))
+            var loaded = deserializer.Deserialize<LakeSpeakConfig>(File.ReadAllText(path))
                 ?? new LakeSpeakConfig();
+
+            // YamlDotNet constructs its own dictionary and assigns it over the field
+            // initializer, discarding the OrdinalIgnoreCase comparer. Without rebuilding it,
+            // an alias written `Finance:` would not match `--agent finance`, and resolution
+            // would silently fall through to title matching — which can select a different
+            // Agent entirely. That is the "answer against the wrong data" failure this
+            // codebase exists to avoid.
+            loaded.Agents = new Dictionary<string, AgentAlias>(
+                loaded.Agents, StringComparer.OrdinalIgnoreCase);
+
+            return loaded;
         }
         catch (YamlDotNet.Core.YamlException ex)
         {

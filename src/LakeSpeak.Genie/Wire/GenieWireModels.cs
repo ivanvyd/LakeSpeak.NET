@@ -276,6 +276,22 @@ internal sealed record ResultDataWire
     // chunk, so this is what stops a partial result being reported as complete.
     [JsonPropertyName("next_chunk_index")]
     public int? NextChunkIndex { get; init; }
+
+    // Under EXTERNAL_LINKS disposition the rows are NOT inline: data_array is absent and the
+    // data sits behind presigned URLs. Deserialised solely so that case can be detected and
+    // refused — returning zero rows as a successful, complete result would be worse than any
+    // error this client can raise.
+    [JsonPropertyName("external_links")]
+    public IReadOnlyList<ExternalLinkWire>? ExternalLinks { get; init; }
+}
+
+internal sealed record ExternalLinkWire
+{
+    [JsonPropertyName("chunk_index")]
+    public int? ChunkIndex { get; init; }
+
+    [JsonPropertyName("row_count")]
+    public long? RowCount { get; init; }
 }
 
 internal sealed record DownloadHandleWire

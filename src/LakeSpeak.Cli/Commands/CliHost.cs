@@ -5,6 +5,7 @@ using LakeSpeak.Configuration;
 using LakeSpeak.Genie;
 using LakeSpeak.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LakeSpeak.Cli.Commands;
 
@@ -46,6 +47,18 @@ internal sealed class CliHost : IDisposable
         var profile = parseResult.GetValue(GlobalOptions.Profile) ?? config.Defaults.Profile;
 
         var services = new ServiceCollection();
+
+        // --verbose was declared and registered but never read, so it did nothing while the help
+        // text promised diagnostics "with credentials always redacted" — a guarantee about
+        // behaviour that did not exist. The client already logs through ILogger; it simply had no
+        // sink. Every record is scrubbed on its way out, which is what makes the promise true.
+        if (parseResult.GetValue(GlobalOptions.Verbose))
+        {
+            services.AddLogging(builder => builder
+                .SetMinimumLevel(LogLevel.Debug)
+                .AddProvider(new RedactingStderrLoggerProvider()));
+        }
+
         services.AddLakeSpeak(options => options.Profile = profile);
 
         return new CliHost(services.BuildServiceProvider(), output, config, format);
