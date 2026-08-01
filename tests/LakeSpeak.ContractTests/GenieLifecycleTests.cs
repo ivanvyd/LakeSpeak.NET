@@ -30,7 +30,7 @@ public sealed class GenieLifecycleTests : IDisposable
         var http = new HttpClient { BaseAddress = new Uri(_server.Url!) };
         var options = new GenieClientOptions
         {
-            // The server is http, and Validate() rightly refuses a non-https host. Host is only
+            // The stub is http, and Validate() rightly refuses a non-https host. Host is only
             // used to build the base address, which is set directly above.
             Host = new Uri("https://example.azuredatabricks.net"),
             InitialPollInterval = TimeSpan.FromSeconds(1),
@@ -74,8 +74,7 @@ public sealed class GenieLifecycleTests : IDisposable
             }
 
             // The last stub must not advance the state, or it stops matching itself after one
-            // response and WireMock starts 404ing. That turned the polling-timeout test into a
-            // 404 test without either one failing for the right reason.
+            // response and WireMock starts 404ing.
             if (!isLast)
             {
                 stub = stub.WillSetStateTo($"s{i + 1}");
@@ -145,15 +144,18 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task Ask_walks_the_full_lifecycle_and_returns_a_normalized_response()
     {
+        // Arrange
         StubStartConversation();
         StubMessageSequence("SUBMITTED", "FILTERING_CONTEXT", "EXECUTING_QUERY", "COMPLETED");
         StubQueryResult();
-
         var client = CreateClient();
+
+        // Act
         var task = client.AskAsync(Agent, "How did revenue change?", cancellationToken: Ct);
         await AdvanceUntilSettledAsync(task);
         var response = await task;
 
+        // Assert
         response.State.ShouldBe(GenieMessageState.Completed);
         response.ConversationId.ShouldBe(Conversation);
 
@@ -176,12 +178,14 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task Reports_every_state_transition_in_order()
     {
+        // Arrange
         StubStartConversation();
         StubMessageSequence("SUBMITTED", "PENDING_WAREHOUSE", "EXECUTING_QUERY", "COMPLETED");
         StubQueryResult();
-
         var seen = new List<GenieMessageState>();
         var client = CreateClient();
+
+        // Act
         var task = client.AskAsync(Agent, "q", new GenieAskOptions
         {
             OnStateChanged = s => seen.Add(s),
@@ -189,6 +193,7 @@ public sealed class GenieLifecycleTests : IDisposable
         await AdvanceUntilSettledAsync(task);
         await task;
 
+        // Assert
         seen.ShouldBe([
             GenieMessageState.Submitted,
             GenieMessageState.PendingWarehouse,
@@ -200,6 +205,7 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task A_failed_message_raises_MessageFailed_carrying_the_platform_reason()
     {
+        // Arrange
         StubStartConversation();
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}")
@@ -212,21 +218,24 @@ public sealed class GenieLifecycleTests : IDisposable
                   "error": { "error": "Table orders does not exist", "type": "SQL_EXECUTION_EXCEPTION" }
                 }
                 """));
-
         var client = CreateClient();
-        var ex = await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
 
+        // Act
+        var ex = await Should.ThrowAsync<GenieException>(
+            () => client.AskAsync(Agent, "q", cancellationToken: Ct));
+
+        // Assert
         ex.Kind.ShouldBe(GenieFailureKind.MessageFailed);
         ex.Message.ShouldContain("Table orders does not exist");
         ex.ErrorCode.ShouldBe("SQL_EXECUTION_EXCEPTION");
         ex.IsRetryable.ShouldBeFalse();
     }
 
-    // QUERY_RESULT_EXPIRED is terminal but is not a failure: the answer and SQL are still
-    // valid. Throwing here would discard a good answer over a stale cache entry.
     [Fact]
     public async Task An_expired_result_returns_the_answer_rather_than_throwing()
     {
+        // Arrange — QUERY_RESULT_EXPIRED is terminal but is not a failure: the answer and SQL
+        // are still valid, so throwing would discard a good answer over a stale cache entry.
         StubStartConversation();
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}")
@@ -241,10 +250,12 @@ public sealed class GenieLifecycleTests : IDisposable
                   ]
                 }
                 """));
-
         var client = CreateClient();
+
+        // Act
         var response = await client.AskAsync(Agent, "q", cancellationToken: Ct);
 
+        // Assert
         response.State.ShouldBe(GenieMessageState.QueryResultExpired);
         response.Text.ShouldBe("Revenue rose 14.2%.");
     }
@@ -257,14 +268,18 @@ public sealed class GenieLifecycleTests : IDisposable
     [InlineData(500, GenieFailureKind.Unexpected, false)]
     public async Task Maps_http_failures_to_typed_kinds(int status, GenieFailureKind kind, bool retryable)
     {
+        // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(status).WithBody(
                 """{"error_code":"PERMISSION_DENIED","message":"nope"}"""));
-
         var client = CreateClient();
-        var ex = await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
 
+        // Act
+        var ex = await Should.ThrowAsync<GenieException>(
+            () => client.AskAsync(Agent, "q", cancellationToken: Ct));
+
+        // Assert
         ex.Kind.ShouldBe(kind);
         ex.StatusCode.ShouldBe(status);
         ex.IsRetryable.ShouldBe(retryable);
@@ -273,30 +288,35 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task A_body_that_is_not_json_fails_as_MalformedResponse_without_echoing_it()
     {
+        // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithBody("<html>gateway</html>"));
-
         var client = CreateClient();
-        var ex = await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
 
+        // Act
+        var ex = await Should.ThrowAsync<GenieException>(
+            () => client.AskAsync(Agent, "q", cancellationToken: Ct));
+
+        // Assert — the body can contain query results, which are governed data, and this message
+        // may reach a log or a bug report.
         ex.Kind.ShouldBe(GenieFailureKind.MalformedResponse);
-        // The body can contain query results, which are governed data, and this message may
-        // reach a log or a bug report.
         ex.Message.ShouldNotContain("gateway");
     }
 
     [Fact]
     public async Task Polling_stops_at_the_timeout_and_keeps_the_last_seen_state()
     {
+        // Arrange
         StubStartConversation();
         StubMessageSequence("EXECUTING_QUERY");
-
         var client = CreateClient(timeout: TimeSpan.FromSeconds(30));
-        var task = client.AskAsync(Agent, "q", cancellationToken: Ct);
 
+        // Act
+        var task = client.AskAsync(Agent, "q", cancellationToken: Ct);
         await AdvanceUntilSettledAsync(task);
 
+        // Assert
         var ex = await Should.ThrowAsync<GenieException>(() => task);
         ex.Kind.ShouldBe(GenieFailureKind.PollingTimeout);
         ex.LastKnownResponse!.State.ShouldBe(GenieMessageState.ExecutingQuery);
@@ -305,31 +325,37 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task Cancellation_stops_polling_promptly()
     {
+        // Arrange
         StubStartConversation();
         StubMessageSequence("EXECUTING_QUERY");
-
         using var cts = new CancellationTokenSource();
         var client = CreateClient();
-        var task = client.AskAsync(Agent, "q", cancellationToken: cts.Token);
 
+        // Act
+        var task = client.AskAsync(Agent, "q", cancellationToken: cts.Token);
         await Task.Yield();
         await cts.CancelAsync();
         _clock.Advance(TimeSpan.FromSeconds(5));
 
+        // Assert
         await Should.ThrowAsync<OperationCanceledException>(() => task);
     }
 
     [Fact]
     public async Task Feedback_posts_the_rating_and_tolerates_an_empty_body()
     {
+        // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}/feedback")
                 .UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithBody(string.Empty));
-
         var client = CreateClient();
-        await client.SendFeedbackAsync(Agent, Conversation, Message, GenieFeedbackRating.Negative, "wrong filter", Ct);
 
+        // Act
+        await client.SendFeedbackAsync(
+            Agent, Conversation, Message, GenieFeedbackRating.Negative, "wrong filter", Ct);
+
+        // Assert
         var request = _server.LogEntries.Single().RequestMessage;
         Assert.NotNull(request);
         Assert.NotNull(request.Body);
@@ -340,6 +366,7 @@ public sealed class GenieLifecycleTests : IDisposable
     [Fact]
     public async Task Agent_listing_follows_pagination()
     {
+        // Arrange
         _server.Given(Request.Create().WithPath("/api/2.0/genie/spaces").UsingGet()
                 .WithParam("page_token", "p2"))
             .RespondWith(Response.Create().WithStatusCode(200).WithBody(
@@ -351,25 +378,30 @@ public sealed class GenieLifecycleTests : IDisposable
 
         var client = CreateClient();
         var agents = new List<GenieAgent>();
+
+        // Act
         await foreach (var agent in client.ListAllAgentsAsync(Ct))
         {
             agents.Add(agent);
         }
 
+        // Assert
         agents.Select(a => a.Title).ShouldBe(["Sales", "Finance"]);
     }
 
-    // WireMock hands back the same token forever here. Without the repeated-token guard this
-    // enumerates until the process is killed.
     [Fact]
     public async Task Agent_listing_stops_when_the_server_repeats_a_page_token()
     {
+        // Arrange — WireMock hands back the same token forever here. Without the repeated-token
+        // guard this enumerates until the process is killed.
         _server.Given(Request.Create().WithPath("/api/2.0/genie/spaces").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithBody(
                 """{"spaces":[{"space_id":"a","title":"Sales"}],"next_page_token":"same"}"""));
 
         var client = CreateClient();
         var count = 0;
+
+        // Act
         await foreach (var _ in client.ListAllAgentsAsync(Ct))
         {
             if (++count > 50)
@@ -378,6 +410,7 @@ public sealed class GenieLifecycleTests : IDisposable
             }
         }
 
+        // Assert
         count.ShouldBe(2);
     }
 
@@ -386,10 +419,10 @@ public sealed class GenieLifecycleTests : IDisposable
     /// throws.
     /// </summary>
     /// <remarks>
-    /// Bounded by real wall time, not by a fixed iteration count. A counted loop can exhaust
-    /// its iterations while an HTTP round trip is still in flight, after which nothing advances
-    /// the clock again and the awaiting test hangs forever rather than failing. Falling out of
-    /// this loop without the task settling is itself a failure, and is reported as one.
+    /// Bounded by real wall time, not by a fixed iteration count. A counted loop can exhaust its
+    /// iterations while an HTTP round trip is still in flight, after which nothing advances the
+    /// clock again and the awaiting test hangs forever rather than failing. Falling out of this
+    /// loop without the task settling is itself a failure, and is reported as one.
     /// </remarks>
     private async Task AdvanceUntilSettledAsync(Task task)
     {
