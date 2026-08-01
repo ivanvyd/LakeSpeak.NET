@@ -81,3 +81,13 @@ contract tests only.
 Add a row when you run something, naming what you ran it against. Remove a row if the evidence
 stops being true. An entry with no evidence behind it is worse than a missing entry, because it
 gets believed.
+
+## Live run — 2026-08-01, second pass
+
+Re-run of the full live suite (8 tests) against the same Azure Databricks workspace after the
+Agent-resolution change that fetches an id directly instead of paging the listing. All 8 passed,
+which is the point of re-running it: that change alters how every `ask`, `chat` and `pack run`
+finds its Agent, and a contract test cannot tell you whether a real workspace agrees.
+
+Still not exercised live, with the reason each resists it, are the three paths listed under v0.1 in
+[ROADMAP.md](../ROADMAP.md).

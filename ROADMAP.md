@@ -19,7 +19,16 @@ Status: in development.
 - [x] CI, release pipeline, SBOM, provenance
 - [x] Verification against a live Azure Databricks workspace
 - [x] CLI output tests across terminal widths, unicode, nulls and escape-sequence injection
-- [ ] Live coverage for `chat`, chunked results and `QUERY_RESULT_EXPIRED` recovery
+- [ ] Live coverage for three paths that resist automation — each blocked for a different reason,
+      recorded here rather than left as one vague gap:
+  - `chat` — the REPL refuses to start without an interactive terminal, by design, so it cannot be
+    driven from CI or an agent session. Its underlying follow-up call *is* covered live; the loop
+    around it is not. Needs a human at a terminal.
+  - Chunked results — Genie writes its own SQL and generally bounds it, so producing a result large
+    enough to span chunks is not reliably reachable through the Conversation API. Covered by
+    contract tests against a stubbed multi-chunk response.
+  - `QUERY_RESULT_EXPIRED` recovery — the cache expires on Databricks' schedule, hours later. No
+    way to force it; covered by contract tests only.
 - [x] Command reference and authentication guide
 
 ## v0.2 — automation
