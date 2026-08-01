@@ -22,6 +22,16 @@ here rather than left to be discovered.
 - **CI** covering build, cross-platform tests, packing, tool install, CodeQL, Scorecard, secret
   scanning, dependency review, SBOM and build provenance attestation.
 
+### Fixed
+
+- Live integration tests reported **failure** rather than **skip** when no workspace was
+  configured, so a bare `dotnet test` gave a contributor without Databricks access 8 red tests.
+  They are now gated with `[Fact(SkipUnless = …)]`, which xunit evaluates before constructing the
+  class; throwing from the constructor never skipped.
+- The release workflow declared a `dry-run` input it never read, and gated publishing on a tag
+  push — so a manual run could not publish and the toggle did nothing. Replaced with `version` and
+  `publish` inputs that are actually consulted.
+
 ### Notes
 
 Verified against a live Azure Databricks workspace on 2026-08-01: `agents list`, `ask`, every
