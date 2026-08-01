@@ -5,6 +5,9 @@ Talk to governed Databricks data from your terminal and .NET applications.
 LakeSpeak.NET is an independent open-source .NET client, terminal application, and automation
 toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents.
 
+**New here?** [Getting started](docs/getting-started.md) walks from nothing to a working answer,
+including what a Genie Agent is and how to tell whether you have one.
+
 > **Not a Databricks product.** LakeSpeak.NET is an independent open-source community project. It
 > is not an official Databricks product, is not endorsed by Databricks, and is not supported under
 > any Databricks service-level agreement. "Databricks", "Databricks Genie" and "Unity Catalog" are
@@ -17,6 +20,17 @@ toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents
 **v0.1 development. Not yet released.** See [Verification status](#verification-status) for what has
 actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI surface and the
 `LakeSpeak.Genie` public API may both change.
+
+## What this is, in one paragraph
+
+[Databricks Genie](https://docs.databricks.com/aws/en/genie/) answers questions about your data in
+plain English: you ask, it writes SQL against tables someone has curated, runs it on a SQL
+warehouse, and answers. A **Genie Agent** is one such configured surface. Genie normally lives in
+the Databricks web UI — LakeSpeak puts it in your terminal, your scripts, and your .NET code, while
+keeping the generated SQL visible so you can check the answer.
+
+You need a Genie Agent to already exist in your workspace and be shared with you. LakeSpeak cannot
+create one, and sees only what your own Databricks identity can see.
 
 ## Why this exists
 
@@ -171,6 +185,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 
 ## Documentation
 
+- [Getting started](docs/getting-started.md) — zero to a working answer
 - [Commands](docs/commands.md) — every command, flag and exit code
 - [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
 - [Question Packs](docs/question-packs.md) — the schema and its failure semantics
@@ -179,6 +194,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 - [Decisions](docs/decisions/) — ADRs for the load-bearing choices
 - [Genie API surface](docs/planning/genie-api-surface.md) — every wire claim, labelled verified or not
 - [SOC 2 control mapping](docs/compliance/soc2-mapping.md)
+- [Releasing](RELEASING.md) — how a version is cut, and how to rehearse one
 
 ## Contributing
 

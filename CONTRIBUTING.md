@@ -21,6 +21,25 @@ dotnet test -c Release --filter "Category!=Live"
 The default test run needs no Databricks workspace and no credentials. That is deliberate: a
 contributor should be able to make a change and prove it without an account or a bill.
 
+## How the solution is laid out
+
+Two projects ship to NuGet. The rest are internal to the CLI tool and are bundled into it, which
+is why they are not separate packages — every extra public package is an API to support forever.
+
+| Project | Ships? | What it is |
+|---|---|---|
+| `LakeSpeak.Genie` | **NuGet** | The client: wire contracts, polling, attachments, auth, typed failures |
+| `LakeSpeak.Cli` | **NuGet** (dotnet tool) | Commands, console output, the `lakespeak` entry point |
+| `LakeSpeak.Configuration` | internal | The config file, agent aliases, the last-answer pointer |
+| `LakeSpeak.Application` | internal | Agent resolution — turning what you typed into one Agent |
+| `LakeSpeak.Rendering` | internal | Terminal tables, CSV, Markdown, JSON, control-character safety |
+| `LakeSpeak.QuestionPacks` | internal | Pack schema, validation, runner, report writer |
+
+The wire/domain split matters: everything in `LakeSpeak.Genie/Wire/` is `internal` and mirrors the
+Databricks response shapes exactly, including `space_id`. The public surface uses Agent
+terminology. That translation happens once, at the serialization boundary — see
+[`docs/planning/genie-api-surface.md`](docs/planning/genie-api-surface.md).
+
 ## Before opening a pull request
 
 ```bash

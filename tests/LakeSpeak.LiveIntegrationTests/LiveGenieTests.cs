@@ -32,15 +32,26 @@ public sealed class LiveGenieTests : IDisposable
     private readonly ServiceProvider _services;
     private readonly string _agentName;
 
+    /// <summary>
+    /// Whether a live workspace is configured. Every test here is gated on this via
+    /// <c>[Fact(SkipUnless = ...)]</c>, so a contributor without a workspace sees skips
+    /// rather than red — including on a bare <c>dotnet test</c> with no category filter.
+    /// </summary>
+    /// <remarks>
+    /// This has to be a property xunit evaluates before constructing the class. Throwing from
+    /// the constructor does not skip: xunit reports a constructor exception as a failure, which
+    /// is exactly what this suite used to do.
+    /// </remarks>
+    public static bool LiveWorkspaceConfigured =>
+        Environment.GetEnvironmentVariable("LAKESPEAK_LIVE_AGENT") is { Length: > 0 }
+        && Environment.GetEnvironmentVariable("DATABRICKS_HOST") is { Length: > 0 };
+
+    private const string NoWorkspace =
+        "No live workspace configured. Set DATABRICKS_HOST and LAKESPEAK_LIVE_AGENT; see the class remarks.";
+
     public LiveGenieTests()
     {
-        _agentName = Environment.GetEnvironmentVariable("LAKESPEAK_LIVE_AGENT")
-            ?? throw SkipException("LAKESPEAK_LIVE_AGENT is not set.");
-
-        if (Environment.GetEnvironmentVariable("DATABRICKS_HOST") is not { Length: > 0 })
-        {
-            throw SkipException("DATABRICKS_HOST is not set.");
-        }
+        _agentName = Environment.GetEnvironmentVariable("LAKESPEAK_LIVE_AGENT") ?? string.Empty;
 
         var services = new ServiceCollection();
         services.AddLakeSpeak();
@@ -50,11 +61,6 @@ public sealed class LiveGenieTests : IDisposable
     private IGenieClient Client => _services.GetRequiredService<IGenieClient>();
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
-
-    // A missing environment variable is a skipped run, not a failure: a contributor without a
-    // workspace should not see red.
-    private static InvalidOperationException SkipException(string why) =>
-        new($"Live tests skipped: {why} See the class remarks for how to run them.");
 
     private async Task<GenieAgent> ResolveAgentAsync()
     {
@@ -69,7 +75,7 @@ public sealed class LiveGenieTests : IDisposable
         throw new InvalidOperationException($"No Genie Agent named '{_agentName}' is visible.");
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task Agents_can_be_listed()
     {
         // Arrange
@@ -87,7 +93,7 @@ public sealed class LiveGenieTests : IDisposable
         agents.ShouldAllBe(a => a.Title.Length > 0);
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task A_question_returns_an_answer_and_the_sql_behind_it()
     {
         // Arrange
@@ -110,7 +116,7 @@ public sealed class LiveGenieTests : IDisposable
     /// Asserted against a live warehouse rather than a fixture, because a fixture cannot catch a
     /// serialiser deciding to parse a DECIMAL somewhere in the middle.
     /// </summary>
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task Result_cells_arrive_as_strings_and_are_never_reformatted()
     {
         // Arrange
@@ -136,7 +142,7 @@ public sealed class LiveGenieTests : IDisposable
         result.Columns.ShouldAllBe(c => c.Name.Length > 0);
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task A_follow_up_stays_in_the_same_conversation()
     {
         // Arrange
@@ -152,7 +158,7 @@ public sealed class LiveGenieTests : IDisposable
         second.MessageId.ShouldNotBe(first.MessageId);
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task An_unknown_agent_id_is_reported_as_not_found()
     {
         // Arrange
@@ -166,7 +172,7 @@ public sealed class LiveGenieTests : IDisposable
         ex.Kind.ShouldBeOneOf(GenieFailureKind.AgentNotFound, GenieFailureKind.Authorization);
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task Feedback_can_be_sent()
     {
         // Arrange — NONE, not POSITIVE or NEGATIVE, so a run does not skew a real Agent's
@@ -184,7 +190,7 @@ public sealed class LiveGenieTests : IDisposable
         await Should.NotThrowAsync(act);
     }
 
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task Feedback_text_with_a_none_rating_is_rejected_before_the_request()
     {
         // Arrange — caught client-side so the caller gets a clear message rather than an
@@ -203,7 +209,7 @@ public sealed class LiveGenieTests : IDisposable
     /// Cancellation is the path a person exercises most often — Ctrl+C on a slow question — and
     /// the one contract tests can only simulate.
     /// </summary>
-    [Fact]
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
     public async Task Cancelling_a_question_stops_promptly()
     {
         // Arrange

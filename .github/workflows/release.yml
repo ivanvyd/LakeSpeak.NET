@@ -5,10 +5,14 @@ on:
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      dry-run:
-        description: 'Build and attest, but do not publish to NuGet'
+      version:
+        description: 'Version to build, without the leading v (e.g. 0.1.0). Leave blank for a dev build.'
+        type: string
+        required: false
+      publish:
+        description: 'Publish to NuGet. Leave unticked to build, test and attest without releasing.'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -36,6 +40,8 @@ jobs:
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             v="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            v="${{ inputs.version }}"
           else
             v="0.0.0-dev.${GITHUB_RUN_NUMBER}"
           fi
@@ -85,7 +91,11 @@ jobs:
 
   publish:
     needs: build
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # A tag push publishes. A manual run publishes only when explicitly ticked, so the default
+    # dispatch is a safe rehearsal that builds, tests and attests without releasing anything.
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+      || (github.event_name == 'workflow_dispatch' && inputs.publish)
     runs-on: ubuntu-latest
     # A protected environment turns publishing into a decision someone makes,
     # rather than a side effect of pushing a tag.
@@ -114,7 +124,9 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
+      # Only a tag has a release to attach artifacts to; a manual publish has no ref to name.
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: |
             artifacts/*.zip
