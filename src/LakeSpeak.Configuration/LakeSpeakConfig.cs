@@ -106,6 +106,4 @@ public sealed class DisplaySettings
     public int MaxRows { get; set; } = 50;
 
     public bool ShowSqlByDefault { get; set; }
-
-    public bool ShowTimings { get; set; } = true;
 }

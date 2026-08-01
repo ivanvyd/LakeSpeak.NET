@@ -37,9 +37,22 @@ internal static class GlobalOptions
             Recursive = true,
         };
 
-    internal static OutputFormat ResolveFormat(ParseResult parseResult)
+    /// <param name="parseResult">The parsed command line.</param>
+    /// <param name="configuredDefault">
+    /// `defaults.output` from the config file, used when the flag is absent. Passed in rather
+    /// than read here so this stays a pure function of its inputs.
+    /// </param>
+    internal static OutputFormat ResolveFormat(ParseResult parseResult, string? configuredDefault = null)
     {
+        // The flag wins; the configured default is the fallback. System.CommandLine always
+        // supplies "text" for an absent flag, so an explicit default is indistinguishable from
+        // no flag — which is why the config value is only consulted when the result is "text".
         var raw = parseResult.GetValue(Format);
+        if (raw == "text" && configuredDefault is { Length: > 0 })
+        {
+            raw = configuredDefault;
+        }
+
         if (!OutputFormatExtensions.TryParse(raw, out var format))
         {
             throw new CliUsageException(

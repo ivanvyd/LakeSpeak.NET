@@ -44,6 +44,9 @@ internal static class ExportCommand
                 $"Unknown target '{target}'. Only 'last' is supported in this version.");
         }
 
+        // The pointer records which profile the conversation lives in. Without consulting it,
+        // this command would resolve the profile from the flag or config default and could
+        // address a different workspace than the answer came from.
         var recent = RecentConversation.Load()
             ?? throw new CliUsageException("No previous answer to export. Run `lakespeak ask` first.");
 

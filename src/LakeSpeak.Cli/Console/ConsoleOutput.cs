@@ -63,8 +63,6 @@ public sealed class ConsoleOutput
     /// <summary>Diagnostics, progress and errors.</summary>
     public IAnsiConsole Error { get; }
 
-    public int Width => IsInteractive ? System.Console.WindowWidth : 120;
-
     /// <summary>Writes raw text to stdout with no markup interpretation.</summary>
     public void WriteResult(string text) => _stdout.Write(text);
 

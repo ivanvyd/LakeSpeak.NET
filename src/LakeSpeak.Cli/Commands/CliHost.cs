@@ -36,15 +36,20 @@ internal sealed class CliHost : IDisposable
 
     internal static CliHost Create(ParseResult parseResult)
     {
-        var format = GlobalOptions.ResolveFormat(parseResult);
+        var config = LakeSpeakConfig.Load();
+
+        var format = GlobalOptions.ResolveFormat(parseResult, config.Defaults.Output);
         var quiet = parseResult.GetValue(GlobalOptions.Quiet);
         var output = new ConsoleOutput(format, quiet);
 
-        var config = LakeSpeakConfig.Load();
-
-        // Precedence: explicit flag, then the LakeSpeak config default. The environment and
-        // .databrickscfg are consulted below this, inside AddLakeSpeak.
-        var profile = parseResult.GetValue(GlobalOptions.Profile) ?? config.Defaults.Profile;
+        // Precedence: explicit flag, then the profile the last answer came from, then the
+        // config default. The pointer sits above the default so `export last` and
+        // `feedback last` address the workspace the conversation actually lives in rather than
+        // whichever profile happens to be configured. Environment and .databrickscfg are
+        // consulted below this, inside AddLakeSpeak.
+        var profile = parseResult.GetValue(GlobalOptions.Profile)
+            ?? RecentConversation.Load()?.Profile
+            ?? config.Defaults.Profile;
 
         var services = new ServiceCollection();
 
