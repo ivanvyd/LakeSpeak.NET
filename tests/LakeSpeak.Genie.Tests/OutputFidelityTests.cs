@@ -193,6 +193,46 @@ public class OutputFidelityTests
     }
 
     [Fact]
+    public void Json_carries_the_values_bound_into_the_sql()
+    {
+        // Arrange — the bind values were captured from the wire and then dropped before any
+        // renderer saw them, so a reader got the statement but not what it actually ran with.
+        var response = new GenieResponse(
+            "a", "c", "m", GenieMessageState.Completed, "answer",
+            new GenieQuery("SELECT * FROM t WHERE region = :region", Parameters:
+            [
+                new GenieQueryParameter("region", "STRING", "Germany"),
+            ]),
+            null, [], new GenieResponseMetadata(TimeSpan.Zero, 1));
+
+        // Act
+        using var parsed = System.Text.Json.JsonDocument.Parse(MachineOutput.ToJson(response));
+
+        // Assert
+        var parameter = parsed.RootElement.GetProperty("query").GetProperty("parameters")[0];
+        parameter.GetProperty("name").GetString().ShouldBe("region");
+        parameter.GetProperty("type").GetString().ShouldBe("STRING");
+        parameter.GetProperty("value").GetString().ShouldBe("Germany");
+    }
+
+    [Fact]
+    public void Json_omits_parameters_entirely_when_the_query_had_none()
+    {
+        // Arrange — an empty array would imply Genie reported zero bind values; absent is the
+        // honest encoding of "not applicable".
+        var response = new GenieResponse(
+            "a", "c", "m", GenieMessageState.Completed, "answer",
+            new GenieQuery("SELECT 1"), null, [], new GenieResponseMetadata(TimeSpan.Zero, 1));
+
+        // Act
+        using var parsed = System.Text.Json.JsonDocument.Parse(MachineOutput.ToJson(response));
+
+        // Assert
+        parsed.RootElement.GetProperty("query")
+            .TryGetProperty("parameters", out _).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Json_uses_a_stable_lowercase_status_vocabulary()
     {
         // Arrange
