@@ -333,10 +333,19 @@ public sealed partial class GenieClient : IGenieClient
 
         var rows = statement.Result?.DataArray ?? [];
 
+        // The Statement Execution contract chunks large results, and this client reads only the
+        // first chunk. `manifest.truncated` does NOT cover that: it reports statement-level
+        // truncation by Databricks, and is false for a result that is merely split. Reporting
+        // only that flag would hand back the first chunk with truncated=false — a partial
+        // result presented as complete, which is the one failure this client must never have.
+        // Fetching the remaining chunks is v0.2 work; until then the shortfall is visible.
+        var hasMoreChunks = statement.Result?.NextChunkIndex is not null
+            || (statement.Manifest.TotalRowCount is { } total && rows.Count < total);
+
         return new GenieQueryResult(
             cols,
             rows,
-            statement.Manifest.Truncated ?? false,
+            (statement.Manifest.Truncated ?? false) || hasMoreChunks,
             statement.Manifest.TotalRowCount);
     }
 

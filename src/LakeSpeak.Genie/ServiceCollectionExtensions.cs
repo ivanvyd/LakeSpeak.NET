@@ -1,6 +1,7 @@
 using LakeSpeak.Genie.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace LakeSpeak.Genie;
@@ -63,12 +64,16 @@ public static class ServiceCollectionExtensions
             .AddHttpMessageHandler<GenieAuthenticationHandler>()
             .AddStandardResilienceHandler(resilience =>
             {
-                // Retrying a 401 or 403 burns quota to produce the same answer, and retrying a
-                // POST that starts a conversation would ask Genie the same question twice.
-                // Only transient transport faults and 429/5xx are retried, which is the
-                // standard handler's default classification.
                 resilience.Retry.MaxRetryAttempts = 3;
                 resilience.Retry.UseJitter = true;
+
+                // The standard handler retries POST by default. That is wrong for this API:
+                // start-conversation and create-message are not idempotent, so a retry after a
+                // transient 5xx asks Genie the SAME question a second time — running the SQL
+                // warehouse twice, billing twice, and leaving an orphaned conversation whose
+                // id the client never returns. Reads stay retryable, which is where retrying
+                // actually helps: the polling loop is almost all of the request volume.
+                resilience.Retry.DisableForUnsafeHttpMethods();
 
                 // The per-attempt ceiling must not undercut the caller's own request timeout,
                 // or every slow-but-succeeding call is cancelled by the pipeline instead.

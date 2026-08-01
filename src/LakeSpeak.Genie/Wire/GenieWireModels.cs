@@ -271,6 +271,11 @@ internal sealed record ResultDataWire
 
     [JsonPropertyName("chunk_index")]
     public int? ChunkIndex { get; init; }
+
+    // Present when the result continues beyond this chunk. The client reads only the first
+    // chunk, so this is what stops a partial result being reported as complete.
+    [JsonPropertyName("next_chunk_index")]
+    public int? NextChunkIndex { get; init; }
 }
 
 internal sealed record DownloadHandleWire
