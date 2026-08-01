@@ -256,8 +256,8 @@
       "lakespeak.application": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Configuration": "[1.0.0, )",
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Configuration": "[0.1.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.10, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.10, )"
         }
@@ -265,7 +265,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
           "Microsoft.Extensions.Configuration": "[10.0.10, )",
           "Microsoft.Extensions.Configuration.Binder": "[10.0.10, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.10, )",
@@ -287,15 +287,16 @@
         "type": "Project",
         "dependencies": {
           "JsonSchema.Net": "[9.4.0, )",
-          "LakeSpeak.Application": "[1.0.0, )",
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Application": "[0.1.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
+          "LakeSpeak.Rendering": "[0.1.0, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[1.0.0, )",
+          "LakeSpeak.Genie": "[0.1.0, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },

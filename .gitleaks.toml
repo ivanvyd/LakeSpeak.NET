@@ -1,0 +1,19 @@
+[extend]
+useDefault = true
+
+# The redaction tests need credential-shaped strings to assert against. They are
+# synthetic and were never valid anywhere. Allowlisting the test file by path
+# rather than disabling the rule keeps the scanner honest about every other file.
+[[rules]]
+id = "lakespeak-synthetic-test-credentials"
+description = "Synthetic credentials used only to prove redaction works"
+regex = '''dapi[a-f0-9]{32,}'''
+[rules.allowlist]
+paths = ['''tests/LakeSpeak\.Genie\.Tests/DiagnosticRedactionTests\.cs''']
+
+[allowlist]
+description = "Test fixtures containing deliberately fake credentials"
+paths = [
+  '''tests/.*/DiagnosticRedactionTests\.cs''',
+  '''tests/.*/fixtures/.*\.json''',
+]
