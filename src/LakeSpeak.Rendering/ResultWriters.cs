@@ -198,6 +198,15 @@ public static class CsvWriter
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Escapes a single CSV field, including the spreadsheet-formula guard.
+    /// </summary>
+    /// <remarks>
+    /// Public so no other writer reimplements it. A second copy of this rule is how one CSV
+    /// path ends up defused and another does not.
+    /// </remarks>
+    public static string EscapeField(string? value) => Quote(value);
+
     private static string Quote(string? value)
     {
         // A SQL NULL becomes an empty unquoted field, which is how every CSV reader

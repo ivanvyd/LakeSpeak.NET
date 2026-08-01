@@ -115,6 +115,25 @@ public class OutputFidelityTests
         csv.ShouldContain("'");
     }
 
+    [Theory]
+    [InlineData("=1+1")]
+    [InlineData("\t=cmd|'/c calc'!A1")]
+    [InlineData("has,comma")]
+    [InlineData(null)]
+    public void The_shared_escaper_carries_the_same_rules_as_the_row_writer(string? value)
+    {
+        // Arrange — every CSV path must go through one escaper. A second copy is how one path
+        // ends up defused against formula injection and another does not, which is exactly what
+        // happened to `agents list --format csv`.
+        var viaRowWriter = CsvWriter.Write(Result(("payload", value))).Split('\n')[1].TrimEnd('\r');
+
+        // Act
+        var viaSharedHelper = CsvWriter.EscapeField(value);
+
+        // Assert
+        viaSharedHelper.ShouldBe(viaRowWriter);
+    }
+
     [Fact]
     public void Csv_quotes_values_containing_delimiters_and_quotes()
     {

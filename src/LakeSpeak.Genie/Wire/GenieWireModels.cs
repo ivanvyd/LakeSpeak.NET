@@ -294,16 +294,6 @@ internal sealed record ExternalLinkWire
     public long? RowCount { get; init; }
 }
 
-internal sealed record DownloadHandleWire
-{
-    [JsonPropertyName("download_id")]
-    public string? DownloadId { get; init; }
-
-    // Bearer-equivalent. Never logged; see DiagnosticRedaction.
-    [JsonPropertyName("download_id_signature")]
-    public string? DownloadIdSignature { get; init; }
-}
-
 internal sealed record FeedbackRequestWire
 {
     [JsonPropertyName("rating")]

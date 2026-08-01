@@ -60,7 +60,7 @@ internal static class AgentsCommand
                 host.Output.WriteResultLine("id,title");
                 foreach (var agent in agents)
                 {
-                    host.Output.WriteResultLine($"{agent.AgentId},{Escape(agent.Title)}");
+                    host.Output.WriteResultLine($"{CsvWriter.EscapeField(agent.AgentId)},{CsvWriter.EscapeField(agent.Title)}");
                 }
 
                 break;
@@ -72,9 +72,4 @@ internal static class AgentsCommand
 
         return ExitCode.Success;
     }
-
-    private static string Escape(string value) =>
-        value.AsSpan().ContainsAny(",\"\r\n")
-            ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
-            : value;
 }
