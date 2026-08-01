@@ -53,6 +53,9 @@ internal static class FeedbackCommand
                 $"Unknown rating '{other}'. Use positive, negative, or none."),
         };
 
+        // The pointer records which profile the conversation lives in. Without consulting it,
+        // this command would resolve the profile from the flag or config default and could
+        // address a different workspace than the answer came from.
         var recent = RecentConversation.Load()
             ?? throw new CliUsageException(
                 "No previous answer to rate. Run `lakespeak ask` first.");

@@ -75,8 +75,10 @@ public static class ServiceCollectionExtensions
                 // actually helps: the polling loop is almost all of the request volume.
                 resilience.Retry.DisableForUnsafeHttpMethods();
 
-                // The per-attempt ceiling must not undercut the caller's own request timeout,
-                // or every slow-but-succeeding call is cancelled by the pipeline instead.
+                // These sit under the default 100s RequestTimeout. Nothing enforces that
+                // relationship, so a caller who lowers RequestTimeout below 30s can have a
+                // slow-but-succeeding call cancelled by the pipeline rather than by their own
+                // timeout. Not guarded today; stated here rather than implied to be safe.
                 resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
                 resilience.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
                 resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);

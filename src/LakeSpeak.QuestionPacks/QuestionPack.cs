@@ -157,9 +157,12 @@ public static partial class QuestionPackLoader
         }
 
         var format = raw.Spec?.Output?.Format ?? "markdown";
-        if (format is not ("markdown" or "json"))
+        // Only markdown, because only markdown has a writer. Accepting "json" here and then
+        // writing markdown anyway is worse than rejecting it: the pack author gets a file that
+        // validated cleanly and is silently the wrong format.
+        if (format is not "markdown")
         {
-            errors.Add($"spec.output.format must be 'markdown' or 'json' (found '{format}')");
+            errors.Add($"spec.output.format must be 'markdown' (found '{format}'). JSON reports are not implemented.");
         }
 
         if (errors.Count > 0)

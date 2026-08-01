@@ -137,6 +137,15 @@ public sealed class DatabricksCliTokenProvider : IGenieTokenProvider, IDisposabl
                 $"The Databricks CLI did not return a token within {ProcessTimeout.TotalSeconds:F0}s. " +
                 "If this profile needs a browser login, run `databricks auth login` first.");
         }
+        catch (OperationCanceledException)
+        {
+            // The caller cancelled — Ctrl+C on a chat question, say. Disposing the Process
+            // releases the handle but does not stop the program, so without this the CLI (and
+            // any browser it opened for a login) keeps running detached after LakeSpeak has
+            // moved on. The timeout path above kills it; cancellation must too.
+            TryKill(process);
+            throw;
+        }
 
         var stdout = await stdoutTask.ConfigureAwait(false);
         var stderr = await stderrTask.ConfigureAwait(false);

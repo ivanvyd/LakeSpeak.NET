@@ -173,7 +173,8 @@ public static class MachineOutput
 /// <summary>Writes a query result as RFC 4180 CSV.</summary>
 public static class CsvWriter
 {
-    // Characters a spreadsheet will skip over before deciding a cell is a formula.
+    // Characters a spreadsheet skips over before deciding a cell is a formula. OWASP names
+    // tab and carriage return; a leading space is included for the same reason.
     private static readonly char[] FormulaLeadIn = ['\t', '\r', ' '];
 
     /// <summary>

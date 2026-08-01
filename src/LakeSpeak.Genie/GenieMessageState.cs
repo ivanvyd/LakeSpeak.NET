@@ -85,6 +85,6 @@ public static class GenieMessageStateExtensions
         GenieMessageState.Cancelled => "Cancelled",
         GenieMessageState.QueryResultExpired => "Query result expired",
         GenieMessageState.Unknown => "Working",
-        _ => "Working",
+        _ => "Working",   // unreachable for any value FromWire can produce; required by the compiler
     };
 }
