@@ -56,11 +56,13 @@ release is cheap.
 
 ### Prerequisites, once
 
-> **None of this is configured yet.** As of the last check the repository has no environments and
-> no secrets. This matters more than it looks: a workflow that names an environment which does not
-> exist does **not** fail — GitHub creates it implicitly, with no protection rules. So until the
-> steps below are done there is no approval gate, and the only thing standing between a mistyped
-> manual run and a permanent package is the version guard in the workflow itself.
+> **Configured as of 2026-08-01.** The trusted publishing policy exists on nuget.org, the
+> `NUGET_USER` secret is set, and the `nuget` environment exists with `ivanvyd` as a required
+> reviewer. The steps below record what was done, so it can be rebuilt or audited.
+>
+> One thing worth knowing if you ever recreate this: a workflow naming an environment that does
+> **not** exist does not fail — GitHub creates it implicitly with no protection rules. An absent
+> environment is silently permissive, not loud.
 
 Publishing uses **trusted publishing**, not a stored API key. GitHub mints a short-lived OIDC
 token, nuget.org verifies it against a policy naming this exact repository and workflow, and
@@ -76,7 +78,17 @@ Log in to nuget.org → your username → **Trusted Publishing** → add a polic
 | Repository Owner | `ivanvyd` |
 | Repository | `lakespeak` |
 | Workflow File | `release.yml` — the file name only, **not** `.github/workflows/release.yml` |
-| Environment | `nuget` — must match the `environment:` in the publish job |
+| Environment | `nuget` — set, so the policy only accepts tokens minted from that environment |
+
+**Environment** is optional. nuget.org only checks the token's `environment` claim [when the
+policy supplies a
+filter](https://github.com/NuGet/Home/blob/dev/accepted/2024/trusted-publishers-oidc-for-nuget-push.technical.md),
+so leaving it blank would still accept a job running under `environment: nuget`. It is set here
+because filling it in narrows the policy: a token minted from any other environment is rejected.
+Owner, repository and workflow file are checked either way.
+
+Because it *is* set, the publish job must keep `environment: nuget`. Removing it would change the
+token's claim and the policy would stop matching.
 
 The policy is owned by you or by an organisation, and applies to every package that owner owns.
 If Trusted Publishing does not appear in your account, it has not been rolled out to you yet;
@@ -94,10 +106,12 @@ gh secret set NUGET_USER
 **3. Create the `nuget` environment with a required reviewer.**
 
 Settings → Environments → New environment → `nuget` → add yourself under *Required reviewers*.
+Leave *Prevent self-review* off: as the only reviewer you would otherwise be unable to approve
+your own release, which blocks publishing entirely rather than securing it.
 
-Creating the environment alone changes nothing — the required reviewer *is* the gate, and it is
-also what the trusted publishing policy binds to. Without it, publishing is a side effect of
-pushing a tag rather than a decision someone makes.
+Creating the environment alone changes nothing — the required reviewer *is* the gate. With it, a
+tag push builds, tests, packs and attests, then stops and waits for you before anything reaches
+NuGet.
 
 **4. Verify all three before the first release.**
 
