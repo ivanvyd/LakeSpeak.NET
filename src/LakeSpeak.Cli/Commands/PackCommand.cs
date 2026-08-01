@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Reflection;
+using LakeSpeak.Cli.Console;
 using LakeSpeak.QuestionPacks;
 using Spectre.Console;
 
@@ -57,7 +58,7 @@ internal static class PackCommand
             var pack = QuestionPackLoader.Load(path);
             host.Output.Error.MarkupLine(
                 $"[green]OK[/] — [bold]{Markup.Escape(pack.Name)}[/]: " +
-                $"{pack.Questions.Count} question(s) against Agent '{Markup.Escape(pack.Agent)}'.");
+                $"{Wording.Count(pack.Questions.Count, "question")} against Agent '{Markup.Escape(pack.Agent)}'.");
             return ExitCode.Success;
         }
         catch (PackValidationException ex)

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using LakeSpeak.Cli.Console;
 using LakeSpeak.Genie;
 using LakeSpeak.Rendering;
 using Spectre.Console;
@@ -359,7 +360,7 @@ internal sealed class ChatSession(CliHost host, GenieAgent agent)
 
         File.WriteAllText(full, CsvWriter.Write(result));
         host.Output.Error.MarkupLine(
-            $"[green]Wrote[/] {Markup.Escape(full)} [dim]({result.RowCount} rows). " +
+            $"[green]Wrote[/] {Markup.Escape(full)} [dim]({Wording.Count(result.RowCount, "row")}). " +
             "It contains governed data; look after it.[/]");
     }
 

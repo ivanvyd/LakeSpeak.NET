@@ -1,0 +1,4 @@
+Profiles in .databrickscfg: 0
+Requesting a token via DATABRICKS_TOKEN…
+OK — obtained a token (3331 characters, not shown).
+OK — the workspace answered; 1 Agent visible.
