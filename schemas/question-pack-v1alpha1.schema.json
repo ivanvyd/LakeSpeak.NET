@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lakespeak.dev/schemas/question-pack-v1alpha1.schema.json",
+  "title": "LakeSpeak Question Pack (v1alpha1)",
+  "description": "A version-controlled set of Genie questions that produce a repeatable report. Question Packs are data, never code: nothing here can execute a command, read a file, or widen the permissions of the identity running it.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "lakespeak.dev/v1alpha1",
+      "description": "Pinned so a pack written today keeps its meaning when the schema evolves."
+    },
+    "kind": { "const": "QuestionPack" },
+    "metadata": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+          "description": "Lowercase kebab-case. Used in output filenames, so it must be filesystem-safe."
+        },
+        "description": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["agent", "questions"],
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Agent id, exact title, or an alias configured locally. Required and never inferred: a report that silently ran against a different Agent is worse than one that failed."
+        },
+        "profile": {
+          "type": "string",
+          "description": "Databricks CLI profile. A profile name only; never a credential."
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Capped because each question is a Genie conversation costing warehouse time. A pack that fans out to hundreds of questions is a scheduled job, not a report.",
+          "items": {
+            "type": "object",
+            "required": ["id", "ask"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+                "description": "Stable identifier. Used as the anchor in generated reports, so renaming it breaks existing links."
+              },
+              "title": { "type": "string", "maxLength": 200 },
+              "ask": { "type": "string", "minLength": 1, "maxLength": 4000 },
+              "timeout": {
+                "type": "string",
+                "pattern": "^[0-9]+[smh]$",
+                "description": "Per-question wait, for example 90s or 5m. Falls back to the pack default."
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "format": { "enum": ["markdown", "json"] },
+            "path": {
+              "type": "string",
+              "description": "Written relative to the pack file. Absolute paths and parent-directory traversal are rejected at load time."
+            }
+          }
+        },
+        "behavior": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "continueOnQuestionFailure": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true the run completes and failed questions are reported in place, exiting 8 for partial failure. When false the first failure stops the run."
+            },
+            "includeGeneratedSql": { "type": "boolean", "default": false },
+            "includeTimings": { "type": "boolean", "default": true },
+            "includeIdentifiers": {
+              "type": "boolean",
+              "default": false,
+              "description": "Record conversation and message ids in the report so an answer can be traced back in Databricks. Off by default because those ids identify a conversation containing governed data."
+            },
+            "timeout": { "type": "string", "pattern": "^[0-9]+[smh]$", "default": "10m" }
+          }
+        }
+      }
+    }
+  }
+}

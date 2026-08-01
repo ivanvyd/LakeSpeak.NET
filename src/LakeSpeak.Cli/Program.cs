@@ -20,6 +20,7 @@ internal static class Program
         root.Subcommands.Add(AskCommand.Create());
         root.Subcommands.Add(AuthCommand.Create());
         root.Subcommands.Add(ConfigCommand.Create());
+        root.Subcommands.Add(PackCommand.Create());
 
         return await root.Parse(args).InvokeAsync().ConfigureAwait(false);
     }

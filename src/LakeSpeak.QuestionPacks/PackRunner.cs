@@ -1,0 +1,231 @@
+using System.Globalization;
+using System.Text;
+using LakeSpeak.Genie;
+using LakeSpeak.Rendering;
+
+namespace LakeSpeak.QuestionPacks;
+
+public sealed record QuestionOutcome(
+    PackQuestion Question,
+    GenieResponse? Response,
+    string? Failure,
+    TimeSpan Duration)
+{
+    public bool Succeeded => Response is not null;
+}
+
+public sealed record PackResult(
+    QuestionPack Pack,
+    string AgentId,
+    string? AgentTitle,
+    IReadOnlyList<QuestionOutcome> Outcomes,
+    DateTimeOffset StartedAt,
+    TimeSpan Duration)
+{
+    public int FailureCount => Outcomes.Count(o => !o.Succeeded);
+
+    public bool AnyFailed => FailureCount > 0;
+}
+
+/// <summary>
+/// Runs a pack's questions in order and collects the outcomes.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Questions run sequentially rather than in parallel. Each one occupies a SQL warehouse, and a
+/// pack that fires ten concurrent questions at a shared warehouse degrades it for everyone else
+/// on it. Reports are not latency-sensitive.
+/// </para>
+/// <para>
+/// Each question gets a fresh conversation. Genie conversations are stateful, so reusing one
+/// would let the answer to question three depend on questions one and two — making the report
+/// non-deterministic and order-dependent in a way nobody reading it would suspect.
+/// </para>
+/// </remarks>
+public sealed class PackRunner(IGenieClient client, TimeProvider? timeProvider = null)
+{
+    private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
+
+    public async Task<PackResult> RunAsync(
+        QuestionPack pack,
+        string agentId,
+        string? agentTitle,
+        IProgress<PackQuestion>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var startedAt = _time.GetUtcNow();
+        var packStart = _time.GetTimestamp();
+        var outcomes = new List<QuestionOutcome>(pack.Questions.Count);
+
+        foreach (var question in pack.Questions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(question);
+
+            var start = _time.GetTimestamp();
+            try
+            {
+                var response = await client.AskAsync(
+                    agentId,
+                    question.Ask,
+                    new GenieAskOptions
+                    {
+                        IncludeQueryResult = true,
+                        Timeout = question.Timeout ?? pack.Behavior.Timeout,
+                    },
+                    cancellationToken).ConfigureAwait(false);
+
+                outcomes.Add(new QuestionOutcome(question, response, null, _time.GetElapsedTime(start)));
+            }
+            catch (GenieException ex)
+            {
+                if (!pack.Behavior.ContinueOnQuestionFailure)
+                {
+                    throw;
+                }
+
+                // The message is already scrubbed by GenieException, so it is safe to put in a
+                // report that gets committed or pasted into a ticket.
+                outcomes.Add(new QuestionOutcome(question, null, ex.Message, _time.GetElapsedTime(start)));
+            }
+        }
+
+        return new PackResult(
+            pack, agentId, agentTitle, outcomes, startedAt, _time.GetElapsedTime(packStart));
+    }
+}
+
+/// <summary>
+/// Writes a pack result as Markdown.
+/// </summary>
+/// <remarks>
+/// The structure is deterministic: the same pack against the same data produces a byte-identical
+/// report except for the timestamp and timings. That is what makes a committed report reviewable
+/// in a diff.
+/// </remarks>
+public static class PackReportWriter
+{
+    public static string WriteMarkdown(PackResult result, string toolVersion)
+    {
+        var builder = new StringBuilder();
+        var pack = result.Pack;
+
+        builder.AppendLine(CultureInfo.InvariantCulture, $"# {Title(pack)}")
+            .AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(pack.Description))
+        {
+            builder.AppendLine(TerminalSafety.Sanitize(pack.Description)).AppendLine();
+        }
+
+        builder.AppendLine(CultureInfo.InvariantCulture,
+                $"Generated: {result.StartedAt.UtcDateTime:yyyy-MM-dd HH:mm} UTC")
+            .AppendLine(CultureInfo.InvariantCulture, $"Agent: {result.AgentTitle ?? result.AgentId}")
+            .AppendLine(CultureInfo.InvariantCulture, $"LakeSpeak: {toolVersion}")
+            .AppendLine();
+
+        if (result.AnyFailed)
+        {
+            // Stated at the top, not buried after the answers that did work. A report whose
+            // failures are only visible at the bottom gets read as complete.
+            builder.AppendLine(CultureInfo.InvariantCulture,
+                    $"> **{result.FailureCount} of {result.Outcomes.Count} questions failed.** Sections below say which, and why.")
+                .AppendLine();
+        }
+
+        builder.AppendLine("Answers are generated by Databricks Genie from natural-language questions. " +
+                "They can be wrong in ways that read as plausible. Check the generated SQL before " +
+                "acting on anything consequential.")
+            .AppendLine();
+
+        foreach (var outcome in result.Outcomes)
+        {
+            WriteSection(builder, outcome, pack);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void WriteSection(StringBuilder builder, QuestionOutcome outcome, QuestionPack pack)
+    {
+        var heading = outcome.Question.Title ?? outcome.Question.Id;
+        builder.AppendLine(CultureInfo.InvariantCulture, $"## {TerminalSafety.Sanitize(heading)}")
+            .AppendLine();
+
+        if (!outcome.Succeeded)
+        {
+            builder.AppendLine(CultureInfo.InvariantCulture,
+                    $"**This question failed.** {TerminalSafety.Sanitize(outcome.Failure)}")
+                .AppendLine();
+            return;
+        }
+
+        var response = outcome.Response!;
+
+        if (!string.IsNullOrWhiteSpace(response.Text))
+        {
+            builder.AppendLine(TerminalSafety.Sanitize(response.Text)).AppendLine();
+        }
+
+        if (response.Result is { Columns.Count: > 0 } table)
+        {
+            builder.Append("| ")
+                .Append(string.Join(" | ", table.Columns.Select(c => EscapeCell(c.Name))))
+                .AppendLine(" |")
+                .Append('|')
+                .Append(string.Concat(Enumerable.Repeat("---|", table.Columns.Count)))
+                .AppendLine();
+
+            foreach (var row in table.Rows)
+            {
+                builder.Append("| ").Append(string.Join(" | ", row.Select(EscapeCell))).AppendLine(" |");
+            }
+
+            builder.AppendLine();
+
+            if (table.IsTruncated)
+            {
+                builder.AppendLine("_Databricks truncated this result; it is not the full set of rows._")
+                    .AppendLine();
+            }
+        }
+
+        if (pack.Behavior.IncludeGeneratedSql && response.Query?.Sql is { Length: > 0 } sql)
+        {
+            builder.AppendLine("<details><summary>Generated SQL</summary>")
+                .AppendLine()
+                .AppendLine("```sql")
+                .AppendLine(TerminalSafety.Sanitize(sql))
+                .AppendLine("```")
+                .AppendLine()
+                .AppendLine("</details>")
+                .AppendLine();
+        }
+
+        var notes = new List<string>();
+        if (pack.Behavior.IncludeTimings)
+        {
+            notes.Add($"{outcome.Duration.TotalSeconds:F1}s");
+        }
+
+        if (pack.Behavior.IncludeIdentifiers)
+        {
+            notes.Add($"conversation `{response.ConversationId}`");
+            notes.Add($"message `{response.MessageId}`");
+        }
+
+        if (notes.Count > 0)
+        {
+            builder.AppendLine(CultureInfo.InvariantCulture, $"_{string.Join(" · ", notes)}_").AppendLine();
+        }
+    }
+
+    private static string Title(QuestionPack pack) =>
+        string.Join(' ', pack.Name.Split('-').Select(w =>
+            w.Length == 0 ? w : char.ToUpperInvariant(w[0]) + w[1..]));
+
+    private static string EscapeCell(string? value) =>
+        value is null
+            ? string.Empty
+            : TerminalSafety.SanitizeCell(value).Replace("|", "\\|", StringComparison.Ordinal);
+}
