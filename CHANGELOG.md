@@ -6,6 +6,13 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.1.0-preview.1 — 2026-08-01
+
+First published build. A preview: the CLI surface and the `LakeSpeak.Genie` public API may both
+change before `0.1.0`, and `0.x` minor versions may break the API.
+
 ### Added
 
 - **`LakeSpeak.Genie`** — a client for the Databricks Genie Conversation API: Agent listing with

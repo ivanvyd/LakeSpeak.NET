@@ -21,9 +21,14 @@ including what a Genie Agent is and how to tell whether you have one.
 
 ## Status
 
-**v0.1 development. Not yet released.** See [Verification status](#verification-status) for what has
-actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI surface and the
-`LakeSpeak.Genie` public API may both change.
+**v0.1.0-preview.1 — first published build.** See [Verification status](#verification-status) for
+what has actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI
+surface and the `LakeSpeak.Genie` public API may both change, and before `v1.0` a minor version is
+allowed to break them.
+
+```bash
+dotnet tool install --global LakeSpeak.Cli --prerelease
+```
 
 ## What this is, in one paragraph
 
