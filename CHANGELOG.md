@@ -24,6 +24,8 @@ here rather than left to be discovered.
 
 ### Notes
 
-Nothing in this release has been verified against a live Databricks workspace. See
-[docs/compatibility.md](docs/compatibility.md), which records what was actually tested rather than
-what is expected to work.
+Verified against a live Azure Databricks workspace on 2026-08-01: `agents list`, `ask`, every
+output format, `pack run`, `export last` and `feedback last`. `chat`, chunked and external-link
+results, visualizations and `QUERY_RESULT_EXPIRED` recovery were **not** exercised live and remain
+covered by contract tests only. [docs/compatibility.md](docs/compatibility.md) records exactly what
+was run against what.

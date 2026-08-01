@@ -7,9 +7,9 @@ namespace LakeSpeak.Genie.Authentication;
 /// </summary>
 /// <remarks>
 /// The token is fetched per request rather than captured once, so a refresh by the provider takes
-/// effect without rebuilding the client. It is attached here and nowhere else: no call site
-/// handles a raw token, which is what keeps the credential out of URLs, logs and argument vectors
-/// by construction rather than by review.
+/// effect without rebuilding the client. This is the only place in the HTTP pipeline that touches
+/// a raw token, so no request-building code can put one in a URL or a log by accident.
+/// <c>auth check</c> also calls the provider directly, but only to report the token's length.
 /// </remarks>
 public sealed class GenieAuthenticationHandler(IGenieTokenProvider tokenProvider) : DelegatingHandler
 {
