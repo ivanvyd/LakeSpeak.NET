@@ -25,8 +25,10 @@ and no token is written to its configuration file.
 **Tokens are never passed as process arguments.** Command lines are readable by other users on the
 same host on most platforms.
 
-**Authorization headers are redacted** in all diagnostic output, including `--debug`, and in
-exception messages.
+**Authorization headers are redacted** in all diagnostic output, including `--verbose`, and in
+exception messages. Scheme-prefixed credentials (`Authorization: Bearer <token>`) are covered —
+an earlier pattern redacted only the scheme word and left the credential, which is why the
+redaction suite now tries to defeat itself rather than confirming it works on convenient shapes.
 
 **Presigned result URLs are fetched without the `Authorization` header.** Sending a Databricks
 bearer token to blob storage would leak it to a third party. Databricks rejects such requests with

@@ -4,7 +4,6 @@
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="JsonSchema.Net" />
     <ProjectReference Include="..\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
-    <ProjectReference Include="..\LakeSpeak.Application\LakeSpeak.Application.csproj" />
     <ProjectReference Include="..\LakeSpeak.Rendering\LakeSpeak.Rendering.csproj" />
   </ItemGroup>
 

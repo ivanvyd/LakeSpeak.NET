@@ -22,6 +22,9 @@ public enum GenieFailureKind
     QueryResultExpired,
     QueryExecutionFailed,
     MalformedResponse,
+
+    /// <summary>A result shape this version cannot read, such as external links.</summary>
+    UnsupportedResult,
     Network,
     Unexpected,
 }
@@ -86,10 +89,17 @@ public static partial class DiagnosticRedaction
     [GeneratedRegex(@"\bey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Jwt();
 
-    // The optional quote after the key name matters: in JSON the key is `"name":"value"`, so a
-    // pattern that jumps straight from the name to the separator never matches, and the secret
-    // survives. A test with a realistic JSON payload caught exactly that.
-    [GeneratedRegex(@"(?i)\b(authorization|bearer|x-databricks-[\w-]*token|access_token|refresh_token|client_secret|download_id_signature|statement_id_signature)\b[""']?\s*[:=]?\s*[""']?([^\s""',}]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    // Two details carry this pattern, and both were found by a credential surviving it.
+    //
+    // The optional quote after the key name: in JSON the key is `"name":"value"`, so a pattern
+    // jumping straight from the name to the separator never matches and the secret survives.
+    //
+    // The optional scheme word: `Authorization: Bearer <token>` is the single most common way a
+    // credential is written down. Without consuming `Bearer`/`Basic` first, the value capture
+    // stops at the space and redacts only the scheme — leaving the credential itself in the
+    // output. That is precisely what happened, so the scheme is consumed and the token after it
+    // is what gets taken.
+    [GeneratedRegex(@"(?i)\b(authorization|bearer|x-databricks-[\w-]*token|access_token|refresh_token|client_secret|download_id_signature|statement_id_signature)\b[""']?\s*[:=]?\s*(?:(?:bearer|basic)\s+)?[""']?([^\s""',}]+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex NamedSecret();
 
     /// <summary>Replaces credential-shaped substrings with <see cref="Placeholder"/>.</summary>

@@ -173,6 +173,9 @@ public static class MachineOutput
 /// <summary>Writes a query result as RFC 4180 CSV.</summary>
 public static class CsvWriter
 {
+    // Characters a spreadsheet will skip over before deciding a cell is a formula.
+    private static readonly char[] FormulaLeadIn = ['\t', '\r', ' '];
+
     /// <summary>
     /// Formats the query result. Values are written exactly as Databricks returned them.
     /// </summary>
@@ -204,9 +207,12 @@ public static class CsvWriter
             return string.Empty;
         }
 
-        // A leading =, +, - or @ makes a spreadsheet treat the cell as a formula. Prefixing a
-        // single quote is the conventional defence and is visible rather than silent.
-        var needsFormulaGuard = value.Length > 0 && value[0] is '=' or '+' or '-' or '@';
+        // A leading =, +, - or @ makes a spreadsheet treat the cell as a formula. Tab and
+        // carriage return count too: OWASP documents both as accepted prefixes before the
+        // marker, and some spreadsheet versions honour them. Prefixing a single quote is the
+        // conventional defence and is visible rather than silent.
+        var lead = value.AsSpan().TrimStart(FormulaLeadIn);
+        var needsFormulaGuard = lead.Length > 0 && lead[0] is '=' or '+' or '-' or '@';
         var escaped = value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
         if (needsFormulaGuard)

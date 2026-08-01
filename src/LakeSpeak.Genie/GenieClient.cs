@@ -343,6 +343,22 @@ public sealed partial class GenieClient : IGenieClient
             .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName))
             .ToList();
 
+        // EXTERNAL_LINKS disposition puts the rows behind presigned URLs and omits data_array
+        // entirely. This client cannot follow those links, and returning an empty row set as a
+        // successful complete result would be the worst outcome available — a silently empty
+        // export that looks like a real answer. Fail loudly instead.
+        if (statement.Result?.ExternalLinks is { Count: > 0 } links
+            && statement.Result.DataArray is null)
+        {
+            var rowsBehindLinks = links.Sum(l => l.RowCount ?? 0);
+            throw new GenieException(
+                GenieFailureKind.UnsupportedResult,
+                $"Databricks returned this result as {links.Count} external link(s) covering " +
+                $"{rowsBehindLinks} row(s) rather than inline rows. This version cannot read that " +
+                "form, and will not report an empty result as a complete one. Narrow the question " +
+                "so the result comes back inline.");
+        }
+
         var rows = statement.Result?.DataArray ?? [];
 
         // The Statement Execution contract chunks large results, and this client reads only the
@@ -404,16 +420,37 @@ public sealed partial class GenieClient : IGenieClient
             new GenieResponseMetadata(
                 duration,
                 pollCount,
-                FromUnixMillis(wire.CreatedTimestamp),
-                FromUnixMillis(wire.LastUpdatedTimestamp),
+                FromUnixTimestamp(wire.CreatedTimestamp),
+                FromUnixTimestamp(wire.LastUpdatedTimestamp),
                 queryAttachment?.AttachmentId))
         {
             HasVisualization = attachments.Any(a => a.Viz is not null),
         };
     }
 
-    private static DateTimeOffset? FromUnixMillis(long? value)
-        => value is null or 0 ? null : DateTimeOffset.FromUnixTimeMilliseconds(value.Value);
+    /// <summary>
+    /// Converts a Genie timestamp, detecting its unit by magnitude.
+    /// </summary>
+    /// <remarks>
+    /// The field is typed <c>int64</c> and its unit is undocumented — the SDK name suggests
+    /// milliseconds, while the one published example is ten digits, which is seconds. Assuming
+    /// milliseconds on a seconds value yields January 1970 instead of the real date: a silent
+    /// 55-year error on a public property. The threshold is the year 2001 in milliseconds; any
+    /// plausible Genie timestamp in seconds is far below it, and any in milliseconds far above.
+    /// </remarks>
+    private static DateTimeOffset? FromUnixTimestamp(long? value)
+    {
+        if (value is null or <= 0)
+        {
+            return null;
+        }
+
+        const long millisecondThreshold = 100_000_000_000L;
+
+        return value.Value >= millisecondThreshold
+            ? DateTimeOffset.FromUnixTimeMilliseconds(value.Value)
+            : DateTimeOffset.FromUnixTimeSeconds(value.Value);
+    }
 
     private static string Esc(string segment) => Uri.EscapeDataString(segment);
 

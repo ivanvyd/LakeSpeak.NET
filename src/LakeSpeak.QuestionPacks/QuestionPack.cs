@@ -204,11 +204,51 @@ public static partial class QuestionPackLoader
         var root = Path.GetFullPath(baseDirectory);
         var target = Path.GetFullPath(Path.Combine(root, path));
 
-        if (!target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-            && !string.Equals(target, root, StringComparison.Ordinal))
+        if (!IsInside(target, root))
         {
             errors.Add($"spec.output.path '{path}' resolves outside the pack directory");
+            return;
         }
+
+        // The lexical check above is not enough on its own. A pack arrives as a YAML file inside
+        // a directory the author controls, and that directory can contain a symlink or a Windows
+        // junction. `link/report.md` then passes every string comparison while the write follows
+        // the reparse point and lands anywhere the attacker chose — traversal without a single
+        // `..`. Each component between the root and the target is therefore resolved.
+        if (FollowsALink(target, root))
+        {
+            errors.Add(
+                $"spec.output.path '{path}' passes through a symbolic link or junction, so its " +
+                "real destination is outside the pack directory");
+        }
+    }
+
+    private static bool IsInside(string target, string root) =>
+        target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+        || string.Equals(target, root, StringComparison.Ordinal);
+
+    private static bool FollowsALink(string target, string root)
+    {
+        for (var current = Path.GetDirectoryName(target);
+             current is not null && current.Length >= root.Length;
+             current = Path.GetDirectoryName(current))
+        {
+            var info = new DirectoryInfo(current);
+            if (!info.Exists)
+            {
+                continue;
+            }
+
+            // ResolveLinkTarget returns null for an ordinary directory, so a non-null answer
+            // means this component redirects somewhere. Re-check where it actually lands.
+            if (info.ResolveLinkTarget(returnFinalTarget: true) is { } resolved
+                && !IsInside(Path.GetFullPath(resolved.FullName), root))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static TimeSpan? ParseDuration(string? value, List<string> errors, string context)

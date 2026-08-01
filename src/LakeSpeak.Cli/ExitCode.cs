@@ -35,6 +35,7 @@ public static class ExitCode
         GenieFailureKind.PollingTimeout => Timeout,
         GenieFailureKind.RateLimited => GenieFailure,
         GenieFailureKind.MalformedResponse => MalformedResponse,
+        GenieFailureKind.UnsupportedResult => MalformedResponse,
         GenieFailureKind.Network => Unexpected,
         GenieFailureKind.Unexpected => Unexpected,
         // GenieFailureKind is this project's own closed set, so an unhandled arm is a bug to

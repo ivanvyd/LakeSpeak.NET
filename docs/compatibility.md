@@ -75,7 +75,7 @@ contract tests only.
 | Credential redaction, both signature fields | Unit tests using realistic JSON payloads |
 | Question Pack validation, including path traversal | Unit tests, plus the CLI run by hand |
 | CLI parsing, help, exit codes, `config show` leaking nothing | The built binary run by hand |
-| **Anything against real Databricks** | **Not done.** No live workspace has been contacted. |
+| Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. |
 
 ## How to update this file
 
