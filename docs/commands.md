@@ -98,6 +98,48 @@ one pass instead of repeated guessing.
 
 See the [Question Pack guide](question-packs.md).
 
+## `lakespeak export [last]`
+
+Exports the last answer's query result without opening a chat session — the scriptable
+counterpart to chat's `/export`.
+
+```bash
+lakespeak export last --output revenue.csv
+lakespeak export last                       # to stdout
+```
+
+| Option | Meaning |
+|---|---|
+| `--output`, `-o` | File to write. Defaults to stdout |
+| `--force` | Overwrite the output file if it exists |
+
+The result is **re-fetched from Databricks** rather than cached locally: a local copy of governed
+data would have none of the governance, and Databricks is already the system of record. That means
+an expired cached result fails here rather than silently returning stale rows.
+
+If the result is incomplete — truncated by Databricks, or continuing beyond the rows this version
+reads — the command says so on stderr. It never writes a partial export silently.
+
+## `lakespeak feedback [last] --rating <r>`
+
+Rates the last answer without opening a chat session.
+
+```bash
+lakespeak feedback last --rating negative --comment "Included cancelled orders."
+lakespeak feedback last --rating positive
+```
+
+| Option | Meaning |
+|---|---|
+| `--rating`, `-r` | `positive`, `negative`, or `none`. Required |
+| `--comment`, `-c` | Free-text comment sent to Databricks |
+
+Databricks rejects a comment alongside a `none` rating. LakeSpeak refuses that combination before
+sending, exiting `2`, rather than surfacing an HTTP 400 that reads like a transport fault.
+
+Both commands read a pointer file written by the last `ask`. It records identifiers only — Agent,
+conversation, message and attachment ids — and never a question, an answer, or a row.
+
 ## `lakespeak auth check`
 
 Verifies that a profile resolves, that a token can be obtained, and that the workspace answers.

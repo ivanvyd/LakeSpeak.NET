@@ -46,11 +46,10 @@ Entra ID access token for resource `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d`, suppl
 | `ask --format json` | Valid UTF-8, versioned schema, on stdout only |
 | `ask --format csv` | Clean CSV on stdout with diagnostics on stderr, verified via `2>/dev/null` |
 | `ask` against an unknown Agent | Real listing lookup, exit 2 |
-| `pack run` | Two questions, Markdown report written, exit 0 |
+| `pack run` | Two questions, Markdown report written, exit 0. One of the two came back as a Genie clarifying question rather than an answer — see [limitations](limitations.md) |
 | Decimal fidelity | `4500000.00`, `3350000.50`, `1780000.25` reached CSV, JSON and Markdown byte-identical to what Databricks returned |
 | Column types | `DECIMAL(22,2)` — precision and scale preserved, which `type_name` alone would have lost |
 | Non-ASCII | `€` intact in a file-written report |
-
 | `export last` | Re-fetched the result from Databricks and wrote correct CSV |
 | `feedback last` | Positive rating with a comment accepted |
 | Opt-in live suite | 8 tests green, including follow-up conversations, feedback and cancellation |

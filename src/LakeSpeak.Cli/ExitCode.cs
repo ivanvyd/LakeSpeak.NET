@@ -38,8 +38,10 @@ public static class ExitCode
         GenieFailureKind.UnsupportedResult => MalformedResponse,
         GenieFailureKind.Network => Unexpected,
         GenieFailureKind.Unexpected => Unexpected,
-        // GenieFailureKind is this project's own closed set, so an unhandled arm is a bug to
-        // catch at compile time rather than a platform value to tolerate at runtime.
+        // GenieFailureKind is this project's own closed set, so an unmapped value is a bug rather
+        // than a platform value to tolerate. This arm makes the switch exhaustive to the
+        // compiler, which means a NEW member will not raise CS8509 — the gap is caught by
+        // ExitCodeTests.Every_failure_kind_is_mapped in CI, not at build time.
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unmapped failure kind."),
     };
 }

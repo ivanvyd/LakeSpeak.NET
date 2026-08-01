@@ -48,10 +48,8 @@ internal sealed class CliHost : IDisposable
 
         var services = new ServiceCollection();
 
-        // --verbose was declared and registered but never read, so it did nothing while the help
-        // text promised diagnostics "with credentials always redacted" — a guarantee about
-        // behaviour that did not exist. The client already logs through ILogger; it simply had no
-        // sink. Every record is scrubbed on its way out, which is what makes the promise true.
+        // Every record is scrubbed on its way out by RedactingStderrLoggerProvider, which is what
+        // makes the --verbose help text's redaction promise true rather than aspirational.
         if (parseResult.GetValue(GlobalOptions.Verbose))
         {
             services.AddLogging(builder => builder

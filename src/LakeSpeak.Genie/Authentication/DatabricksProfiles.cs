@@ -84,9 +84,6 @@ public static class DatabricksProfiles
         return profiles;
     }
 
-    public static DatabricksProfile? Find(string profileName, string? path = null) =>
-        Load(path).FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
-
     /// <summary>
     /// Resolves the workspace host, in the documented precedence order: explicit value, then
     /// <c>DATABRICKS_HOST</c>, then the named profile, then the DEFAULT profile.

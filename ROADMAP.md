@@ -17,9 +17,10 @@ Status: in development.
 - [x] Question Packs: schema, validation, runner, Markdown reports
 - [x] Output formats and stable exit codes
 - [x] CI, release pipeline, SBOM, provenance
-- [ ] Verification against a live Azure Databricks workspace
+- [x] Verification against a live Azure Databricks workspace
 - [ ] CLI snapshot tests across terminal widths, unicode and `NO_COLOR`
-- [ ] Command reference and authentication guide
+- [ ] Live coverage for `chat`, chunked results and `QUERY_RESULT_EXPIRED` recovery
+- [x] Command reference and authentication guide
 
 ## v0.2 — automation
 
