@@ -74,12 +74,6 @@ This was wrong until a post-ship review caught it: the client relied on `manifes
 reports statement-level truncation by Databricks and is `false` for a merely-chunked result. A large
 result was returned as its first chunk labelled complete. Fetching remaining chunks is v0.2 work.
 
-## Bound parameter values are shown, but only in JSON
-
-When Genie binds values into the generated SQL, `--format json` reports them under
-`query.parameters`. The terminal and Markdown renderers show the statement without them, so a
-report can contain SQL whose placeholders are unexplained. Surfacing them everywhere is v0.2.
-
 ## Not implemented in v0.1
 
 Full-result downloads beyond the first chunk, visualization rendering, conversation list and resume

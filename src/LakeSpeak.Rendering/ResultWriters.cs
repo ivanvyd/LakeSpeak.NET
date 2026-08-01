@@ -284,8 +284,11 @@ public static class MarkdownWriter
                 .AppendLine("```sql")
                 .AppendLine(TerminalSafety.Sanitize(sql))
                 .AppendLine("```")
-                .AppendLine()
-                .AppendLine("</details>")
+                .AppendLine();
+
+            WriteParameters(builder, response.Query?.Parameters);
+
+            builder.AppendLine("</details>")
                 .AppendLine();
         }
 
@@ -295,6 +298,26 @@ public static class MarkdownWriter
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>Lists the values bound into the statement, so its placeholders are explained.</summary>
+    private static void WriteParameters(StringBuilder builder, IReadOnlyList<GenieQueryParameter>? parameters)
+    {
+        if (parameters is not { Count: > 0 })
+        {
+            return;
+        }
+
+        builder.AppendLine("| Parameter | Type | Value |").AppendLine("|---|---|---|");
+        foreach (var parameter in parameters)
+        {
+            builder.Append("| ").Append(Escape(parameter.Keyword))
+                .Append(" | ").Append(Escape(parameter.SqlType))
+                .Append(" | ").Append(Escape(parameter.Value))
+                .AppendLine(" |");
+        }
+
+        builder.AppendLine();
     }
 
     /// <summary>

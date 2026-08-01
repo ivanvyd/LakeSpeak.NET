@@ -2,6 +2,7 @@
 
 <ItemGroup>
     <PackageReference Include="Verify.XunitV3" />
+    <PackageReference Include="Spectre.Console.Testing" />
     <ProjectReference Include="..\..\src\LakeSpeak.Cli\LakeSpeak.Cli.csproj" />
     <ProjectReference Include="..\..\src\LakeSpeak.Rendering\LakeSpeak.Rendering.csproj" />
   </ItemGroup>
