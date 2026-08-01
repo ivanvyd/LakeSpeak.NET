@@ -27,6 +27,7 @@ public sealed class ConfigAliasTests : IDisposable
     [InlineData("FiNaNcE")]
     public void An_alias_resolves_regardless_of_case(string typed)
     {
+        // Arrange
         var config = Load(
             """
             version: 1
@@ -35,16 +36,20 @@ public sealed class ConfigAliasTests : IDisposable
                 id: 01f-finance
             """);
 
-        config.Agents.TryGetValue(typed, out var alias).ShouldBeTrue();
+        // Act
+        var found = config.Agents.TryGetValue(typed, out var alias);
+
+        // Assert
+        found.ShouldBeTrue();
         alias!.Id.ShouldBe("01f-finance");
     }
 
-    // Falling through to title matching on a case mismatch is not a harmless extra round trip:
-    // it can select a different Agent whose title happens to match, which is the
-    // answer-against-the-wrong-data failure the resolver exists to prevent.
     [Fact]
     public void The_comparer_survives_deserialisation()
     {
+        // Arrange — falling through to title matching on a case mismatch is not a harmless extra
+        // round trip: it can select a different Agent whose title happens to match, which is the
+        // answer-against-the-wrong-data failure the resolver exists to prevent.
         var config = Load(
             """
             version: 1
@@ -53,15 +58,24 @@ public sealed class ConfigAliasTests : IDisposable
                 id: 01f-sales
             """);
 
-        config.Agents.Comparer.ShouldBe(StringComparer.OrdinalIgnoreCase);
+        // Act
+        var comparer = config.Agents.Comparer;
+
+        // Assert
+        comparer.ShouldBe(StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void A_config_with_no_agents_section_still_has_a_case_insensitive_dictionary()
     {
+        // Arrange
         var config = Load("version: 1");
 
-        config.Agents.Comparer.ShouldBe(StringComparer.OrdinalIgnoreCase);
+        // Act
+        var comparer = config.Agents.Comparer;
+
+        // Assert
+        comparer.ShouldBe(StringComparer.OrdinalIgnoreCase);
     }
 
     public void Dispose()

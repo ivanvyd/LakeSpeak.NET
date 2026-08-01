@@ -1,5 +1,3 @@
-using LakeSpeak.Genie;
-
 namespace LakeSpeak.Genie.Tests;
 
 /// <summary>
@@ -12,8 +10,7 @@ namespace LakeSpeak.Genie.Tests;
 /// </remarks>
 public class RedactionEvasionTests
 {
-    // The token here is deliberately neither JWT-shaped nor dapi-shaped, so the only thing that
-    // can catch it is the named-key rule.
+    // Deliberately neither JWT-shaped nor dapi-shaped, so only the named-key rule can catch it.
     private const string Opaque = "sometoken_not_jwt_or_dapi_shaped_1234567890";
 
     [Theory]
@@ -24,17 +21,28 @@ public class RedactionEvasionTests
     [InlineData("Authorization = Bearer ")]
     public void A_scheme_prefixed_credential_does_not_survive(string prefix)
     {
-        var scrubbed = DiagnosticRedaction.Scrub(prefix + Opaque);
+        // Arrange — redacting only the word "Bearer" and leaving the credential is the failure
+        // this whole class exists to catch.
+        var diagnostic = prefix + Opaque;
 
-        // Redacting only the word "Bearer" and leaving the credential is the failure this
-        // whole class exists to catch.
+        // Act
+        var scrubbed = DiagnosticRedaction.Scrub(diagnostic);
+
+        // Assert
         scrubbed.ShouldNotContain(Opaque);
     }
 
     [Fact]
     public void A_bearer_token_on_its_own_does_not_survive()
     {
-        DiagnosticRedaction.Scrub($"Bearer {Opaque}").ShouldNotContain(Opaque);
+        // Arrange
+        var diagnostic = $"Bearer {Opaque}";
+
+        // Act
+        var scrubbed = DiagnosticRedaction.Scrub(diagnostic);
+
+        // Assert
+        scrubbed.ShouldNotContain(Opaque);
     }
 
     [Theory]
@@ -44,17 +52,26 @@ public class RedactionEvasionTests
     [InlineData("statement_id_signature: ")]
     public void Named_secrets_do_not_survive_regardless_of_separator(string prefix)
     {
-        DiagnosticRedaction.Scrub(prefix + Opaque).ShouldNotContain(Opaque);
+        // Arrange
+        var diagnostic = prefix + Opaque;
+
+        // Act
+        var scrubbed = DiagnosticRedaction.Scrub(diagnostic);
+
+        // Assert
+        scrubbed.ShouldNotContain(Opaque);
     }
 
-    // Realistic shape: a header dump, where the credential is followed by more headers. The
-    // scrubber must take the credential without eating the rest of the line's structure.
     [Fact]
     public void Redacts_the_credential_in_a_header_dump_without_eating_everything()
     {
-        var scrubbed = DiagnosticRedaction.Scrub(
-            $"Authorization: Bearer {Opaque}\nContent-Type: application/json");
+        // Arrange — a realistic shape, where the credential is followed by more headers.
+        var diagnostic = $"Authorization: Bearer {Opaque}\nContent-Type: application/json";
 
+        // Act
+        var scrubbed = DiagnosticRedaction.Scrub(diagnostic);
+
+        // Assert
         scrubbed.ShouldNotContain(Opaque);
         scrubbed.ShouldContain("Content-Type: application/json");
     }
@@ -62,10 +79,13 @@ public class RedactionEvasionTests
     [Fact]
     public void Ordinary_prose_containing_the_word_bearer_is_left_readable()
     {
+        // Arrange — over-scrubbing prose would make diagnostics useless.
         const string prose = "The bearer of this message is not authorized.";
 
-        // Over-scrubbing prose would make diagnostics useless; the value after the keyword is
-        // taken, but the sentence must stay recognisable.
-        DiagnosticRedaction.Scrub(prose).ShouldContain("The bearer");
+        // Act
+        var scrubbed = DiagnosticRedaction.Scrub(prose);
+
+        // Assert
+        scrubbed.ShouldContain("The bearer");
     }
 }
