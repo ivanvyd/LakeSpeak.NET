@@ -234,3 +234,11 @@ services.AddGenieTokenProvider(async ct => await myTokenSource.GetAsync(ct));
 ```
 
 Full detail in the [authentication guide](authentication.md).
+
+A complete runnable version of this is at
+[`examples/dotnet-quickstart`](../examples/dotnet-quickstart/), built in CI so it cannot drift
+from the library:
+
+```bash
+dotnet run --project examples/dotnet-quickstart -- <agent-id> "How many rows are there?"
+```
