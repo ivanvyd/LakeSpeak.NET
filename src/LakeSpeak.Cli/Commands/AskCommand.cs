@@ -80,7 +80,7 @@ internal static class AskCommand
             ConversationId = response.ConversationId,
             MessageId = response.MessageId,
             AttachmentId = response.Metadata.AttachmentId,
-            UpdatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = host.Clock.GetUtcNow(),
         }.Save();
 
         Write(host, response, agent, showSql);

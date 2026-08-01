@@ -38,6 +38,12 @@ internal sealed class CliHost : IDisposable
     /// </summary>
     internal IGenieTokenProvider TokenProvider => _services.GetRequiredService<IGenieTokenProvider>();
 
+    /// <summary>
+    /// The clock, so commands read time the same way the library does rather than reaching for
+    /// <c>DateTimeOffset.UtcNow</c> — which nothing can fake in a test.
+    /// </summary>
+    internal TimeProvider Clock => _services.GetRequiredService<TimeProvider>();
+
     internal AgentResolver Resolver => new(Client, Config);
 
     internal TerminalRenderer Renderer => new(Output.Out, Config.Display.MaxRows);
