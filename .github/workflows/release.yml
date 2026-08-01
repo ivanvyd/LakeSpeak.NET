@@ -43,6 +43,13 @@ jobs:
           elif [ -n "${{ inputs.version }}" ]; then
             v="${{ inputs.version }}"
           else
+            # Placeholder for a rehearsal run. Publishing this would put a permanent
+            # 0.0.0-dev package on nuget.org, which cannot be unpublished — so refuse
+            # rather than let a ticked box and an empty field combine into a release.
+            if [ "${{ inputs.publish }}" = "true" ]; then
+              echo "::error::'publish' was ticked but 'version' is empty. Supply an explicit version to publish." >&2
+              exit 1
+            fi
             v="0.0.0-dev.${GITHUB_RUN_NUMBER}"
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"

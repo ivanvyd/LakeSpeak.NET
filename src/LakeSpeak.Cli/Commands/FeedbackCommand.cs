@@ -37,12 +37,7 @@ internal static class FeedbackCommand
 
     private static async Task<int> RunAsync(CliHost host, ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var target = parseResult.GetValue(Target);
-        if (!string.Equals(target, "last", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new CliUsageException(
-                $"Unknown target '{target}'. Only 'last' is supported in this version.");
-        }
+        CliArguments.RequireLastTarget(parseResult.GetValue(Target));
 
         var rating = parseResult.GetValue(Rating) switch
         {

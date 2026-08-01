@@ -296,7 +296,7 @@ internal sealed class ChatSession(CliHost host, GenieAgent agent)
         table.AddRow("[bold]/export <path>[/]", "Write the last result to a CSV file");
         table.AddRow("[bold]/thumbs-up[/]", "Send positive feedback to Databricks");
         table.AddRow("[bold]/thumbs-down [comment][/]", "Send negative feedback to Databricks");
-        table.AddRow("[bold]/exit[/]", "Leave");
+        table.AddRow("[bold]/exit[/]", "Leave (or /quit)");
         console.Write(table);
     }
 

@@ -68,7 +68,10 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "format": { "enum": ["markdown", "json"] },
+            "format": {
+              "enum": ["markdown"],
+              "description": "Only markdown is implemented. JSON reports are reserved for a later schema version; the loader rejects anything else."
+            },
             "path": {
               "type": "string",
               "description": "Written relative to the pack file. Absolute paths and parent-directory traversal are rejected at load time."

@@ -1,5 +1,9 @@
 # LakeSpeak.NET
 
+[![CI](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/lakespeak/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/lakespeak)
+
 Talk to governed Databricks data from your terminal and .NET applications.
 
 LakeSpeak.NET is an independent open-source .NET client, terminal application, and automation
@@ -115,6 +119,11 @@ if (response.Query is not null)
 }
 ```
 
+Abbreviated for orientation. The complete version — DI registration, `using` directives, reading
+the rows, and typed error handling on `GenieFailureKind` — is in
+[Getting started → Using it from .NET](docs/getting-started.md#using-it-from-net), and it is
+compiled against the library rather than written by hand.
+
 ## Question Packs
 
 A Question Pack turns a set of business questions into a reviewable, version-controlled report.
@@ -187,6 +196,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 
 - [Getting started](docs/getting-started.md) — zero to a working answer
 - [Commands](docs/commands.md) — every command, flag and exit code
+- [Configuration](docs/configuration.md) — the config file, aliases and defaults
 - [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
 - [Question Packs](docs/question-packs.md) — the schema and its failure semantics
 - [Troubleshooting](docs/troubleshooting.md)

@@ -186,4 +186,53 @@ public class AgentResolverTests
         // Assert
         resolution.NotFound.ShouldBeTrue();
     }
+
+    [Fact]
+    public async Task An_agent_id_is_fetched_directly_rather_than_by_paging_the_listing()
+    {
+        // Arrange — the id form is what scripts and Question Packs are told to prefer, so it
+        // must not cost one round trip per page of a workspace's Agents.
+        const string id = "01ef1234567890abcdef1234567890ab";
+        var client = Substitute.For<IGenieClient>();
+        client.GetAgentAsync(id, Arg.Any<CancellationToken>()).Returns(new GenieAgent(id, "Sales"));
+
+        // Act
+        var resolution = await new AgentResolver(client, ConfigWith()).ResolveAsync(id, Ct);
+
+        // Assert
+        resolution.Agent!.AgentId.ShouldBe(id);
+        client.DidNotReceive().ListAllAgentsAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task An_id_shaped_title_still_resolves_when_no_agent_has_that_id()
+    {
+        // Arrange — the short-circuit must fall through rather than swallow the lookup: a title
+        // may legitimately look like an id, and returning not-found there would be a regression.
+        const string idShaped = "01efaaaabbbbccccddddeeeeffff0000";
+        var client = ClientReturning(new GenieAgent("01ef0000111122223333444455556666", idShaped));
+        client.GetAgentAsync(idShaped, Arg.Any<CancellationToken>())
+            .Returns<GenieAgent>(_ => throw new GenieException(GenieFailureKind.AgentNotFound, "no such Agent"));
+
+        // Act
+        var resolution = await new AgentResolver(client, ConfigWith()).ResolveAsync(idShaped, Ct);
+
+        // Assert
+        resolution.Agent!.Title.ShouldBe(idShaped);
+    }
+
+    [Fact]
+    public async Task A_plain_name_does_not_spend_a_lookup_before_the_listing()
+    {
+        // Arrange — gating on the id shape is the point: a name like "sales" would otherwise
+        // pay a guaranteed 404 on every single invocation.
+        var client = ClientReturning(new GenieAgent("01ef0000111122223333444455556666", "sales"));
+
+        // Act
+        var resolution = await new AgentResolver(client, ConfigWith()).ResolveAsync("sales", Ct);
+
+        // Assert
+        resolution.Agent!.Title.ShouldBe("sales");
+        await client.DidNotReceive().GetAgentAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
 }
