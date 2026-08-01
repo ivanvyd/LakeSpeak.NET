@@ -56,9 +56,23 @@ release is cheap.
 
 ### Prerequisites, once
 
+> **Neither of these is configured yet.** As of the last check the repository has no environments
+> and no secrets. This matters more than it looks: a workflow that names an environment which does
+> not exist does **not** fail — GitHub creates it implicitly, with no protection rules. So until
+> the steps below are done there is no approval gate, and the only thing standing between a
+> mistyped manual run and a permanent package is the version guard in the workflow itself.
+
 - `NUGET_API_KEY` as a repository secret, scoped to `LakeSpeak.*`, not a global key.
-- A `nuget` **environment** in repository settings. This is what turns publishing into a decision
-  someone makes rather than a side effect of pushing a tag. Add yourself as a required reviewer.
+- A `nuget` **environment** in repository settings, **with a required reviewer**. Creating the
+  environment alone changes nothing; the required reviewer is the gate. This is what turns
+  publishing into a decision someone makes rather than a side effect of pushing a tag.
+
+Verify both are in place before the first release:
+
+```bash
+gh api repos/ivanvyd/lakespeak/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
+gh secret list
+```
 
 ### Steps
 
@@ -73,7 +87,8 @@ release is cheap.
    git push origin v1.2.3
    ```
 
-5. The workflow runs and stops at the `nuget` environment gate. Approve it.
+5. The workflow runs. If the environment gate is configured (see prerequisites), it stops
+   there for approval — otherwise it publishes straight away.
 6. Check the GitHub release: three binaries, checksums, SBOM, generated notes.
 
 ### Publishing without a tag
@@ -87,7 +102,8 @@ It does not create a GitHub release, because a manual run has no tag to attach o
 ## If something goes wrong
 
 **NuGet does not allow unpublishing.** A package can be deprecated or delisted, never removed.
-That is why the rehearsal step exists and why the environment gate is not optional.
+That is why the rehearsal step exists, and why configuring the environment gate is worth
+doing before the first release rather than after the first mistake.
 
 - **Wrong version published** → publish a corrected higher version, then delist the wrong one.
   Do not attempt to reuse the version number; NuGet will reject it and `--skip-duplicate` will
