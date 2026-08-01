@@ -271,7 +271,16 @@ public static class MarkdownWriter
         return builder.ToString();
     }
 
-    private static void WriteTable(StringBuilder builder, GenieQueryResult result)
+    /// <summary>
+    /// Renders a result as a Markdown table plus its truncation notice.
+    /// </summary>
+    /// <remarks>
+    /// Public so no other report writer reimplements it. A second copy of this had already
+    /// drifted — one renderer stated the row counts on truncation and the other did not, so the
+    /// same data produced two different claims about completeness depending on which command
+    /// wrote it.
+    /// </remarks>
+    public static void WriteTable(StringBuilder builder, GenieQueryResult result)
     {
         builder.Append("| ")
             .Append(string.Join(" | ", result.Columns.Select(c => Escape(c.Name))))

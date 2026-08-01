@@ -1,0 +1,11 @@
+# Solo-maintained, so this file automates review assignment rather than describing a team.
+*                                       @ivanvyd
+
+# Listed separately so a change to a security-relevant surface is never skimmed as routine.
+/src/LakeSpeak.Genie/Authentication/    @ivanvyd
+/src/LakeSpeak.Genie/GenieFailures.cs   @ivanvyd
+/src/LakeSpeak.QuestionPacks/           @ivanvyd
+/.github/workflows/                     @ivanvyd
+/SECURITY.md                            @ivanvyd
+/docs/security/                         @ivanvyd
+/docs/compliance/                       @ivanvyd

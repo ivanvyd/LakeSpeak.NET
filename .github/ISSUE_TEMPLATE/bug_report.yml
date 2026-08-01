@@ -1,0 +1,68 @@
+name: Bug report
+description: Something behaves differently from what the docs say.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you paste any output: questions, answers and query results can contain your
+        organisation's data. LakeSpeak redacts credentials, but it cannot know which of your
+        table names are sensitive. **Read what you paste.**
+
+        For a security vulnerability, do not use this form — report it privately through
+        [Security Advisories](https://github.com/ivanvyd/lakespeak/security/advisories/new).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what happened, and what you expected instead.
+      placeholder: |
+        I ran: lakespeak ask --agent sales "..."
+        I expected: ...
+        Instead: ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: LakeSpeak version
+      description: Output of `lakespeak --version`.
+      placeholder: 0.1.0+abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, Linux, macOS]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloud
+    attributes:
+      label: Databricks cloud
+      description: Only Azure has been verified against a live workspace — see docs/compatibility.md.
+      options: [Azure, AWS, GCP, Not sure]
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Output of `lakespeak --verbose ...`. Credentials are redacted automatically; remove anything else that should not be public.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked docs/limitations.md and this is not a documented limitation.
+          required: true
+        - label: I removed anything from the pasted output that should not be public.
+          required: true
