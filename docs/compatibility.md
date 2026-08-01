@@ -51,9 +51,17 @@ Entra ID access token for resource `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d`, suppl
 | Column types | `DECIMAL(22,2)` — precision and scale preserved, which `type_name` alone would have lost |
 | Non-ASCII | `€` intact in a file-written report |
 
-What this did **not** exercise: `chat` (needs an interactive terminal), feedback submission,
-full-result downloads, visualizations, cancellation against a genuinely long-running query, and
-`QUERY_RESULT_EXPIRED` recovery. Those remain covered by contract tests only.
+| `export last` | Re-fetched the result from Databricks and wrote correct CSV |
+| `feedback last` | Positive rating with a comment accepted |
+| Opt-in live suite | 8 tests green, including follow-up conversations, feedback and cancellation |
+
+The live suite in `tests/LakeSpeak.LiveIntegrationTests` reproduces all of this. Run it with
+`DATABRICKS_HOST`, `DATABRICKS_TOKEN` and `LAKESPEAK_LIVE_AGENT` set:
+`dotnet test -c Release --filter "Category=Live"`.
+
+What this still does **not** exercise: `chat` (needs an interactive terminal), full-result downloads
+beyond the first chunk, visualizations, and `QUERY_RESULT_EXPIRED` recovery. Those remain covered by
+contract tests only.
 
 ## What has been verified, and how
 

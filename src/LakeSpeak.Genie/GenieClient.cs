@@ -240,6 +240,18 @@ public sealed partial class GenieClient : IGenieClient
         string? comment = null,
         CancellationToken cancellationToken = default)
     {
+        // Databricks rejects a comment alongside a NONE rating with an HTTP 400 whose message is
+        // easy to misread as a transport problem. The constraint is undocumented and was found by
+        // calling the endpoint; catching it here turns a confusing server error into a clear one,
+        // and costs a round trip nobody wanted.
+        if (rating == GenieFeedbackRating.None && !string.IsNullOrWhiteSpace(comment))
+        {
+            throw new ArgumentException(
+                "Databricks only accepts a feedback comment alongside a positive or negative rating. " +
+                "Either choose a rating, or send the rating without a comment.",
+                nameof(comment));
+        }
+
         var body = new FeedbackRequestWire
         {
             Rating = rating switch

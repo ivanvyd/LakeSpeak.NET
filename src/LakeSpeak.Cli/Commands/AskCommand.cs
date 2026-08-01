@@ -1,4 +1,5 @@
 using System.CommandLine;
+using LakeSpeak.Configuration;
 using LakeSpeak.Genie;
 using LakeSpeak.Rendering;
 
@@ -70,6 +71,17 @@ internal static class AskCommand
                 OnStateChanged = state => host.Output.Status(state.ToProgressDescription() + "…"),
             },
             cancellationToken).ConfigureAwait(false);
+
+        new RecentConversation
+        {
+            Profile = parseResult.GetValue(GlobalOptions.Profile),
+            AgentId = agent.AgentId,
+            AgentTitle = agent.Title,
+            ConversationId = response.ConversationId,
+            MessageId = response.MessageId,
+            AttachmentId = response.Metadata.AttachmentId,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        }.Save();
 
         Write(host, response, agent, showSql);
         return ExitCode.Success;
