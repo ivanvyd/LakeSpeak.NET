@@ -117,6 +117,9 @@ jobs:
     environment: nuget
     permissions:
       contents: write
+      # Lets GitHub mint the short-lived OIDC token that nuget.org exchanges for a temporary
+      # API key. This is what removes the long-lived secret from the repository entirely.
+      id-token: write
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
@@ -126,16 +129,27 @@ jobs:
           name: release-artifacts
           path: artifacts
 
-      - name: Push to NuGet
+      - name: Fail early if trusted publishing is not configured
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_USER: ${{ secrets.NUGET_USER }}
         run: |
-          if [ -z "$NUGET_API_KEY" ]; then
-            echo "::error::NUGET_API_KEY is not configured; refusing to publish."
+          if [ -z "$NUGET_USER" ]; then
+            echo "::error::NUGET_USER is not set. See RELEASING.md — trusted publishing needs the nuget.org profile name and a matching policy on nuget.org."
             exit 1
           fi
+
+      # Exchanged immediately before the push: the temporary key nuget.org issues lasts one hour,
+      # and each OIDC token buys exactly one key.
+      - name: Exchange the OIDC token for a temporary NuGet key
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        run: |
           dotnet nuget push "artifacts/*.nupkg" \
-            --api-key "$NUGET_API_KEY" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
