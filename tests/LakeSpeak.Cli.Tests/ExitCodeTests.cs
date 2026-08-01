@@ -1,4 +1,3 @@
-using LakeSpeak.Cli;
 using LakeSpeak.Genie;
 
 namespace LakeSpeak.Cli.Tests;
@@ -21,10 +20,19 @@ public class ExitCodeTests
     [InlineData(GenieFailureKind.RateLimited, ExitCode.GenieFailure)]
     [InlineData(GenieFailureKind.PollingTimeout, ExitCode.Timeout)]
     [InlineData(GenieFailureKind.MalformedResponse, ExitCode.MalformedResponse)]
+    [InlineData(GenieFailureKind.UnsupportedResult, ExitCode.MalformedResponse)]
     [InlineData(GenieFailureKind.Network, ExitCode.Unexpected)]
     [InlineData(GenieFailureKind.Unexpected, ExitCode.Unexpected)]
-    public void Each_failure_kind_maps_to_its_documented_code(GenieFailureKind kind, int expected) =>
-        ExitCode.From(kind).ShouldBe(expected);
+    public void Each_failure_kind_maps_to_its_documented_code(GenieFailureKind kind, int expected)
+    {
+        // Arrange — the kind under test arrives as the theory parameter.
+
+        // Act
+        var code = ExitCode.From(kind);
+
+        // Assert
+        code.ShouldBe(expected);
+    }
 
     /// <summary>
     /// Adding a <see cref="GenieFailureKind"/> without extending the mapping would otherwise
@@ -34,10 +42,14 @@ public class ExitCodeTests
     [Fact]
     public void Every_failure_kind_is_mapped()
     {
-        foreach (var kind in Enum.GetValues<GenieFailureKind>())
-        {
-            Should.NotThrow(() => ExitCode.From(kind), $"{kind} has no exit code mapping.");
-        }
+        // Arrange
+        var kinds = Enum.GetValues<GenieFailureKind>();
+
+        // Act
+        var unmapped = kinds.Where(k => !TryMap(k)).ToList();
+
+        // Assert
+        unmapped.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -47,25 +59,51 @@ public class ExitCodeTests
     [Fact]
     public void The_documented_numbers_have_not_moved()
     {
-        ExitCode.Success.ShouldBe(0);
-        ExitCode.Unexpected.ShouldBe(1);
-        ExitCode.InvalidUsage.ShouldBe(2);
-        ExitCode.Authentication.ShouldBe(3);
-        ExitCode.Authorization.ShouldBe(4);
-        ExitCode.NotFound.ShouldBe(5);
-        ExitCode.GenieFailure.ShouldBe(6);
-        ExitCode.Timeout.ShouldBe(7);
-        ExitCode.PartialPackFailure.ShouldBe(8);
-        ExitCode.MalformedResponse.ShouldBe(9);
+        // Arrange — the documented table from docs/commands.md.
+        var documented = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+        // Act
+        var actual = new[]
+        {
+            ExitCode.Success,
+            ExitCode.Unexpected,
+            ExitCode.InvalidUsage,
+            ExitCode.Authentication,
+            ExitCode.Authorization,
+            ExitCode.NotFound,
+            ExitCode.GenieFailure,
+            ExitCode.Timeout,
+            ExitCode.PartialPackFailure,
+            ExitCode.MalformedResponse,
+        };
+
+        // Assert
+        actual.ShouldBe(documented);
     }
 
-    // Success must stay 0 and every failure non-zero, or `set -e` and CI stop working.
     [Fact]
     public void Only_success_is_zero()
     {
-        foreach (var kind in Enum.GetValues<GenieFailureKind>())
+        // Arrange — success must stay 0 and every failure non-zero, or `set -e` and CI break.
+        var kinds = Enum.GetValues<GenieFailureKind>();
+
+        // Act
+        var codes = kinds.Select(ExitCode.From).ToList();
+
+        // Assert
+        codes.ShouldAllBe(c => c != ExitCode.Success);
+    }
+
+    private static bool TryMap(GenieFailureKind kind)
+    {
+        try
         {
-            ExitCode.From(kind).ShouldNotBe(ExitCode.Success);
+            ExitCode.From(kind);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
         }
     }
 }

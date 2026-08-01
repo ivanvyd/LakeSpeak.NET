@@ -21,9 +21,9 @@ namespace LakeSpeak.LiveIntegrationTests;
 /// </code>
 /// </para>
 /// <para>
-/// Every test here is read-only apart from <see cref="Feedback_can_be_sent"/>, which writes a
-/// NONE rating — the neutral value — so a test run does not pollute a real Agent's feedback
-/// signal. Nothing creates, modifies, or deletes an Agent.
+/// Every test is read-only apart from <see cref="Feedback_can_be_sent"/>, which writes a NONE
+/// rating — the neutral value — so a run does not pollute a real Agent's feedback signal.
+/// Nothing creates, modifies, or deletes an Agent.
 /// </para>
 /// </remarks>
 [Trait("Category", "Live")]
@@ -72,12 +72,16 @@ public sealed class LiveGenieTests : IDisposable
     [Fact]
     public async Task Agents_can_be_listed()
     {
+        // Arrange
         var agents = new List<GenieAgent>();
+
+        // Act
         await foreach (var agent in Client.ListAllAgentsAsync(Ct))
         {
             agents.Add(agent);
         }
 
+        // Assert
         agents.ShouldNotBeEmpty();
         agents.ShouldAllBe(a => a.AgentId.Length > 0);
         agents.ShouldAllBe(a => a.Title.Length > 0);
@@ -86,33 +90,37 @@ public sealed class LiveGenieTests : IDisposable
     [Fact]
     public async Task A_question_returns_an_answer_and_the_sql_behind_it()
     {
+        // Arrange
         var agent = await ResolveAgentAsync();
 
+        // Act
         var response = await Client.AskAsync(
             agent.AgentId, "How many rows are in the data?", cancellationToken: Ct);
 
+        // Assert — not asserted: that the answer is correct. No client can check that, and a
+        // test pretending otherwise would be the exact overreach this project's docs warn about.
         response.State.ShouldBe(GenieMessageState.Completed);
         response.ConversationId.ShouldNotBeNullOrWhiteSpace();
         response.MessageId.ShouldNotBeNullOrWhiteSpace();
         response.Text.ShouldNotBeNullOrWhiteSpace();
-
-        // Not asserted: that the answer is correct. No client can check that, and a test
-        // pretending otherwise would be the exact overreach this project's docs warn about.
     }
 
     /// <summary>
     /// The claim this project makes most loudly: a value is never reformatted on its way out.
-    /// Asserted against a live warehouse rather than a fixture, because a fixture cannot catch
-    /// a serialiser deciding to parse a DECIMAL somewhere in the middle.
+    /// Asserted against a live warehouse rather than a fixture, because a fixture cannot catch a
+    /// serialiser deciding to parse a DECIMAL somewhere in the middle.
     /// </summary>
     [Fact]
     public async Task Result_cells_arrive_as_strings_and_are_never_reformatted()
     {
+        // Arrange
         var agent = await ResolveAgentAsync();
 
+        // Act
         var response = await Client.AskAsync(
             agent.AgentId, "Show every row with all columns.", cancellationToken: Ct);
 
+        // Assert
         if (response.Result is not { Rows.Count: > 0 } result)
         {
             // Genie may answer in prose. That is not a failure of this client.
@@ -131,12 +139,15 @@ public sealed class LiveGenieTests : IDisposable
     [Fact]
     public async Task A_follow_up_stays_in_the_same_conversation()
     {
+        // Arrange
         var agent = await ResolveAgentAsync();
-
         var first = await Client.AskAsync(agent.AgentId, "How many rows are there?", cancellationToken: Ct);
+
+        // Act
         var second = await Client.FollowUpAsync(
             agent.AgentId, first.ConversationId, "And how many columns?", cancellationToken: Ct);
 
+        // Assert
         second.ConversationId.ShouldBe(first.ConversationId);
         second.MessageId.ShouldNotBe(first.MessageId);
     }
@@ -144,32 +155,47 @@ public sealed class LiveGenieTests : IDisposable
     [Fact]
     public async Task An_unknown_agent_id_is_reported_as_not_found()
     {
-        var ex = await Should.ThrowAsync<GenieException>(
-            () => Client.AskAsync("01f00000000000000000000000000000", "hello", cancellationToken: Ct));
+        // Arrange
+        const string absent = "01f00000000000000000000000000000";
 
+        // Act
+        var act = () => Client.AskAsync(absent, "hello", cancellationToken: Ct);
+
+        // Assert
+        var ex = await Should.ThrowAsync<GenieException>(act);
         ex.Kind.ShouldBeOneOf(GenieFailureKind.AgentNotFound, GenieFailureKind.Authorization);
     }
 
     [Fact]
     public async Task Feedback_can_be_sent()
     {
+        // Arrange — NONE, not POSITIVE or NEGATIVE, so a run does not skew a real Agent's
+        // feedback. No comment either: Databricks rejects text alongside a NONE rating, an
+        // undocumented constraint this test discovered.
         var agent = await ResolveAgentAsync();
         var response = await Client.AskAsync(agent.AgentId, "How many rows are there?", cancellationToken: Ct);
 
-        // NONE, not POSITIVE or NEGATIVE: a test run must not skew a real Agent's feedback.
-        // No comment either — Databricks rejects text alongside a NONE rating, which is an
-        // undocumented constraint this test discovered.
-        await Client.SendFeedbackAsync(
+        // Act
+        var act = () => Client.SendFeedbackAsync(
             agent.AgentId, response.ConversationId, response.MessageId,
             GenieFeedbackRating.None, comment: null, Ct);
+
+        // Assert
+        await Should.NotThrowAsync(act);
     }
 
     [Fact]
     public async Task Feedback_text_with_a_none_rating_is_rejected_before_the_request()
     {
-        var ex = await Should.ThrowAsync<ArgumentException>(() => Client.SendFeedbackAsync(
-            "agent", "conversation", "message", GenieFeedbackRating.None, "a comment", Ct));
+        // Arrange — caught client-side so the caller gets a clear message rather than an
+        // HTTP 400 that reads like a transport fault.
 
+        // Act
+        var act = () => Client.SendFeedbackAsync(
+            "agent", "conversation", "message", GenieFeedbackRating.None, "a comment", Ct);
+
+        // Assert
+        var ex = await Should.ThrowAsync<ArgumentException>(act);
         ex.Message.ShouldContain("positive or negative");
     }
 
@@ -180,11 +206,16 @@ public sealed class LiveGenieTests : IDisposable
     [Fact]
     public async Task Cancelling_a_question_stops_promptly()
     {
+        // Arrange
         var agent = await ResolveAgentAsync();
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
-        await Should.ThrowAsync<OperationCanceledException>(
-            () => Client.AskAsync(agent.AgentId, "Summarise every column in detail.", cancellationToken: cts.Token));
+        // Act
+        var act = () => Client.AskAsync(
+            agent.AgentId, "Summarise every column in detail.", cancellationToken: cts.Token);
+
+        // Assert
+        await Should.ThrowAsync<OperationCanceledException>(act);
     }
 
     public void Dispose() => _services.Dispose();

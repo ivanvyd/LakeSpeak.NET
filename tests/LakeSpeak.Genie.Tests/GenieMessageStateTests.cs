@@ -1,6 +1,3 @@
-using LakeSpeak.Genie;
-using Shouldly;
-
 namespace LakeSpeak.Genie.Tests;
 
 public class GenieMessageStateTests
@@ -19,58 +16,109 @@ public class GenieMessageStateTests
     [InlineData("FAILED", GenieMessageState.Failed)]
     [InlineData("CANCELLED", GenieMessageState.Cancelled)]
     [InlineData("QUERY_RESULT_EXPIRED", GenieMessageState.QueryResultExpired)]
-    public void Maps_every_documented_platform_status(string wire, GenieMessageState expected) =>
-        GenieMessageStateExtensions.FromWire(wire).ShouldBe(expected);
+    public void Maps_every_documented_platform_status(string wire, GenieMessageState expected)
+    {
+        // Arrange — the platform status arrives as the theory parameter.
+
+        // Act
+        var state = GenieMessageStateExtensions.FromWire(wire);
+
+        // Assert
+        state.ShouldBe(expected);
+    }
 
     [Theory]
     [InlineData("SOMETHING_DATABRICKS_ADDED_LATER")]
     [InlineData("")]
     [InlineData(null)]
     [InlineData("completed")] // the API is uppercase; casing is not normalised for us
-    public void Maps_anything_unrecognised_to_Unknown(string? wire) =>
-        GenieMessageStateExtensions.FromWire(wire).ShouldBe(GenieMessageState.Unknown);
+    public void Maps_anything_unrecognised_to_Unknown(string? wire)
+    {
+        // Arrange — an unrecognised status arrives as the theory parameter.
+
+        // Act
+        var state = GenieMessageStateExtensions.FromWire(wire);
+
+        // Assert
+        state.ShouldBe(GenieMessageState.Unknown);
+    }
 
     [Theory]
     [InlineData(GenieMessageState.Completed)]
     [InlineData(GenieMessageState.Failed)]
     [InlineData(GenieMessageState.Cancelled)]
     [InlineData(GenieMessageState.QueryResultExpired)]
-    public void Terminal_states_stop_polling(GenieMessageState state) =>
-        state.IsTerminal().ShouldBeTrue();
+    public void Terminal_states_stop_polling(GenieMessageState state)
+    {
+        // Arrange — the state arrives as the theory parameter.
+
+        // Act
+        var terminal = state.IsTerminal();
+
+        // Assert
+        terminal.ShouldBeTrue();
+    }
 
     [Theory]
     [InlineData(GenieMessageState.Submitted)]
     [InlineData(GenieMessageState.Thinking)]
     [InlineData(GenieMessageState.PendingWarehouse)]
     [InlineData(GenieMessageState.ExecutingQuery)]
-    public void Non_terminal_states_continue_polling(GenieMessageState state) =>
-        state.IsTerminal().ShouldBeFalse();
+    public void Non_terminal_states_continue_polling(GenieMessageState state)
+    {
+        // Arrange — the state arrives as the theory parameter.
 
-    // An unrecognised status is far more likely to be a new intermediate step than a new
-    // terminal one. Treating it as terminal would silently truncate a working conversation
-    // and return an empty answer as if it were complete.
+        // Act
+        var terminal = state.IsTerminal();
+
+        // Assert
+        terminal.ShouldBeFalse();
+    }
+
     [Fact]
-    public void Unknown_is_not_terminal() =>
-        GenieMessageState.Unknown.IsTerminal().ShouldBeFalse();
+    public void Unknown_is_not_terminal()
+    {
+        // Arrange — an unrecognised status is far more likely a new intermediate step than a new
+        // terminal one; treating it as terminal would truncate a working conversation and return
+        // an empty answer as if it were complete.
+        const GenieMessageState state = GenieMessageState.Unknown;
 
-    // Genie spells it CANCELLED; the SQL Statement Execution API spells its own state CANCELED.
-    // The two must never share a parser: feeding the SQL spelling in here has to fall through
-    // to Unknown rather than quietly resolving to Cancelled, which would end polling early.
+        // Act
+        var terminal = state.IsTerminal();
+
+        // Assert
+        terminal.ShouldBeFalse();
+    }
+
     [Fact]
     public void Does_not_accept_the_SQL_APIs_single_L_spelling()
     {
-        GenieMessageStateExtensions.FromWire("CANCELED").ShouldBe(GenieMessageState.Unknown);
-        GenieMessageStateExtensions.FromWire("CANCELLED").ShouldBe(GenieMessageState.Cancelled);
+        // Arrange — Genie spells it CANCELLED; the SQL Statement Execution API spells its own
+        // state CANCELED. Feeding the SQL spelling here must not end a poll early.
+        const string sqlSpelling = "CANCELED";
+        const string genieSpelling = "CANCELLED";
+
+        // Act
+        var fromSql = GenieMessageStateExtensions.FromWire(sqlSpelling);
+        var fromGenie = GenieMessageStateExtensions.FromWire(genieSpelling);
+
+        // Assert
+        fromSql.ShouldBe(GenieMessageState.Unknown);
+        fromGenie.ShouldBe(GenieMessageState.Cancelled);
     }
 
-    // Published Databricks documentation shows a status of IN_PROGRESS, which appears in no
-    // SDK. A client that threw on unrecognised values would compile, pass its mocks, and fail
-    // against the real service.
     [Fact]
     public void Tolerates_a_status_that_appears_only_in_documentation()
     {
-        var state = GenieMessageStateExtensions.FromWire("IN_PROGRESS");
+        // Arrange — published Databricks documentation shows IN_PROGRESS, which exists in no SDK.
+        // A client that threw on unrecognised values would compile, pass its mocks, and fail
+        // against the real service.
+        const string documentedButAbsentFromEverySdk = "IN_PROGRESS";
 
+        // Act
+        var state = GenieMessageStateExtensions.FromWire(documentedButAbsentFromEverySdk);
+
+        // Assert
         state.ShouldBe(GenieMessageState.Unknown);
         state.IsTerminal().ShouldBeFalse();
     }
@@ -78,9 +126,13 @@ public class GenieMessageStateTests
     [Fact]
     public void Every_state_has_progress_text()
     {
-        foreach (var state in Enum.GetValues<GenieMessageState>())
-        {
-            state.ToProgressDescription().ShouldNotBeNullOrWhiteSpace();
-        }
+        // Arrange
+        var states = Enum.GetValues<GenieMessageState>();
+
+        // Act
+        var descriptions = states.Select(s => s.ToProgressDescription()).ToList();
+
+        // Assert
+        descriptions.ShouldAllBe(d => !string.IsNullOrWhiteSpace(d));
     }
 }

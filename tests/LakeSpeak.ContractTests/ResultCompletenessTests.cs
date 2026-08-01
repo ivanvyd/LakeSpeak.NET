@@ -52,37 +52,41 @@ public sealed class ResultCompletenessTests : IDisposable
 
     /// <summary>
     /// The Statement Execution contract splits large results into chunks, and this client reads
-    /// only the first. `manifest.truncated` reports statement-level truncation by Databricks and
-    /// is false for a merely-chunked result, so relying on it alone hands back the first chunk
+    /// only the first. <c>manifest.truncated</c> reports statement-level truncation by Databricks
+    /// and is false for a merely-chunked result, so relying on it alone hands back the first chunk
     /// labelled complete — a partial export nobody knows is partial.
     /// </summary>
     [Fact]
     public async Task A_chunked_result_is_reported_as_truncated()
     {
+        // Arrange
         StubQueryResult(
             """{ "row_count": 2, "chunk_index": 0, "next_chunk_index": 1, "data_array": [["Germany"],["France"]] }""");
+        var client = CreateClient();
 
-        var result = await CreateClient()
-            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
 
+        // Assert
         result.ShouldNotBeNull();
         result.Rows.Count.ShouldBe(2);
         result.IsTruncated.ShouldBeTrue();
     }
 
-    /// <summary>
-    /// The same failure reached a different way: the manifest advertises more rows than arrived.
-    /// </summary>
     [Fact]
     public async Task A_short_read_against_the_manifest_row_count_is_reported_as_truncated()
     {
+        // Arrange — the same failure reached a different way: the manifest advertises more rows
+        // than arrived.
         StubQueryResult(
             """{ "row_count": 1, "data_array": [["Germany"]] }""",
             manifestExtra: """, "total_row_count": 5000""");
+        var client = CreateClient();
 
-        var result = await CreateClient()
-            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
 
+        // Assert
         result!.IsTruncated.ShouldBeTrue();
         result.TotalRowCount.ShouldBe(5000);
     }
@@ -90,24 +94,50 @@ public sealed class ResultCompletenessTests : IDisposable
     [Fact]
     public async Task A_complete_single_chunk_result_is_not_reported_as_truncated()
     {
+        // Arrange — the conservative truncation check must not false-positive on a whole result.
         StubQueryResult(
             """{ "row_count": 2, "chunk_index": 0, "data_array": [["Germany"],["France"]] }""",
             manifestExtra: """, "total_row_count": 2""");
+        var client = CreateClient();
 
-        var result = await CreateClient()
-            .GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
 
+        // Assert
         result!.IsTruncated.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// Under EXTERNAL_LINKS disposition the rows sit behind presigned URLs and
+    /// <c>data_array</c> is absent. Returning an empty row set as a successful, complete result
+    /// would be the worst outcome available — a silently empty export that looks like an answer.
+    /// </summary>
+    [Fact]
+    public async Task An_external_links_result_is_refused_rather_than_returned_empty()
+    {
+        // Arrange — no data_array, no total_row_count, no next_chunk_index.
+        StubQueryResult(
+            """{ "external_links": [ { "chunk_index": 0, "row_count": 100000 } ] }""");
+        var client = CreateClient();
+
+        // Act
+        var act = () => client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        var ex = await Should.ThrowAsync<GenieException>(act);
+        ex.Kind.ShouldBe(GenieFailureKind.UnsupportedResult);
+        ex.Message.ShouldContain("100000");
     }
 
     /// <summary>
     /// start-conversation is not idempotent: a retry asks Genie the same question again, running
     /// the SQL warehouse a second time and billing for it, and leaves an orphaned conversation
-    /// whose id the caller never receives. The resilience pipeline must not retry it.
+    /// whose id the caller never receives.
     /// </summary>
     [Fact]
     public async Task A_failed_start_conversation_is_never_retried()
     {
+        // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(503));
@@ -117,21 +147,20 @@ public sealed class ResultCompletenessTests : IDisposable
         services.AddLakeSpeak(o => o.Host = new Uri("https://example.azuredatabricks.net"));
         using var provider = services.BuildServiceProvider();
 
-        // Point the configured client at the stub without disturbing the resilience pipeline.
-        var factory = provider.GetRequiredService<IHttpClientFactory>();
-        var http = factory.CreateClient(nameof(IGenieClient));
+        // The configured client is pointed at the stub without disturbing the resilience pipeline.
+        var http = provider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(IGenieClient));
         http.BaseAddress = new Uri(_server.Url!);
-
         var client = new GenieClient(http, Options.Create(new GenieClientOptions
         {
             Host = new Uri("https://example.azuredatabricks.net"),
         }));
 
+        // Act
         await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
 
+        // Assert
         var attempts = _server.LogEntries.Count(e =>
             e.RequestMessage?.Path?.EndsWith("start-conversation", StringComparison.Ordinal) == true);
-
         attempts.ShouldBe(1);
     }
 
