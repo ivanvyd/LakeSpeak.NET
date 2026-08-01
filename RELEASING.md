@@ -56,23 +56,59 @@ release is cheap.
 
 ### Prerequisites, once
 
-> **Neither of these is configured yet.** As of the last check the repository has no environments
-> and no secrets. This matters more than it looks: a workflow that names an environment which does
-> not exist does **not** fail — GitHub creates it implicitly, with no protection rules. So until
-> the steps below are done there is no approval gate, and the only thing standing between a
-> mistyped manual run and a permanent package is the version guard in the workflow itself.
+> **None of this is configured yet.** As of the last check the repository has no environments and
+> no secrets. This matters more than it looks: a workflow that names an environment which does not
+> exist does **not** fail — GitHub creates it implicitly, with no protection rules. So until the
+> steps below are done there is no approval gate, and the only thing standing between a mistyped
+> manual run and a permanent package is the version guard in the workflow itself.
 
-- `NUGET_API_KEY` as a repository secret, scoped to `LakeSpeak.*`, not a global key.
-- A `nuget` **environment** in repository settings, **with a required reviewer**. Creating the
-  environment alone changes nothing; the required reviewer is the gate. This is what turns
-  publishing into a decision someone makes rather than a side effect of pushing a tag.
+Publishing uses **trusted publishing**, not a stored API key. GitHub mints a short-lived OIDC
+token, nuget.org verifies it against a policy naming this exact repository and workflow, and
+returns a temporary key valid for one hour. Nothing long-lived is ever stored in the repository,
+so there is no key to leak, rotate, or accidentally scope too widely.
 
-Verify both are in place before the first release:
+**1. Create the trusted publishing policy on nuget.org.**
+
+Log in to nuget.org → your username → **Trusted Publishing** → add a policy:
+
+| Field | Value |
+|---|---|
+| Repository Owner | `ivanvyd` |
+| Repository | `lakespeak` |
+| Workflow File | `release.yml` — the file name only, **not** `.github/workflows/release.yml` |
+| Environment | `nuget` — must match the `environment:` in the publish job |
+
+The policy is owned by you or by an organisation, and applies to every package that owner owns.
+If Trusted Publishing does not appear in your account, it has not been rolled out to you yet;
+in that case fall back to an API key scoped to `LakeSpeak.*`.
+
+**2. Add the `NUGET_USER` repository secret.**
+
+Your nuget.org **profile name** — not your email address. It is not a credential; it is a secret
+only so the workflow file does not hard-code an account name.
+
+```bash
+gh secret set NUGET_USER
+```
+
+**3. Create the `nuget` environment with a required reviewer.**
+
+Settings → Environments → New environment → `nuget` → add yourself under *Required reviewers*.
+
+Creating the environment alone changes nothing — the required reviewer *is* the gate, and it is
+also what the trusted publishing policy binds to. Without it, publishing is a side effect of
+pushing a tag rather than a decision someone makes.
+
+**4. Verify all three before the first release.**
 
 ```bash
 gh api repos/ivanvyd/lakespeak/environments --jq '.environments[] | {name, rules: [.protection_rules[].type]}'
 gh secret list
 ```
+
+The first publish also completes the policy: for a new policy nuget.org records the GitHub
+repository and owner IDs on first successful use, which is what stops someone deleting the repo,
+recreating it under the same name, and publishing as if nothing changed.
 
 ### Steps
 
