@@ -1,9 +1,16 @@
 # LakeSpeak.NET
 
+[![CI](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanvyd/lakespeak/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/lakespeak/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/lakespeak)
+
 Talk to governed Databricks data from your terminal and .NET applications.
 
 LakeSpeak.NET is an independent open-source .NET client, terminal application, and automation
 toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents.
+
+**New here?** [Getting started](docs/getting-started.md) walks from nothing to a working answer,
+including what a Genie Agent is and how to tell whether you have one.
 
 > **Not a Databricks product.** LakeSpeak.NET is an independent open-source community project. It
 > is not an official Databricks product, is not endorsed by Databricks, and is not supported under
@@ -17,6 +24,17 @@ toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents
 **v0.1 development. Not yet released.** See [Verification status](#verification-status) for what has
 actually been tested and what has not. Nothing here is stable until `v1.0`; the CLI surface and the
 `LakeSpeak.Genie` public API may both change.
+
+## What this is, in one paragraph
+
+[Databricks Genie](https://docs.databricks.com/aws/en/genie/) answers questions about your data in
+plain English: you ask, it writes SQL against tables someone has curated, runs it on a SQL
+warehouse, and answers. A **Genie Agent** is one such configured surface. Genie normally lives in
+the Databricks web UI — LakeSpeak puts it in your terminal, your scripts, and your .NET code, while
+keeping the generated SQL visible so you can check the answer.
+
+You need a Genie Agent to already exist in your workspace and be shared with you. LakeSpeak cannot
+create one, and sees only what your own Databricks identity can see.
 
 ## Why this exists
 
@@ -101,6 +119,11 @@ if (response.Query is not null)
 }
 ```
 
+Abbreviated for orientation. The complete version — DI registration, `using` directives, reading
+the rows, and typed error handling on `GenieFailureKind` — is in
+[Getting started → Using it from .NET](docs/getting-started.md#using-it-from-net), and it is
+compiled against the library rather than written by hand.
+
 ## Question Packs
 
 A Question Pack turns a set of business questions into a reviewable, version-controlled report.
@@ -171,7 +194,10 @@ Paths that have not been exercised against a real workspace are labelled as such
 
 ## Documentation
 
+- [Getting started](docs/getting-started.md) — zero to a working answer
 - [Commands](docs/commands.md) — every command, flag and exit code
+- [Configuration](docs/configuration.md) — the config file, aliases and defaults
+- [`examples/`](examples/) — a runnable .NET console sample and a complete Question Pack
 - [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
 - [Question Packs](docs/question-packs.md) — the schema and its failure semantics
 - [Troubleshooting](docs/troubleshooting.md)
@@ -179,6 +205,7 @@ Paths that have not been exercised against a real workspace are labelled as such
 - [Decisions](docs/decisions/) — ADRs for the load-bearing choices
 - [Genie API surface](docs/planning/genie-api-surface.md) — every wire claim, labelled verified or not
 - [SOC 2 control mapping](docs/compliance/soc2-mapping.md)
+- [Releasing](RELEASING.md) — how a version is cut, and how to rehearse one
 
 ## Contributing
 

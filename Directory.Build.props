@@ -34,6 +34,9 @@
          attestation in .github/workflows/release.yml to mean anything. -->
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- No Microsoft.SourceLink.GitHub reference is needed: the .NET SDK has bundled Source Link
+         since .NET 8, so these two properties are live, not inert. Verified by packing and
+         reading the emitted .pdb, which carries a commit-pinned raw.githubusercontent.com URL. -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -54,6 +57,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ivanvyd/lakespeak</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>https://github.com/ivanvyd/lakespeak/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <Copyright>Copyright (c) LakeSpeak.NET contributors</Copyright>
     <PackageTags>databricks;genie;cli;analytics;conversational</PackageTags>
   </PropertyGroup>

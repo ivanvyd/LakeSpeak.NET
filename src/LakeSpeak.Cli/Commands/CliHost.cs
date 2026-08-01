@@ -3,6 +3,7 @@ using LakeSpeak.Application;
 using LakeSpeak.Cli.Console;
 using LakeSpeak.Configuration;
 using LakeSpeak.Genie;
+using LakeSpeak.Genie.Authentication;
 using LakeSpeak.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,13 @@ internal sealed class CliHost : IDisposable
     internal OutputFormat Format { get; }
 
     internal IGenieClient Client => _services.GetRequiredService<IGenieClient>();
+
+    /// <summary>
+    /// The token provider the client will actually use — the CLI broker, the environment, or one
+    /// a host application registered. <c>auth check</c> must test this rather than construct its
+    /// own, or it reports failure for a setup that works.
+    /// </summary>
+    internal IGenieTokenProvider TokenProvider => _services.GetRequiredService<IGenieTokenProvider>();
 
     internal AgentResolver Resolver => new(Client, Config);
 
@@ -84,7 +92,17 @@ internal sealed class CliHost : IDisposable
         }
         catch (CliUsageException ex)
         {
-            System.Console.Error.WriteLine($"error: {ex.Message}");
+            // Create() is inside the try, so a usage error raised while building the host leaves
+            // nothing to render through. Only then fall back to the bare console.
+            if (host is null)
+            {
+                System.Console.Error.WriteLine($"error: {ex.Message}");
+            }
+            else
+            {
+                host.Output.Fail(ex.Message);
+            }
+
             return ExitCode.InvalidUsage;
         }
         catch (GenieException ex)

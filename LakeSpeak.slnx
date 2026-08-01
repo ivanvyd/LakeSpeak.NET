@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/examples/" />
+  <Folder Name="/examples/dotnet-quickstart/">
+    <Project Path="examples/dotnet-quickstart/LakeSpeak.Examples.Quickstart.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LakeSpeak.Application/LakeSpeak.Application.csproj" />
     <Project Path="src/LakeSpeak.Cli/LakeSpeak.Cli.csproj" />

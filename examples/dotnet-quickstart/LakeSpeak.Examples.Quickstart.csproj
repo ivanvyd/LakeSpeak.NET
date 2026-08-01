@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>LakeSpeak.Examples.Quickstart</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!-- A sample is documentation. It builds under the same rules as the library so it cannot
+         demonstrate something the analyzers would reject in real code. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CA2007 (call ConfigureAwait) is a library rule. A console application has no
+         synchronization context to return to, and writing ConfigureAwait(false) here would teach
+         a reader to copy a library idiom into application code where it means nothing. -->
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- A project reference rather than a PackageReference so CI catches an API change the same
+         day it lands, instead of after the next release. A reader copying this into their own
+         solution swaps it for: dotnet add package LakeSpeak.Genie -->
+    <ProjectReference Include="..\..\src\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
+  </ItemGroup>
+
+</Project>

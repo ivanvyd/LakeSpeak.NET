@@ -34,6 +34,23 @@ public sealed class AgentResolver(IGenieClient client, LakeSpeakConfig config)
             return new AgentResolution(new GenieAgent(alias.Id, nameOrId), []);
         }
 
+        // An id can be fetched directly. Without this, resolving one means paging the whole
+        // listing until it turns up — four round trips in a workspace with 350 Agents, for the
+        // form scripts and Question Packs are told to prefer. Gated on the id shape so that a
+        // title like "sales" does not spend a guaranteed 404 before the listing it actually needs.
+        if (LooksLikeAgentId(nameOrId))
+        {
+            try
+            {
+                return new AgentResolution(
+                    await client.GetAgentAsync(nameOrId, cancellationToken).ConfigureAwait(false), []);
+            }
+            catch (GenieException ex) when (ex.Kind is GenieFailureKind.AgentNotFound)
+            {
+                // An id-shaped string that is not an Agent is still a legal title. Fall through.
+            }
+        }
+
         var agents = new List<GenieAgent>();
         await foreach (var agent in client.ListAllAgentsAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -64,4 +81,12 @@ public sealed class AgentResolver(IGenieClient client, LakeSpeakConfig config)
             ? new AgentResolution(loose[0], [])
             : new AgentResolution(null, loose);
     }
+
+    /// <summary>
+    /// Whether a string has the shape of a Genie Agent id — 32 lowercase hex characters, as every
+    /// id Databricks has returned takes that form. Deliberately a shape test and not a validity
+    /// test: a false positive costs one 404 and falls through, a false negative costs nothing.
+    /// </summary>
+    private static bool LooksLikeAgentId(string value) =>
+        value.Length == 32 && value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
 }

@@ -63,5 +63,23 @@ internal static class GlobalOptions
     }
 }
 
+/// <summary>Argument checks shared by more than one command.</summary>
+internal static class CliArguments
+{
+    /// <summary>
+    /// Validates the <c>target</c> argument that <c>export</c> and <c>feedback</c> both take.
+    /// Shared because both are documented as accepting more values later, and two copies of the
+    /// accepted-value list is how one of them gets extended and the other quietly does not.
+    /// </summary>
+    internal static void RequireLastTarget(string? target)
+    {
+        if (!string.Equals(target, "last", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new CliUsageException(
+                $"Unknown target '{target}'. Only 'last' is supported in this version.");
+        }
+    }
+}
+
 /// <summary>A problem with what the user typed, as opposed to a failure talking to Databricks.</summary>
 internal sealed class CliUsageException(string message) : Exception(message);

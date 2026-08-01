@@ -78,7 +78,7 @@ Ctrl+C cancels the question in flight and returns you to the prompt; it does not
 | `/result` | Show the last query result |
 | `/export <path>` | Write the last result to CSV |
 | `/thumbs-up`, `/thumbs-down [comment]` | Send feedback to Databricks |
-| `/exit` | Leave |
+| `/exit` | Leave (`/quit` does the same) |
 
 ## `lakespeak pack`
 

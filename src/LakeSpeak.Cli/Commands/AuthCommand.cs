@@ -41,9 +41,12 @@ internal static class AuthCommand
         }
 
         // The only real proof is fetching a token. Everything above is configuration reading.
-        host.Output.Status("Requesting a token through the Databricks CLI…");
+        // Ask the provider the client will actually use — constructing the CLI broker here would
+        // report failure when DATABRICKS_TOKEN is set and the Databricks CLI is not installed,
+        // which is precisely the unattended setup the environment provider exists to serve.
+        var provider = host.TokenProvider;
+        host.Output.Status($"Requesting a token via {DescribeProvider(provider)}…");
 
-        using var provider = new DatabricksCliTokenProvider(profile);
         var token = await provider.GetTokenAsync(cancellationToken).ConfigureAwait(false);
 
         // Length only. Printing any part of a token to a terminal puts it in scrollback and,
@@ -60,4 +63,14 @@ internal static class AuthCommand
         host.Output.Error.MarkupLine($"[green]OK[/] — the workspace answered; [bold]{agents}[/] Agents visible.");
         return ExitCode.Success;
     }
+
+    // Naming the source is the diagnostic value of this command: "it worked" is much less useful
+    // than "it worked via DATABRICKS_TOKEN", when the reason for running it is usually that
+    // something picked up a credential the reader did not expect.
+    private static string DescribeProvider(IGenieTokenProvider provider) => provider switch
+    {
+        DatabricksCliTokenProvider => "the Databricks CLI",
+        EnvironmentTokenProvider => "DATABRICKS_TOKEN",
+        _ => "the registered token provider",
+    };
 }
