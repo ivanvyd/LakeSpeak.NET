@@ -88,8 +88,16 @@ jobs:
           dotnet CycloneDX LakeSpeak.slnx -o artifacts --json --filename sbom.json
 
       - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v2
+        id: attest
         with:
           subject-path: 'artifacts/*.nupkg'
+
+      # The attestation is reachable through GitHub's Attestations API, but the bundle also has to
+      # land on the release itself: tooling that verifies a downloaded artifact offline has no API
+      # to consult, and OpenSSF Scorecard's Signed-Releases check reads release assets rather than
+      # that API. Without this the provenance exists and still scores zero.
+      - name: Stage the provenance bundle alongside the artifacts
+        run: cp "${{ steps.attest.outputs.bundle-path }}" artifacts/provenance.intoto.jsonl
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -139,4 +147,5 @@ jobs:
             artifacts/*.zip
             artifacts/SHA256SUMS.txt
             artifacts/sbom.json
+            artifacts/provenance.intoto.jsonl
           generate_release_notes: true

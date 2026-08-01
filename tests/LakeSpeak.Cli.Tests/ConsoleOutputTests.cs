@@ -53,6 +53,29 @@ public class ConsoleOutputTests
         isMachine.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// A canary for the render switches in <c>AskCommand</c> and <c>AgentsCommand</c>. Both now
+    /// throw on an unrecognised format rather than falling through to text, but a `default` arm
+    /// means C# will not raise CS8509 — so nothing at compile time notices a seventh format.
+    /// This does: adding one fails here until someone has been to both switches.
+    /// </summary>
+    [Fact]
+    public void The_set_of_output_formats_has_not_grown_unnoticed()
+    {
+        // Arrange
+        string[] known =
+        [
+            nameof(OutputFormat.Text), nameof(OutputFormat.Table), nameof(OutputFormat.Markdown),
+            nameof(OutputFormat.Json), nameof(OutputFormat.Jsonl), nameof(OutputFormat.Csv),
+        ];
+
+        // Act
+        var actual = Enum.GetNames<OutputFormat>();
+
+        // Assert
+        actual.ShouldBe(known, ignoreOrder: true);
+    }
+
     [Fact]
     public void Results_are_written_to_the_supplied_writer_not_the_process_stdout()
     {

@@ -124,7 +124,6 @@ internal static class AskCommand
                 break;
 
             case OutputFormat.Text:
-            default:
                 host.Renderer.WriteAnswer(response);
                 if (response.Result is not null)
                 {
@@ -143,6 +142,13 @@ internal static class AskCommand
                 }
 
                 break;
+
+            // Not a silent fall-through to Text. A format added to the enum and forgotten here
+            // would otherwise render as plain text and look like a working feature — the same
+            // reason ExitCode.From throws rather than defaulting.
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(host), host.Format, "No renderer is wired up for this output format.");
         }
     }
 }
