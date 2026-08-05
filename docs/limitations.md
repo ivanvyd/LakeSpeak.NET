@@ -75,10 +75,11 @@ link that is not a workspace-relative path, a chunk the caller is not permitted 
 
 Two caveats worth knowing. `MaxResultRows` defaults to 100,000 rows, because following a chunked
 result to its end is otherwise unbounded work held in memory — raise it if you would rather have
-the memory cost than the shortfall. And **this path has not been exercised against a live
-workspace**: whether a caller may read the remaining chunks of a statement Genie executed on their
-behalf is a permission question no documentation settles, and if the answer is no, behaviour is
-what it was before — the first chunk, flagged.
+the memory cost than the shortfall. And while the **mechanism** was verified against a live
+workspace on 2026-08-05 — chunk reads on a Genie-executed statement are permitted, and the link,
+response shape and row arithmetic all behave as assumed — **Genie producing a multi-chunk result
+was never reproduced**, because the Agent used for verification has a six-row table and Genie
+bounds its own SQL. See [compatibility.md](compatibility.md).
 
 The truncation flag itself was wrong until a post-ship review caught it: the client relied on
 `manifest.truncated`, which reports statement-level truncation by Databricks and is `false` for a

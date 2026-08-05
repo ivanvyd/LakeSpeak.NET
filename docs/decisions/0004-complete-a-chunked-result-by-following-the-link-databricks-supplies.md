@@ -57,8 +57,24 @@ A chunk that cannot be fetched degrades to the rows already in hand rather than 
 answer text is the primary payload and a missing tail should not discard it; the truncation flag
 is what tells the caller the table is short.
 
-**This is verified by contract tests and has not been exercised against a live workspace.**
-Whether a caller may read the remaining chunks of a statement Genie executed on their behalf is a
-workspace permission question that no documentation settles. The unreachable-chunk path exists
-because the answer may well be "no", in which case behaviour is exactly what it was before this
-change. `docs/compatibility.md` records this as untested rather than implying otherwise.
+## Verification — 2026-08-05
+
+The premise this decision was least sure of has since been checked against a live Azure workspace,
+and it holds.
+
+Whether a caller may read the remaining chunks of a statement Genie executed on their behalf was
+recorded here as settled by no documentation. It is now settled by observation: a Genie-executed
+statement's id, taken from a completed message, returned **HTTP 200** from both
+`/api/2.0/sql/statements/{id}` and `/api/2.0/sql/statements/{id}/result/chunks/0` using the
+caller's own token.
+
+The wire contract was checked the same way, on a deliberately chunked statement: `total_chunk_count`
+of 2, `manifest.truncated` **false** on a merely-chunked result — the defect's premise, confirmed —
+a `next_chunk_internal_link` of `/api/2.0/sql/statements/{id}/result/chunks/1`, and following it
+returning the remaining rows with no `next_chunk_index`, summing exactly to `total_row_count`.
+
+What remains unproven is Genie *itself* emitting a multi-chunk result, which needs a large table in
+a Genie Agent and cannot be forced, since Genie bounds its own SQL. Both halves are verified; their
+composition is not. The unreachable-chunk path therefore stays — not because the permission answer
+is expected to be "no", but because a path that returns rows to a user must not depend on an
+assumption nobody re-checks. See [compatibility.md](../compatibility.md) for the evidence.

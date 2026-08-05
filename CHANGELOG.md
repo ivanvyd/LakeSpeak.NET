@@ -12,8 +12,11 @@ here rather than left to be discovered.
   its first chunk — correctly flagged as truncated, but short. The client now follows the
   `next_chunk_internal_link` Databricks supplies until the result is complete. Every way of
   failing to complete one still reports truncation, so a partial result is still never presented
-  as whole. Verified by contract tests; **not yet exercised against a live workspace**. See
-  [ADR 0004](docs/decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md).
+  as whole. The mechanism was verified against a live Azure workspace on 2026-08-05 — including
+  the permission question ADR 0004 recorded as unknown, which the answer to is yes — though Genie
+  emitting a multi-chunk result was not reproduced. See
+  [ADR 0004](docs/decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md)
+  and [compatibility.md](docs/compatibility.md).
 
 ### Added
 
