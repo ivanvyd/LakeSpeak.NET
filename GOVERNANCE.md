@@ -40,9 +40,13 @@ rejected for being outside it.
 
 **Deferred rather than rejected** — reconsidered once there are real users asking:
 
-- An MCP server mode. Databricks already ships managed MCP endpoints for Genie; a LakeSpeak MCP
-  server is only justified if it exposes something they do not, such as Question Packs. Re-exposing
-  `ask` over MCP is not a reason.
+- An MCP server mode. Databricks ships managed MCP endpoints for Genie, and those are **stateless**
+  — every question starts over — so a stateful LakeSpeak MCP server, or one exposing Question
+  Packs, would offer something they do not. That makes this a scope decision rather than a
+  duplication one: an MCP server is a second product with its own transport and support burden. It
+  is deferred until a real user asks, not rejected. Re-exposing `ask` alone would still not be a
+  reason. See [ADR 0001](docs/decisions/0001-a-cli-and-a-library-rather-than-another-mcp-server.md)
+  and its correction.
 - Multi-Agent orchestration.
 
 ## New dependencies

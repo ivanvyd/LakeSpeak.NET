@@ -26,6 +26,17 @@ here rather than left to be discovered.
 
 - The README no longer states a test count. The number had drifted from 89 to 175 without anyone
   noticing, which is what prose claims do.
+- **Positioning corrected.** Databricks CLI v1.10.0 ships `databricks genie ask`, which holds a
+  conversation across calls, shows SQL and prints JSON. The README previously argued that this
+  project exists because the official CLI makes you manage six identifiers by hand; that argument
+  no longer holds. It now leads with the two things that do — there is no Databricks SDK for .NET,
+  and Question Packs have no equivalent — and points readers at the official command for a plain
+  terminal answer. `ROADMAP.md` named this exact event as one that would narrow the differentiator.
+- **ADR 0001 corrected**, without changing its decision. It rejected an MCP server partly on the
+  grounds that one would duplicate Databricks' managed endpoints. Those endpoints are stateless, so
+  a stateful implementation would not duplicate them. The decision stands on scope instead, which
+  was always the real reason. `GOVERNANCE.md` and `ROADMAP.md` updated to match.
+- NuGet version badges for both packages, so the README shows what is actually published.
 
 ## 0.1.0-preview.1 — 2026-08-01
 

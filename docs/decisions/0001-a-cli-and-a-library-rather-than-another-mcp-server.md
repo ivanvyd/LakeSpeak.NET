@@ -45,3 +45,27 @@ authentication story.
 An MCP mode becomes worth reconsidering only when LakeSpeak has something the official endpoints do
 not, such as Question Packs. Re-exposing `ask` over MCP would not qualify. This is recorded in
 `GOVERNANCE.md` as deferred rather than rejected.
+
+## Correction — 2026-08-05
+
+The decision stands. Two of the premises above do not, and leaving them uncorrected would let a
+future reader inherit reasoning that has since been falsified.
+
+**"An MCP server for Genie would duplicate something Databricks maintains" is wrong.** Databricks'
+managed Genie MCP endpoints invoke Genie as a stateless tool: conversation history is not carried
+between calls, so every `query_space` call is a brand-new question. A stateful MCP server would not
+duplicate theirs. It would do the one thing theirs cannot.
+
+**The second premise confuses the protocol with one implementation of it.** The context above uses
+Genie-as-an-MCP-tool not carrying history to conclude that "MCP is the lossy one". That is a
+property of Databricks' server, not of the protocol. Nothing in MCP prevents a stateful
+implementation, and this project's own conversation handling is the hard part of building one.
+
+The decision is unchanged because the honest reason was never duplication — it is scope. An MCP
+server is a second product with its own transport, surface and support burden, attached to a
+project one person maintains. The trigger for reconsidering it, per `GOVERNANCE.md`, is a real user
+asking. That has not happened.
+
+One further fact bearing on the "coding agents are served through the CLI's JSON output"
+consequence: the official CLI now ships `databricks genie ask`, which is stateful across calls via
+`-s` and emits JSON. The consequence still holds. It is simply no longer unique to LakeSpeak.
