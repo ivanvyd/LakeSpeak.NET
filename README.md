@@ -1,6 +1,8 @@
 # LakeSpeak.NET
 
 [![CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanvyd/LakeSpeak.NET/actions/workflows/ci.yml)
+[![LakeSpeak.Cli](https://img.shields.io/nuget/v/LakeSpeak.Cli?label=LakeSpeak.Cli)](https://www.nuget.org/packages/LakeSpeak.Cli/)
+[![LakeSpeak.Genie](https://img.shields.io/nuget/v/LakeSpeak.Genie?label=LakeSpeak.Genie)](https://www.nuget.org/packages/LakeSpeak.Genie/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/LakeSpeak.NET/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/LakeSpeak.NET)
 
@@ -35,7 +37,7 @@ dotnet tool install --global LakeSpeak.Cli --prerelease
 [Databricks Genie](https://docs.databricks.com/aws/en/genie/) answers questions about your data in
 plain English: you ask, it writes SQL against tables someone has curated, runs it on a SQL
 warehouse, and answers. A **Genie Agent** is one such configured surface. Genie normally lives in
-the Databricks web UI — LakeSpeak puts it in your terminal, your scripts, and your .NET code, while
+the Databricks web UI — LakeSpeak puts it in your .NET code, your scripts and your terminal, while
 keeping the generated SQL visible so you can check the answer.
 
 You need a Genie Agent to already exist in your workspace and be shared with you. LakeSpeak cannot
@@ -43,20 +45,30 @@ create one, and sees only what your own Databricks identity can see.
 
 ## Why this exists
 
-The Genie Conversation API is capable, and the official `databricks genie` CLI exposes it. But using
-it means managing Agent ids, conversation ids, message ids, attachment ids, a polling loop, and a
-two-step download workflow yourself:
+Start with what you may not need this for. The official CLI has a good terminal experience for
+Genie:
 
 ```bash
-databricks genie list-spaces
-databricks genie start-conversation <space-id> "question"
-databricks genie get-message <space-id> <conversation-id> <message-id>
-databricks genie get-message-attachment-query-result ...
-databricks genie generate-download-full-query-result ...
-databricks genie get-download-full-query-result ...
+databricks genie ask -s sales --include-sql "How did revenue change last month?"
 ```
 
-LakeSpeak turns that into:
+That holds a conversation across calls, shows the SQL, and prints JSON with `-o json`. If a terminal
+answer is all you want, it ships with the Databricks CLI and it is fine.
+
+Two things it does not cover.
+
+**There is no Databricks SDK for .NET.** Python, Java, Go and R are covered; .NET is not. A .NET
+service that needs a Genie answer in-process has no first-party option, and shelling out to a CLI
+from a hosted service is not one. `LakeSpeak.Genie` is a typed client with DI registration,
+cancellation, typed failures, and no credential of its own.
+
+**Question Packs have no equivalent.** A set of business questions, version-controlled, reviewed
+like code, run on a schedule, producing a deterministic Markdown report. That is a different
+artifact from a terminal command, and nothing else produces it.
+
+The terminal client exists because the library needed proving and because `--agent` with
+[configured aliases](docs/configuration.md) targets a named Agent, which the official `ask` exposes
+no flag for.
 
 ```bash
 lakespeak ask --agent sales "How did revenue change last month?"
@@ -66,11 +78,12 @@ lakespeak ask --agent sales "How did revenue change last month?"
 
 The generated SQL is shown because the answer is only as trustworthy as the query behind it.
 
-It is deliberately narrow. It is not a Databricks SDK for .NET, not a replacement for the official
-CLI, and not another Genie MCP server — Databricks already ships [managed MCP endpoints for
-Genie](https://docs.databricks.com/aws/en/generative-ai/mcp/), and duplicating them would add
-nothing. What is missing is a good product experience for stateful conversations, and that is the
-gap this fills. See [docs/decisions](docs/decisions/) for the reasoning.
+It is deliberately narrow. It is not a Databricks SDK for .NET and not a replacement for the
+official CLI. It is also not a Genie MCP server: Databricks ships [managed MCP endpoints for
+Genie](https://docs.databricks.com/aws/en/generative-ai/mcp/), and although those are stateless —
+every question starts over — building a stateful one would be a second product, and this is
+deliberately one. See [ADR 0001](docs/decisions/0001-a-cli-and-a-library-rather-than-another-mcp-server.md),
+including its correction.
 
 ## Install
 

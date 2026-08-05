@@ -11,8 +11,10 @@ curated for it, runs that SQL on a SQL warehouse, and answers. A **Genie Agent**
 still calls it a *space* — is one such configured question-answering surface: a set of tables, some
 instructions, and a warehouse to run on.
 
-Genie normally lives inside the Databricks web UI. **LakeSpeak puts it in your terminal and in your
-.NET code.** That is the whole idea.
+Genie normally lives inside the Databricks web UI. **LakeSpeak puts it in your .NET code, and in
+your terminal.** The .NET half is the part nothing else does — Databricks publishes SDKs for
+Python, Java, Go and R, but not for .NET. For a terminal answer alone, `databricks genie ask` ships
+with the Databricks CLI and is worth trying first.
 
 ```
    You                LakeSpeak              Databricks Genie
