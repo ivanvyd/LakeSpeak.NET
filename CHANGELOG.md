@@ -21,6 +21,11 @@ here rather than left to be discovered.
   result. Reaching it reports the result as truncated rather than capping it silently.
 - A test that parses every `lakespeak …` example in the documentation against the real command
   tree, so a documented command or flag that no longer exists fails the build.
+- **A service-principal recipe for unattended runs**, in `docs/authentication.md`. Databricks'
+  documented M2M call mints a token that the existing `DATABRICKS_TOKEN` path accepts, so CI works
+  today without LakeSpeak becoming a credential broker. Documented, not exercised live.
+- **A scheduled GitHub Actions example**, at `examples/github-actions/daily-brief.yml` — a sample
+  to copy, not a live workflow in this repository.
 
 ### Changed
 

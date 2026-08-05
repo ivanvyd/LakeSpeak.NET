@@ -1,0 +1,91 @@
+# Runs a Question Pack on a schedule and commits the report.
+#
+# This is a sample to copy into your own repository's .github/workflows/. It is NOT active in the
+# LakeSpeak repository: a live workflow here would need a real workspace's secrets in a public
+# repo and would bill a SQL warehouse on a cron.
+#
+# Before it works you need:
+#   - a Genie Agent the service principal can reach, and a SQL warehouse it may use
+#   - repository secrets DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
+#   - a pack committed at packs/daily-brief.yaml
+#
+# See docs/authentication.md for how the service principal token is minted, and the one-hour
+# expiry that makes it minted here rather than stored.
+
+name: Daily brief
+
+on:
+  schedule:
+    # 07:00 UTC on weekdays. Cron has no timezone, so this drifts against local time twice a year.
+    - cron: '0 7 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to a commit rather than a tag: a tag can be moved, and a moved tag in a workflow
+      # holding workspace credentials is somebody else's code running with your secrets. This is
+      # how the workflows in this repository are pinned too.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install LakeSpeak
+        run: dotnet tool install --global LakeSpeak.Cli
+
+      - name: Run the pack
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+
+          # Minted here rather than stored: the token is valid for one hour, so a stored one
+          # would be expired by the next scheduled run. ::add-mask:: keeps it out of the log
+          # even if a later step echoes it by accident.
+          TOKEN=$(curl -sS --fail --request POST \
+            --url "$DATABRICKS_HOST/oidc/v1/token" \
+            --user "$DATABRICKS_CLIENT_ID:$DATABRICKS_CLIENT_SECRET" \
+            --data 'grant_type=client_credentials&scope=all-apis' \
+            | jq -r .access_token)
+          echo "::add-mask::$TOKEN"
+          echo "DATABRICKS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Write the report
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        run: lakespeak pack run packs/daily-brief.yaml
+
+      - name: Commit the report
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add reports/
+
+          # A pack that produces an identical report has nothing to commit, and `git commit`
+          # exits non-zero on an empty change — which would fail the run for a non-failure.
+          if git diff --cached --quiet; then
+            echo 'Report unchanged.'
+            exit 0
+          fi
+
+          git commit -m "report: daily brief $(date -u +%Y-%m-%d)"
+          git push
+
+# Two things to decide before using this in earnest.
+#
+# The report contains governed data. Committing it to a repository puts query results wherever
+# that repository is readable, which is a disclosure decision, not a convenience one. Uploading
+# it as an artifact with a retention policy is often the better answer.
+#
+# `pack run` exits 8 when some questions fail and the pack allows it (continueOnQuestionFailure),
+# and 0 when every question completed. Exit 0 does not mean every answer is useful: Genie can
+# reply with a clarifying question, and that is a successful message. See docs/limitations.md.

@@ -219,7 +219,8 @@ Paths that have not been exercised against a real workspace are labelled as such
 - [Getting started](docs/getting-started.md) — zero to a working answer
 - [Commands](docs/commands.md) — every command, flag and exit code
 - [Configuration](docs/configuration.md) — the config file, aliases and defaults
-- [`examples/`](examples/) — a runnable .NET console sample and a complete Question Pack
+- [`examples/`](examples/) — a runnable .NET console sample, a complete Question Pack, and a
+  [scheduled GitHub Actions workflow](examples/github-actions/daily-brief.yml)
 - [Container image](docs/containers.md) — running a Question Pack on a schedule
 - [Authentication](docs/authentication.md) — profiles, environment tokens, and what is not supported
 - [Question Packs](docs/question-packs.md) — the schema and its failure semantics
