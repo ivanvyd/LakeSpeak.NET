@@ -76,21 +76,45 @@ Not a live workspace. Recorded because the packaged surface is the only surface 
 | Packaged tool installed to an isolated `--tool-path` | `lakespeak --version` → `0.1.0+b934d6b…`, matching the merge commit |
 | Throwaway consumer against `LakeSpeak.Genie.0.1.0.nupkg` | Compiles and reads the new `MaxResultRows`, default `100000` — proving the new public member is in the *package*, not just the build output |
 
-## Chunked result assembly — implemented, unverified live
+## Chunked result assembly — mechanism verified live, 2026-08-05
 
-The client now follows `next_chunk_internal_link` to assemble a chunked result
+The client follows `next_chunk_internal_link` to assemble a chunked result
 ([ADR 0004](decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md)).
-This has **never run against a real workspace**, and one specific thing is unknown: whether a
-caller may read the remaining chunks of a statement Genie executed on their behalf. That link
-resolves to `/api/2.0/sql/statements/…`, which is not a Genie path, and no documentation states
-whether the caller's identity carries there.
+Every assumption that design rests on was checked against the live Azure workspace.
 
-If the answer is no, the client returns the first chunk flagged as truncated — exactly the
-behaviour that preceded the change. Nothing regresses; the improvement simply does not arrive.
+**The permission question is answered: yes.** This was the named unknown — whether a caller may
+read the remaining chunks of a statement Genie executed on their behalf, given the link resolves to
+`/api/2.0/sql/statements/…`, which is not a Genie path.
 
-Contract tests cover assembly across three chunks, an unreachable chunk, a repeated link, a link
-resolving off-workspace, and the row cap. What they cannot cover is Databricks' real answer to that
-permission question.
+| Probe | Result |
+|---|---|
+| Genie `start-conversation` → completed message → `query.statement_id` | `01f19102-25bf-…` |
+| `GET /api/2.0/sql/statements/{that id}` with the caller's own token | **HTTP 200**, manifest, `SUCCEEDED` |
+| `GET .../result/chunks/0` for that Genie-executed statement | **HTTP 200**, rows returned |
+
+**The wire contract behaves as the client assumes.** A deliberately chunked statement
+(`SELECT id, repeat('x',120) FROM range(60000)`, run through the Statement Execution API so no
+table was created):
+
+| Observation | Value |
+|---|---|
+| `manifest.total_chunk_count` | `2` |
+| `manifest.truncated` on a merely-chunked result | **`false`** — the original defect's premise, confirmed rather than assumed |
+| Chunk 0 `row_count` | `41250` of `60000` |
+| `next_chunk_internal_link` | `/api/2.0/sql/statements/{id}/result/chunks/1` — workspace-relative, the shape the client's host validation accepts |
+| Following that link | HTTP 200, `row_offset: 41250`, `row_count: 18750`, no `next_chunk_index` |
+| Assembled total | `41250 + 18750 = 60000`, matching `total_row_count` exactly |
+
+That covers the link's shape, the chunk response's shape, the loop's termination condition, and the
+row arithmetic the truncation flag depends on.
+
+**What is still not proven:** Genie itself emitting a result large enough to span chunks. The demo
+Agent's table has six rows, and Genie generally bounds its own SQL, so the two halves above are each
+verified while their composition is not. If Genie never emits a multi-chunk result, this code simply
+never engages; if it does, every mechanism it needs has now been shown to work.
+
+Contract tests continue to cover the paths a live run cannot reach on demand: an unreachable chunk,
+a repeated link, a link resolving off-workspace, and the row cap.
 
 ## What has been verified, and how
 
@@ -104,10 +128,10 @@ permission question.
 | Credential redaction, both signature fields | Unit tests using realistic JSON payloads |
 | Question Pack validation, including path traversal | Unit tests, plus the CLI run by hand |
 | CLI parsing, help, exit codes, `config show` leaking nothing | The built binary run by hand |
-| Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. **Never run live** — see the section above for the specific unknown |
+| Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The wire contract and the chunk-read permission were verified live on 2026-08-05 — see above; Genie emitting a multi-chunk result was not |
 | Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
 | The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
-| Unattended service-principal auth | **Not verified.** `docs/authentication.md` documents Databricks' published M2M call and this project has not executed it |
+| Unattended service-principal auth | **Partly.** The token endpoint accepts the documented request — invalid credentials return `401 invalid_client`, not `404` — so the URL, method, Basic auth and form parameters are right. The exchange with *valid* service-principal credentials has not been run |
 | Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. |
 
 ## How to update this file
