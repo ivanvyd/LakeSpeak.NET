@@ -31,12 +31,19 @@ public sealed class GenieClientOptions
     /// <summary>Page size for agent listing.</summary>
     public int PageSize { get; set; } = 100;
 
-    /// <summary>Upper bound on the rows assembled from a chunked query result.</summary>
+    /// <summary>The row count at which the client stops fetching <em>further</em> chunks.</summary>
     /// <remarks>
-    /// A chunked result is followed to its end, so without a bound the row count is whatever
-    /// Databricks executed — and the rows are held in memory. Reaching this limit is never
-    /// silent: the result comes back flagged as truncated, exactly as an unreachable chunk does.
-    /// Raise it when you would rather have the memory cost than the shortfall.
+    /// <para>
+    /// A chunked result is otherwise followed to its end, so without a bound the row count is
+    /// whatever Databricks executed — and the rows are held in memory. When this limit stops the
+    /// walk the result comes back flagged as truncated, exactly as an unreachable chunk does.
+    /// </para>
+    /// <para>
+    /// It is deliberately <b>not</b> a hard cap on the rows returned. It is checked before
+    /// requesting another chunk, so a single chunk larger than this limit is returned whole: those
+    /// rows already arrived, and discarding data Databricks has already sent would be a worse
+    /// trade than the memory. Size a host for the largest single chunk, not for this number.
+    /// </para>
     /// </remarks>
     public int MaxResultRows { get; set; } = 100_000;
 
