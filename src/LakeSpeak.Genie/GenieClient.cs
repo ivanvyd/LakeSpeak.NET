@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -378,6 +379,7 @@ public sealed partial class GenieClient : IGenieClient
         CancellationToken cancellationToken)
     {
         var chunk = firstChunk;
+        var seenLinks = new HashSet<string>(StringComparer.Ordinal);
 
         // Driven by next_chunk_index, not by the link: the index is what says rows are missing.
         // Every way of failing to follow it below still returns true, so a result is never
@@ -398,19 +400,28 @@ public sealed partial class GenieClient : IGenieClient
                 return true;
             }
 
-            if (!IsWorkspacePath(link))
+            // A chunk that points at itself would otherwise spin here until the process is
+            // killed — and a chunk carrying no rows would not even grow toward MaxResultRows.
+            // Same failure the agent-listing loop guards against with its repeated page token.
+            if (!seenLinks.Add(link))
+            {
+                LogChunkLinkRepeated(_logger);
+                return true;
+            }
+
+            if (!ResolvesToWorkspace(link, out var chunkUri))
             {
                 // The link is server-supplied and the bearer token rides on every workspace
-                // request. An absolute or off-host link would send the Databricks token to
-                // whatever host it names. The link itself is not logged: it is attacker-chosen
-                // in exactly the case worth logging.
+                // request, so a link naming another host would disclose the token to it. The
+                // link is not logged: its contents are attacker-chosen in exactly this case.
                 LogChunkLinkRejected(_logger);
                 return true;
             }
 
             try
             {
-                chunk = await GetAsync<ResultDataWire>(link, cancellationToken).ConfigureAwait(false);
+                chunk = await GetAsync<ResultDataWire>(chunkUri.AbsoluteUri, cancellationToken)
+                    .ConfigureAwait(false);
             }
             catch (GenieException ex)
             {
@@ -449,14 +460,35 @@ public sealed partial class GenieClient : IGenieClient
     }
 
     /// <summary>
-    /// Accepts only a workspace-relative path. Databricks documents the chunk link as an absolute
-    /// path to be joined with the host, so anything carrying a scheme or authority is not the
-    /// thing the contract describes and must not receive the bearer token.
+    /// Resolves a server-supplied chunk link against the workspace and accepts it only if it
+    /// still points at the workspace.
     /// </summary>
-    internal static bool IsWorkspacePath(string link)
-        => link.StartsWith('/')
-            && !link.StartsWith("//", StringComparison.Ordinal)
-            && !Uri.TryCreate(link, UriKind.Absolute, out _);
+    /// <remarks>
+    /// Validating the resolved host rather than the shape of the string is what makes this
+    /// robust: <c>//evil.example.com/x</c> looks like a path and resolves to another host, and
+    /// no amount of prefix-checking is provably free of the next such quirk. Databricks
+    /// documents the link as opaque, so its shape is not ours to constrain — where it ends up is.
+    /// </remarks>
+    private bool ResolvesToWorkspace(string link, [NotNullWhen(true)] out Uri? resolved)
+    {
+        resolved = null;
+        var workspace = _http.BaseAddress ?? _options.Host!;
+
+        if (!Uri.TryCreate(workspace, link, out var candidate))
+        {
+            return false;
+        }
+
+        if (candidate.Scheme != workspace.Scheme
+            || !candidate.Host.Equals(workspace.Host, StringComparison.OrdinalIgnoreCase)
+            || candidate.Port != workspace.Port)
+        {
+            return false;
+        }
+
+        resolved = candidate;
+        return true;
+    }
 
     private static GenieResponse Normalize(
         MessageWire wire, string agentId, string conversationId, string messageId,
@@ -658,14 +690,21 @@ public sealed partial class GenieClient : IGenieClient
     private static partial void LogChunkLinkRejected(ILogger logger);
 
     [LoggerMessage(
-        EventId = 6,
+        EventId = 5,
         Level = LogLevel.Warning,
         Message = "A result chunk advertised a further chunk but carried no link to it. " +
                   "The result is reported as truncated.")]
     private static partial void LogChunkLinkMissing(ILogger logger);
 
     [LoggerMessage(
-        EventId = 5,
+        EventId = 6,
+        Level = LogLevel.Warning,
+        Message = "A result chunk link repeated one already followed; stopping to avoid looping. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkLinkRepeated(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 7,
         Level = LogLevel.Warning,
         Message = "Could not fetch a further result chunk ({Kind}). " +
                   "The rows already retrieved are returned and reported as truncated.")]

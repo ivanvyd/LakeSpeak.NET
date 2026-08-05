@@ -157,14 +157,15 @@ public sealed class ResultCompletenessTests : IDisposable
     }
 
     /// <summary>
-    /// The chunk link is server-supplied and every workspace request carries the bearer token.
-    /// An absolute link would send that token to whatever host it names.
+    /// The chunk link is server-supplied and every workspace request carries the bearer token, so
+    /// a link naming another host would disclose that token to it. Both forms below resolve to
+    /// <c>evil.example.com</c> — the protocol-relative one despite looking like a path, which is
+    /// why the check is on the resolved host rather than the shape of the string.
     /// </summary>
     [Theory]
     [InlineData("https://evil.example.com/api/2.0/sql/statements/s1/result/chunks/1")]
     [InlineData("//evil.example.com/api/2.0/sql/statements/s1/result/chunks/1")]
-    [InlineData("api/2.0/sql/statements/s1/result/chunks/1")]
-    public async Task A_next_chunk_link_that_is_not_a_workspace_path_is_refused(string link)
+    public async Task A_next_chunk_link_pointing_off_the_workspace_is_refused(string link)
     {
         // Arrange
         StubQueryResult(
@@ -188,6 +189,44 @@ public sealed class ResultCompletenessTests : IDisposable
         var chunkRequests = _server.LogEntries.Count(e =>
             e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
         chunkRequests.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// A chunk that points at itself would spin forever, and a self-pointing chunk carrying no
+    /// rows would not even grow toward <c>MaxResultRows</c> — so the row cap is not the backstop
+    /// here. This test would hang rather than fail if the guard were removed.
+    /// </summary>
+    [Fact]
+    public async Task A_chunk_link_that_repeats_stops_rather_than_looping()
+    {
+        // Arrange — chunk one points back at itself and carries no rows.
+        StubQueryResult(
+            """
+            {
+              "row_count": 1, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": [["Germany"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 9000""");
+
+        StubChunk(1,
+            """
+            {
+              "row_count": 0, "chunk_index": 1, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": []
+            }
+            """);
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result!.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeTrue();
     }
 
     /// <summary>

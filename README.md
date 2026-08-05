@@ -190,7 +190,7 @@ promise; it is a record of evidence.
 
 | Area | Status |
 |---|---|
-| Unit and contract tests | 89 tests, run on Windows and Linux in CI |
+| Unit and contract tests | Run on Windows and Linux in CI, on every push and pull request |
 | Azure Databricks, live workspace | `agents list`, `ask`, `pack run` and every output format verified against a real Genie Agent on 2026-08-01 |
 | `chat`, feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
 | AWS Databricks | Not tested |

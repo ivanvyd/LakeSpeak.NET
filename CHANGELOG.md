@@ -6,7 +6,26 @@ here rather than left to be discovered.
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- **Chunked query results are now assembled in full.** A result split across chunks came back as
+  its first chunk — correctly flagged as truncated, but short. The client now follows the
+  `next_chunk_internal_link` Databricks supplies until the result is complete. Every way of
+  failing to complete one still reports truncation, so a partial result is still never presented
+  as whole. Verified by contract tests; **not yet exercised against a live workspace**. See
+  [ADR 0004](docs/decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md).
+
+### Added
+
+- `GenieClientOptions.MaxResultRows` (default 100,000) bounds the rows assembled from a chunked
+  result. Reaching it reports the result as truncated rather than capping it silently.
+- A test that parses every `lakespeak …` example in the documentation against the real command
+  tree, so a documented command or flag that no longer exists fails the build.
+
+### Changed
+
+- The README no longer states a test count. The number had drifted from 89 to 175 without anyone
+  noticing, which is what prose claims do.
 
 ## 0.1.0-preview.1 — 2026-08-01
 
