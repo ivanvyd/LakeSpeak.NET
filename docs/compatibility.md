@@ -58,9 +58,39 @@ The live suite in `tests/LakeSpeak.LiveIntegrationTests` reproduces all of this.
 `DATABRICKS_HOST`, `DATABRICKS_TOKEN` and `LAKESPEAK_LIVE_AGENT` set:
 `dotnet test -c Release --filter "Category=Live"`.
 
-What this still does **not** exercise: `chat` (needs an interactive terminal), full-result downloads
-beyond the first chunk, visualizations, and `QUERY_RESULT_EXPIRED` recovery. Those remain covered by
-contract tests only.
+What this still does **not** exercise: `chat` (needs an interactive terminal), chunked result
+assembly, the Genie full-result download endpoints, visualizations, and `QUERY_RESULT_EXPIRED`
+recovery. Those remain covered by contract tests only.
+
+## Local verification — 2026-08-05
+
+Not a live workspace. Recorded because the packaged surface is the only surface a user meets, and
+"it built" is not evidence that it packaged.
+
+| Check | Result |
+|---|---|
+| Full suite, `Category!=Live` | 224 tests, 0 failed, across five projects |
+| Build under warnings-as-errors | Clean |
+| `dotnet format --verify-no-changes` | Clean |
+| `dotnet restore --locked-mode` | Succeeds; no lock file drift |
+| Packaged tool installed to an isolated `--tool-path` | `lakespeak --version` → `0.1.0+b934d6b…`, matching the merge commit |
+| Throwaway consumer against `LakeSpeak.Genie.0.1.0.nupkg` | Compiles and reads the new `MaxResultRows`, default `100000` — proving the new public member is in the *package*, not just the build output |
+
+## Chunked result assembly — implemented, unverified live
+
+The client now follows `next_chunk_internal_link` to assemble a chunked result
+([ADR 0004](decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md)).
+This has **never run against a real workspace**, and one specific thing is unknown: whether a
+caller may read the remaining chunks of a statement Genie executed on their behalf. That link
+resolves to `/api/2.0/sql/statements/…`, which is not a Genie path, and no documentation states
+whether the caller's identity carries there.
+
+If the answer is no, the client returns the first chunk flagged as truncated — exactly the
+behaviour that preceded the change. Nothing regresses; the improvement simply does not arrive.
+
+Contract tests cover assembly across three chunks, an unreachable chunk, a repeated link, a link
+resolving off-workspace, and the row cap. What they cannot cover is Databricks' real answer to that
+permission question.
 
 ## What has been verified, and how
 
@@ -74,6 +104,10 @@ contract tests only.
 | Credential redaction, both signature fields | Unit tests using realistic JSON payloads |
 | Question Pack validation, including path traversal | Unit tests, plus the CLI run by hand |
 | CLI parsing, help, exit codes, `config show` leaking nothing | The built binary run by hand |
+| Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. **Never run live** — see the section above for the specific unknown |
+| Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
+| The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
+| Unattended service-principal auth | **Not verified.** `docs/authentication.md` documents Databricks' published M2M call and this project has not executed it |
 | Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. |
 
 ## How to update this file

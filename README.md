@@ -206,6 +206,8 @@ promise; it is a record of evidence.
 | Unit and contract tests | Run on Windows and Linux in CI, on every push and pull request |
 | Azure Databricks, live workspace | `agents list`, `ask`, `pack run` and every output format verified against a real Genie Agent on 2026-08-01 |
 | `chat`, feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
+| Chunked results assembled beyond the first chunk | Contract tests only — **not** exercised live. Whether a caller may read the remaining chunks of a Genie-executed statement is unverified; if not, the first chunk is returned flagged as truncated, as before |
+| Unattended service-principal authentication | Documented from Databricks' published flow, **not** executed by this project |
 | AWS Databricks | Not tested |
 | GCP Databricks | Not tested |
 | Windows / Linux | Covered by the CI matrix |
