@@ -19,6 +19,15 @@ internal static class Program
         {
         }
 
+        return await CreateRootCommand().Parse(args).InvokeAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The command tree. Separated from <see cref="Main"/> so tests can parse against the real
+    /// thing — in particular the commands and flags the documentation claims exist.
+    /// </summary>
+    internal static RootCommand CreateRootCommand()
+    {
         var root = new RootCommand(
             "LakeSpeak.NET — talk to governed Databricks data from your terminal.\n" +
             "An independent open-source project, not affiliated with Databricks.");
@@ -37,6 +46,6 @@ internal static class Program
         root.Subcommands.Add(ExportCommand.Create());
         root.Subcommands.Add(FeedbackCommand.Create());
 
-        return await root.Parse(args).InvokeAsync().ConfigureAwait(false);
+        return root;
     }
 }

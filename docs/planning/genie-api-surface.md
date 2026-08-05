@@ -36,6 +36,25 @@ All under `/api/2.0/genie`. VERIFIED unless noted.
 | Re-execute attachment query | POST | `…/attachments/{attachment_id}/execute-query` |
 | Generate full-result download | POST | `…/attachments/{attachment_id}/downloads` |
 | Get full-result download | GET | `…/attachments/{attachment_id}/downloads/{download_id}` |
+
+The download pair is **not used**, and the row above understates what it needs. `generate` returns
+`{ download_id, download_id_signature }` — the signature being a JWT — and `get` requires **both**,
+not the id alone. Its response is a `statement_response`, which is chunked like any other, so it
+does not by itself return a whole result. Verified against `databricks-sdk-py` and the CLI
+reference for `databricks genie get-download-full-query-result`, which takes six positional
+arguments ending in `DOWNLOAD_ID_SIGNATURE`.
+
+## Completing a chunked result
+
+There is no Genie endpoint that takes a chunk index. Genie returns the Statement Execution
+response verbatim, and that contract pairs `next_chunk_index` with `next_chunk_internal_link` —
+documented as an absolute path to be joined with the workspace host and treated as opaque. The
+client follows that link and composes no path of its own; see
+[ADR 0004](../decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md).
+
+**UNVERIFIED**: whether the caller's identity may read the remaining chunks of a statement Genie
+executed on their behalf. No documentation settles it, and it has not been tried live. The client
+treats a refusal as a truncated result rather than a failure.
 | Send message feedback | POST | `…/messages/{message_id}/feedback` |
 | List conversations | GET | `/spaces/{space_id}/conversations` |
 | List conversation messages | GET | `/spaces/{space_id}/conversations/{conversation_id}/messages` |

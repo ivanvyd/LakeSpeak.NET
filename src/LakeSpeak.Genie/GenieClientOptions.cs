@@ -31,6 +31,15 @@ public sealed class GenieClientOptions
     /// <summary>Page size for agent listing.</summary>
     public int PageSize { get; set; } = 100;
 
+    /// <summary>Upper bound on the rows assembled from a chunked query result.</summary>
+    /// <remarks>
+    /// A chunked result is followed to its end, so without a bound the row count is whatever
+    /// Databricks executed — and the rows are held in memory. Reaching this limit is never
+    /// silent: the result comes back flagged as truncated, exactly as an unreachable chunk does.
+    /// Raise it when you would rather have the memory cost than the shortfall.
+    /// </remarks>
+    public int MaxResultRows { get; set; } = 100_000;
+
     internal void Validate()
     {
         if (Host is null)
@@ -51,6 +60,13 @@ public sealed class GenieClientOptions
         {
             throw new InvalidOperationException(
                 "InitialPollInterval must not exceed MaxPollInterval.");
+        }
+
+        if (MaxResultRows < 1)
+        {
+            // Zero would report every result as truncated while returning nothing, which reads
+            // as a broken workspace rather than a misconfiguration.
+            throw new InvalidOperationException("MaxResultRows must be at least 1.");
         }
     }
 }

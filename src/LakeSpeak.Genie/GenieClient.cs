@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -343,38 +344,150 @@ public sealed partial class GenieClient : IGenieClient
             .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName))
             .ToList();
 
-        // EXTERNAL_LINKS disposition puts the rows behind presigned URLs and omits data_array
-        // entirely. This client cannot follow those links, and returning an empty row set as a
-        // successful complete result would be the worst outcome available — a silently empty
-        // export that looks like a real answer. Fail loudly instead.
-        if (statement.Result?.ExternalLinks is { Count: > 0 } links
-            && statement.Result.DataArray is null)
-        {
-            var rowsBehindLinks = links.Sum(l => l.RowCount ?? 0);
-            throw new GenieException(
-                GenieFailureKind.UnsupportedResult,
-                $"Databricks returned this result as {links.Count} external link(s) covering " +
-                $"{rowsBehindLinks} row(s) rather than inline rows. This version cannot read that " +
-                "form, and will not report an empty result as a complete one. Narrow the question " +
-                "so the result comes back inline.");
-        }
+        RejectExternalLinks(statement.Result);
 
-        var rows = statement.Result?.DataArray ?? [];
+        var rows = new List<IReadOnlyList<string?>>(statement.Result?.DataArray ?? []);
+        var incomplete = await AppendRemainingChunksAsync(rows, statement.Result, cancellationToken)
+            .ConfigureAwait(false);
 
-        // The Statement Execution contract chunks large results, and this client reads only the
-        // first chunk. `manifest.truncated` does NOT cover that: it reports statement-level
-        // truncation by Databricks, and is false for a result that is merely split. Reporting
-        // only that flag would hand back the first chunk with truncated=false — a partial
-        // result presented as complete, which is the one failure this client must never have.
-        // Fetching the remaining chunks is v0.2 work; until then the shortfall is visible.
-        var hasMoreChunks = statement.Result?.NextChunkIndex is not null
-            || (statement.Manifest.TotalRowCount is { } total && rows.Count < total);
+        // `manifest.truncated` alone does NOT mean the caller has every row: it reports
+        // statement-level truncation by Databricks, and is false for a result that was merely
+        // split into chunks. A row count short of the manifest total catches the case where a
+        // chunk was unreachable and the loop above stopped early.
+        var shortOfTotal = statement.Manifest.TotalRowCount is { } total && rows.Count < total;
 
         return new GenieQueryResult(
             cols,
             rows,
-            (statement.Manifest.Truncated ?? false) || hasMoreChunks,
+            (statement.Manifest.Truncated ?? false) || incomplete || shortOfTotal,
             statement.Manifest.TotalRowCount);
+    }
+
+    /// <summary>
+    /// Follows <c>next_chunk_internal_link</c> until the result is complete, appending each
+    /// chunk's rows. Returns <see langword="true"/> if rows are known to be missing.
+    /// </summary>
+    /// <remarks>
+    /// Stopping early is never silent: every exit that leaves rows behind returns
+    /// <see langword="true"/>, which the caller turns into <c>IsTruncated</c>. A chunk that
+    /// cannot be fetched degrades to the rows already in hand rather than discarding a good
+    /// partial answer, because the text of the answer is the primary payload.
+    /// </remarks>
+    private async Task<bool> AppendRemainingChunksAsync(
+        List<IReadOnlyList<string?>> rows,
+        ResultDataWire? firstChunk,
+        CancellationToken cancellationToken)
+    {
+        var chunk = firstChunk;
+        var seenLinks = new HashSet<string>(StringComparer.Ordinal);
+
+        // Driven by next_chunk_index, not by the link: the index is what says rows are missing.
+        // Every way of failing to follow it below still returns true, so a result is never
+        // reported complete because the means of completing it was unavailable.
+        while (chunk?.NextChunkIndex is not null)
+        {
+            if (rows.Count >= _options.MaxResultRows)
+            {
+                LogChunkCapReached(_logger, rows.Count, _options.MaxResultRows);
+                return true;
+            }
+
+            if (chunk.NextChunkInternalLink is not { Length: > 0 } link)
+            {
+                // The contract pairs the index with a link. An index without one is a shape this
+                // client has not seen; the honest response is the shortfall, not a guessed URL.
+                LogChunkLinkMissing(_logger);
+                return true;
+            }
+
+            // A chunk that points at itself would otherwise spin here until the process is
+            // killed — and a chunk carrying no rows would not even grow toward MaxResultRows.
+            // Same failure the agent-listing loop guards against with its repeated page token.
+            if (!seenLinks.Add(link))
+            {
+                LogChunkLinkRepeated(_logger);
+                return true;
+            }
+
+            if (!ResolvesToWorkspace(link, out var chunkUri))
+            {
+                // The link is server-supplied and the bearer token rides on every workspace
+                // request, so a link naming another host would disclose the token to it. The
+                // link is not logged: its contents are attacker-chosen in exactly this case.
+                LogChunkLinkRejected(_logger);
+                return true;
+            }
+
+            try
+            {
+                chunk = await GetAsync<ResultDataWire>(chunkUri.AbsoluteUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (GenieException ex)
+            {
+                // Genie executes the statement; whether the caller may read its remaining chunks
+                // is a workspace permission question this client cannot settle in advance.
+                LogChunkFetchFailed(_logger, ex.Kind);
+                return true;
+            }
+
+            RejectExternalLinks(chunk);
+            rows.AddRange(chunk.DataArray ?? []);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// EXTERNAL_LINKS disposition puts rows behind presigned URLs and omits <c>data_array</c>.
+    /// Returning an empty row set as a successful complete result would be the worst outcome
+    /// available — a silently empty export that reads as a real answer.
+    /// </summary>
+    private static void RejectExternalLinks(ResultDataWire? result)
+    {
+        if (result?.ExternalLinks is not { Count: > 0 } links || result.DataArray is not null)
+        {
+            return;
+        }
+
+        var rowsBehindLinks = links.Sum(l => l.RowCount ?? 0);
+        throw new GenieException(
+            GenieFailureKind.UnsupportedResult,
+            $"Databricks returned this result as {links.Count} external link(s) covering " +
+            $"{rowsBehindLinks} row(s) rather than inline rows. This version cannot read that " +
+            "form, and will not report an empty result as a complete one. Narrow the question " +
+            "so the result comes back inline.");
+    }
+
+    /// <summary>
+    /// Resolves a server-supplied chunk link against the workspace and accepts it only if it
+    /// still points at the workspace.
+    /// </summary>
+    /// <remarks>
+    /// Validating the resolved host rather than the shape of the string is what makes this
+    /// robust: <c>//evil.example.com/x</c> looks like a path and resolves to another host, and
+    /// no amount of prefix-checking is provably free of the next such quirk. Databricks
+    /// documents the link as opaque, so its shape is not ours to constrain — where it ends up is.
+    /// </remarks>
+    private bool ResolvesToWorkspace(string link, [NotNullWhen(true)] out Uri? resolved)
+    {
+        resolved = null;
+        var workspace = _http.BaseAddress ?? _options.Host!;
+
+        if (!Uri.TryCreate(workspace, link, out var candidate))
+        {
+            return false;
+        }
+
+        if (candidate.Scheme != workspace.Scheme
+            || !candidate.Host.Equals(workspace.Host, StringComparison.OrdinalIgnoreCase)
+            || candidate.Port != workspace.Port)
+        {
+            return false;
+        }
+
+        resolved = candidate;
+        return true;
     }
 
     private static GenieResponse Normalize(
@@ -561,6 +674,41 @@ public sealed partial class GenieClient : IGenieClient
         Level = LogLevel.Debug,
         Message = "Genie message {MessageId} entered state {State}.")]
     private static partial void LogStateChanged(ILogger logger, string messageId, GenieMessageState state);
+
+    [LoggerMessage(
+        EventId = 3,
+        Level = LogLevel.Warning,
+        Message = "Stopped after {Rows} rows, at the MaxResultRows limit of {Limit}. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkCapReached(ILogger logger, int rows, int limit);
+
+    [LoggerMessage(
+        EventId = 4,
+        Level = LogLevel.Warning,
+        Message = "Refused a next-chunk link that was not a workspace-relative path. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkLinkRejected(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 5,
+        Level = LogLevel.Warning,
+        Message = "A result chunk advertised a further chunk but carried no link to it. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkLinkMissing(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 6,
+        Level = LogLevel.Warning,
+        Message = "A result chunk link repeated one already followed; stopping to avoid looping. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkLinkRepeated(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 7,
+        Level = LogLevel.Warning,
+        Message = "Could not fetch a further result chunk ({Kind}). " +
+                  "The rows already retrieved are returned and reported as truncated.")]
+    private static partial void LogChunkFetchFailed(ILogger logger, GenieFailureKind kind);
 
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {

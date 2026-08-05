@@ -61,21 +61,31 @@ An exported CSV is an ordinary file containing governed data. LakeSpeak warns be
 refuses to overwrite without confirmation; it cannot protect the file afterwards. In CI, remember
 that job logs are usually readable by everyone with repository access.
 
-## Large results are returned as a first chunk, flagged
+## Large results are assembled, and a shortfall is always flagged
 
-The Statement Execution contract splits large results into chunks. v0.1 reads only the first one.
+The Statement Execution contract splits large results into chunks. The client follows the
+`next_chunk_internal_link` Databricks supplies until the result is complete — see
+[ADR 0004](decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md).
 
-What it does **not** do is pretend that is the whole result. A response carrying a
-`next_chunk_index`, or fewer rows than the manifest's total, is reported as **truncated** — in the
-terminal, in the JSON `truncated` field, and in Question Pack reports. So an export can be
-incomplete, but it is never *silently* incomplete.
+When it cannot complete one, it says so. A chunk that advertises a successor with no link to it, a
+link that is not a workspace-relative path, a chunk the caller is not permitted to read, or hitting
+`MaxResultRows` all produce a result reported as **truncated** — in the terminal, in the JSON
+`truncated` field, and in Question Pack reports. An export can be incomplete; it is never
+*silently* incomplete.
 
-This was wrong until a post-ship review caught it: the client relied on `manifest.truncated`, which
-reports statement-level truncation by Databricks and is `false` for a merely-chunked result. A large
-result was returned as its first chunk labelled complete. Fetching remaining chunks is v0.2 work.
+Two caveats worth knowing. `MaxResultRows` defaults to 100,000 rows, because following a chunked
+result to its end is otherwise unbounded work held in memory — raise it if you would rather have
+the memory cost than the shortfall. And **this path has not been exercised against a live
+workspace**: whether a caller may read the remaining chunks of a statement Genie executed on their
+behalf is a permission question no documentation settles, and if the answer is no, behaviour is
+what it was before — the first chunk, flagged.
+
+The truncation flag itself was wrong until a post-ship review caught it: the client relied on
+`manifest.truncated`, which reports statement-level truncation by Databricks and is `false` for a
+merely-chunked result. A large result was returned as its first chunk labelled complete.
 
 ## Not implemented in v0.1
 
-Full-result downloads beyond the first chunk, visualization rendering, conversation list and resume
-commands, OAuth M2M, and an MCP server mode. See [ROADMAP.md](../ROADMAP.md) for what is planned and
-[GOVERNANCE.md](../GOVERNANCE.md) for what is deliberately out of scope.
+Visualization rendering, conversation list and resume commands, OAuth M2M, and an MCP server mode.
+See [ROADMAP.md](../ROADMAP.md) for what is planned and [GOVERNANCE.md](../GOVERNANCE.md) for what
+is deliberately out of scope.
