@@ -1,3 +1,4 @@
+using System.CommandLine.Parsing;
 using System.Text.RegularExpressions;
 
 namespace LakeSpeak.Cli.Tests;
@@ -70,7 +71,7 @@ public sealed class DocumentedCommandTests
     {
         // Arrange
         var root = Program.CreateRootCommand();
-        var args = Tokenize(invocation).Skip(1).ToArray();
+        var args = CommandLineParser.SplitCommandLine(invocation).Skip(1).ToArray();
 
         // Act
         var parseResult = root.Parse(args);
@@ -94,6 +95,28 @@ public sealed class DocumentedCommandTests
         // A floor of 15 would have let a regression silently drop two thirds of the corpus while
         // still passing, which is the failure this guard exists to catch.
         found.ShouldBeGreaterThan(35);
+    }
+
+    /// <summary>
+    /// A redirection or comment character inside a quoted question is part of the question.
+    /// </summary>
+    /// <remarks>
+    /// Stripping shell terminators off the raw string used to cut here, which was worse than a
+    /// crash: `lakespeak ask --agent sales "priced &gt; $50?"` truncated to a command that still
+    /// parsed, so the test passed while checking a string the documentation does not contain.
+    /// </remarks>
+    [Theory]
+    [InlineData("""lakespeak ask --agent sales "What sold at a price > 50?" """, "What sold at a price > 50?")]
+    [InlineData("""lakespeak ask --agent sales "Which SKUs are #1 by revenue?" """, "Which SKUs are #1 by revenue?")]
+    public void A_shell_character_inside_a_quoted_question_is_kept(string line, string expectedQuestion)
+    {
+        // Arrange, Act
+        var extracted = InvocationsIn(line).Single();
+        var tokens = CommandLineParser.SplitCommandLine(extracted).ToList();
+
+        // Assert — the question survives whole, and the command still parses.
+        tokens[^1].ShouldBe(expectedQuestion);
+        Program.CreateRootCommand().Parse(tokens.Skip(1).ToArray()).Errors.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -121,71 +144,36 @@ public sealed class DocumentedCommandTests
                 continue;
             }
 
-            var command = raw[start..];
+            // Tokenize before dropping the shell around the command. Truncating the raw string
+            // at the first `>` or `#` cuts inside a quoted question — "products priced > $50"
+            // would silently become a different, still-parseable command, and the test would go
+            // green having validated something the documentation does not say.
+            var tokens = CommandLineParser.SplitCommandLine(raw[start..]).ToList();
 
-            foreach (var terminator in new[] { "|", "#", "2>", ">", "&&", ";" })
+            var shell = tokens.FindIndex(IsShellTerminator);
+            if (shell >= 0)
             {
-                var at = command.IndexOf(terminator, StringComparison.Ordinal);
-                if (at >= 0)
-                {
-                    command = command[..at];
-                }
+                tokens = tokens[..shell];
             }
 
-            command = command.Trim();
-
-            if (command.Length > "lakespeak ".Length && !Placeholder.IsMatch(command))
+            if (tokens.Count > 1 && !tokens.Any(t => Placeholder.IsMatch(t)))
             {
-                yield return command;
+                yield return string.Join(' ', tokens.Select(Requote));
             }
         }
     }
 
-    /// <summary>Splits a command line on whitespace, keeping quoted arguments whole.</summary>
-    private static List<string> Tokenize(string command)
-    {
-        var tokens = new List<string>();
-        var current = new System.Text.StringBuilder();
-        var quote = '\0';
+    private static bool IsShellTerminator(string token)
+        => token is "|" or "#" or "&&" or ";"
+            || token.StartsWith('>')
+            || token.StartsWith("2>", StringComparison.Ordinal);
 
-        foreach (var c in command)
-        {
-            if (quote != '\0')
-            {
-                if (c == quote)
-                {
-                    quote = '\0';
-                }
-                else
-                {
-                    current.Append(c);
-                }
-            }
-            else if (c is '"' or '\'')
-            {
-                quote = c;
-            }
-            else if (char.IsWhiteSpace(c))
-            {
-                if (current.Length > 0)
-                {
-                    tokens.Add(current.ToString());
-                    current.Clear();
-                }
-            }
-            else
-            {
-                current.Append(c);
-            }
-        }
-
-        if (current.Length > 0)
-        {
-            tokens.Add(current.ToString());
-        }
-
-        return tokens;
-    }
+    /// <summary>
+    /// Puts quotes back around a token that has whitespace in it, so the joined string splits
+    /// back into the same tokens when the test re-reads it.
+    /// </summary>
+    private static string Requote(string token)
+        => token.Any(char.IsWhiteSpace) ? $"\"{token}\"" : token;
 
     /// <summary>
     /// Walks up from the test binary to the directory holding the solution file. The docs are

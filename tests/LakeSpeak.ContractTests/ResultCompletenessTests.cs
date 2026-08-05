@@ -1,3 +1,4 @@
+using System.Globalization;
 using LakeSpeak.Genie;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -264,6 +265,68 @@ public sealed class ResultCompletenessTests : IDisposable
         // Assert
         result!.Rows.Count.ShouldBe(1);
         result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The row cap and the repeated-link guard both fail against a response that hands back a
+    /// <em>fresh</em> link every time while carrying no rows: nothing approaches
+    /// <c>MaxResultRows</c>, and no link is ever seen twice.
+    /// </summary>
+    /// <remarks>
+    /// Found by an adversarial review, which drove 680,307 authenticated requests before a
+    /// five-second token cut it off. Without an iteration bound this test does not fail — it
+    /// hangs, and in production it is an unbounded request flood at a real workspace.
+    /// </remarks>
+    [Fact]
+    public async Task An_endless_walk_of_fresh_links_is_bounded_rather_than_followed_forever()
+    {
+        // Arrange — chunk N always points at a distinct chunk N+1 and never returns a row.
+        StubQueryResult(
+            """
+            {
+              "row_count": 0, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": []
+            }
+            """,
+            manifestExtra: """, "total_row_count": 9000""");
+
+        _server.Given(Request.Create()
+                .WithPath(new WireMock.Matchers.RegexMatcher(@"^/api/2\.0/sql/statements/s1/result/chunks/\d+$"))
+                .UsingGet())
+            .RespondWith(Response.Create().WithCallback(request =>
+            {
+                var index = int.Parse(request.Path.Split('/')[^1], CultureInfo.InvariantCulture);
+                return new WireMock.ResponseMessage
+                {
+                    StatusCode = 200,
+                    BodyData = new WireMock.Util.BodyData
+                    {
+                        DetectedBodyType = WireMock.Types.BodyType.String,
+                        BodyAsString =
+                            $$"""
+                            {
+                              "row_count": 0, "chunk_index": {{index}}, "next_chunk_index": {{index + 1}},
+                              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/{{index + 1}}",
+                              "data_array": []
+                            }
+                            """,
+                    },
+                };
+            }));
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert — it terminates, and says the result is short.
+        result.ShouldNotBeNull();
+        result.IsTruncated.ShouldBeTrue();
+
+        var chunkRequests = _server.LogEntries.Count(e =>
+            e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
+        chunkRequests.ShouldBeLessThanOrEqualTo(GenieClient.MaxChunkFetches);
     }
 
     /// <summary>

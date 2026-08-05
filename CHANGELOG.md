@@ -18,10 +18,24 @@ here rather than left to be discovered.
   [ADR 0004](docs/decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md)
   and [compatibility.md](docs/compatibility.md).
 
+### Security
+
+- **The service-principal recipe no longer puts the client secret in a command-line argument.**
+  `curl --user "$ID:$SECRET"` — the form Databricks' own documentation shows — makes the secret
+  readable from the process table by anything else on the machine while the request runs. On a
+  shared or self-hosted CI runner, which is what the recipe is for, that loses a credential
+  masking cannot protect. The credentials are now piped in on stdin. Found by an adversarial
+  security review.
+
 ### Added
 
 - `GenieClientOptions.MaxResultRows` (default 100,000) bounds the rows assembled from a chunked
-  result. Reaching it reports the result as truncated rather than capping it silently.
+  result. Reaching it reports the result as truncated rather than capping it silently. It bounds
+  the *walk*, not the rows returned: a single chunk larger than the limit comes back whole, since
+  discarding data Databricks already sent would be the worse trade.
+- A hard bound of 1,000 chunk requests per result. Neither the row cap nor the repeated-link guard
+  stops a response that supplies a fresh link every time while carrying no rows — an adversarial
+  review drove 680,307 authenticated requests through that gap before a timeout cut it off.
 - A test that parses every `lakespeak …` example in the documentation against the real command
   tree, so a documented command or flag that no longer exists fails the build.
 - **A service-principal recipe for unattended runs**, in `docs/authentication.md`. Databricks'
