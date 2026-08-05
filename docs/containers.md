@@ -9,6 +9,10 @@ every base-image CVE, and this project is not in a position to make that promise
 Mostly one case: **running a Question Pack on a schedule.** A nightly report from a CI runner, a
 Kubernetes CronJob, or an Airflow task, on a host where installing the .NET SDK is inconvenient.
 
+On GitHub Actions you do not need a container at all — installing the tool is one step. See
+[`examples/github-actions/daily-brief.yml`](../examples/github-actions/daily-brief.yml) for a
+scheduled pack run, including how the service principal token is minted and masked.
+
 For everything else you probably do not want a container. Interactive use wants
 `dotnet tool install --global LakeSpeak.Cli`, and a machine with no .NET at all can use the
 self-contained binary from the [releases page](https://github.com/ivanvyd/LakeSpeak.NET/releases).

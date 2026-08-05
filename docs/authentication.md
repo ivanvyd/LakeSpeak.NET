@@ -49,11 +49,56 @@ export DATABRICKS_TOKEN=$(az account get-access-token \
 This is the path used to verify LakeSpeak against a live workspace; see
 [compatibility.md](compatibility.md).
 
+## Unattended runs: a service principal
+
+For CI, a scheduled Question Pack, or anything with no human at a terminal, use a **Databricks
+service principal** rather than someone's personal access token. LakeSpeak has no M2M flow of its
+own — deliberately, since delegating credentials is why its security story is short — so the token
+is minted by the one documented call and handed over in `DATABRICKS_TOKEN`.
+
+```bash
+export DATABRICKS_HOST="https://adb-1234567890123456.7.azuredatabricks.net"
+
+export DATABRICKS_TOKEN=$(curl -sS --request POST \
+  --url "$DATABRICKS_HOST/oidc/v1/token" \
+  --user "$DATABRICKS_CLIENT_ID:$DATABRICKS_CLIENT_SECRET" \
+  --data 'grant_type=client_credentials&scope=all-apis' \
+  | jq -r .access_token)
+
+lakespeak pack run packs/daily-brief.yaml
+```
+
+`DATABRICKS_CLIENT_ID` is the service principal's application ID and `DATABRICKS_CLIENT_SECRET` is
+an OAuth secret generated for it, both supplied by your secret store. The endpoint is workspace-
+level; the account-level equivalent is `https://accounts.<cloud>/oidc/accounts/<account-id>/v1/token`
+and is not what you want here.
+
+Four things worth knowing before relying on this.
+
+**The token lasts one hour.** `expires_in` is 3600 and there is no refresh. LakeSpeak holds an
+environment token in memory for the life of the process, so a single pack run is fine; a run that
+could exceed an hour is not, and neither is a long-lived daemon. Mint the token immediately before
+the run.
+
+**The service principal sees what it is granted, and nothing else.** It needs access to the Genie
+Agent and its SQL warehouse, granted explicitly — it does not inherit yours. That is the point:
+`lakespeak agents list` under the service principal is the fastest way to confirm what it can
+actually reach.
+
+**Never echo the token.** The command above assigns it without printing it. In CI, mask it, and
+remember that job logs are usually readable by everyone with repository access.
+
+**This recipe is documented, not tested here.** It follows Databricks' published M2M flow and has
+not been exercised against a live workspace by this project. See
+[compatibility.md](compatibility.md) for what has.
+
 ## What is not supported
 
 **OAuth M2M client-credential profiles.** `databricks auth token` covers user-to-machine profiles
-only, so a profile configured with `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` cannot be
-brokered through the CLI. Native M2M is v0.2 work. Until then, use an environment token.
+only — the command says so itself — so a profile configured with `DATABRICKS_CLIENT_ID` and
+`DATABRICKS_CLIENT_SECRET` cannot be brokered through the CLI. The recipe above is the supported
+path; native M2M inside LakeSpeak is deferred, because implementing it would make this project a
+credential broker, which is the thing it deliberately is not.
 
 **OIDC workload federation**, GitHub Actions OIDC, and Azure DevOps OIDC. Also v0.2 or later.
 
