@@ -53,14 +53,26 @@ Status: in development.
 
 ## Deliberately deferred
 
-An MCP server mode. Databricks already ships managed MCP endpoints for Genie, and re-exposing `ask`
-over MCP would add nothing. It becomes worth reconsidering only if LakeSpeak has something they do
-not — Question Packs being the obvious candidate.
+An MCP server mode. Databricks' managed Genie MCP endpoints are stateless, so a stateful LakeSpeak
+one — or one exposing Question Packs — would offer something they do not. It is deferred on scope
+rather than on duplication: a second product with its own transport and support burden, for one
+maintainer. Reconsidered when a real user asks. See
+[ADR 0001](docs/decisions/0001-a-cli-and-a-library-rather-than-another-mcp-server.md).
+
+## One of these already happened
+
+**The official CLI became conversational.** Databricks CLI v1.10.0 ships `databricks genie ask`,
+which holds a conversation across calls with `-s`, shows SQL with `--include-sql`, and prints JSON.
+This page previously listed that as a hypothetical that would narrow the differentiator to Question
+Packs and the .NET library. It has occurred, and the plan followed: the README now leads with those
+two and points readers at the official command for a plain terminal answer.
+
+Recorded here rather than quietly deleted, because a project that predicts something, is right, and
+then says nothing has stopped paying attention.
 
 ## Things that would change the plan
 
 - **An official Databricks .NET SDK.** `LakeSpeak.Genie` would migrate onto it rather than compete
-  with it, and this project would keep only the product layer.
-- **The official CLI becoming conversational.** The differentiator would narrow to Question Packs
-  and the .NET library, and the roadmap would follow.
+  with it, and this project would keep only the product layer. This is the remaining existential
+  one.
 - **Real users.** Everything above is a guess about what people want. Issues beat guesses.
