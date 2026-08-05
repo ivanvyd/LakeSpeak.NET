@@ -14,6 +14,16 @@ public sealed partial class GenieClient : IGenieClient
 {
     private const string Root = "api/2.0/genie/spaces";
 
+    /// <summary>
+    /// Hard bound on chunk requests for one result, independent of how many rows each carries.
+    /// </summary>
+    /// <remarks>
+    /// A chunk observed live held roughly 41,000 rows, so even a caller raising
+    /// <see cref="GenieClientOptions.MaxResultRows"/> into the millions stays far inside this.
+    /// It exists for the case the row cap cannot see: chunks that carry no rows at all.
+    /// </remarks>
+    internal const int MaxChunkFetches = 1000;
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
@@ -352,8 +362,13 @@ public sealed partial class GenieClient : IGenieClient
 
         // `manifest.truncated` alone does NOT mean the caller has every row: it reports
         // statement-level truncation by Databricks, and is false for a result that was merely
-        // split into chunks. A row count short of the manifest total catches the case where a
-        // chunk was unreachable and the loop above stopped early.
+        // split into chunks.
+        //
+        // shortOfTotal is not a second guard on the loop stopping early — every such exit already
+        // returns true above. It catches the case the loop cannot see: a walk that ran to a clean
+        // finish, with no further chunk advertised, yet still ended up with fewer rows than the
+        // manifest promised. That is Databricks disagreeing with itself, and the caller should
+        // hear about it rather than receive a short result labelled whole.
         var shortOfTotal = statement.Manifest.TotalRowCount is { } total && rows.Count < total;
 
         return new GenieQueryResult(
@@ -380,6 +395,7 @@ public sealed partial class GenieClient : IGenieClient
     {
         var chunk = firstChunk;
         var seenLinks = new HashSet<string>(StringComparer.Ordinal);
+        var fetches = 0;
 
         // Driven by next_chunk_index, not by the link: the index is what says rows are missing.
         // Every way of failing to follow it below still returns true, so a result is never
@@ -389,6 +405,16 @@ public sealed partial class GenieClient : IGenieClient
             if (rows.Count >= _options.MaxResultRows)
             {
                 LogChunkCapReached(_logger, rows.Count, _options.MaxResultRows);
+                return true;
+            }
+
+            // Neither the row cap nor the repeated-link guard stops a response that hands back a
+            // fresh link every time while carrying no rows: nothing grows toward MaxResultRows,
+            // and no link repeats. That is an unbounded request flood at a real workspace, so the
+            // number of fetches is bounded outright.
+            if (++fetches > MaxChunkFetches)
+            {
+                LogChunkFetchLimitReached(_logger, MaxChunkFetches);
                 return true;
             }
 
@@ -707,6 +733,13 @@ public sealed partial class GenieClient : IGenieClient
         Message = "A result chunk link repeated one already followed; stopping to avoid looping. " +
                   "The result is reported as truncated.")]
     private static partial void LogChunkLinkRepeated(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 8,
+        Level = LogLevel.Warning,
+        Message = "Stopped after {Limit} chunk requests for a single result. " +
+                  "The result is reported as truncated.")]
+    private static partial void LogChunkFetchLimitReached(ILogger logger, int limit);
 
     [LoggerMessage(
         EventId = 7,

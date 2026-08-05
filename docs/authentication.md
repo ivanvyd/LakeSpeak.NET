@@ -59,14 +59,20 @@ is minted by the one documented call and handed over in `DATABRICKS_TOKEN`.
 ```bash
 export DATABRICKS_HOST="https://adb-1234567890123456.7.azuredatabricks.net"
 
-export DATABRICKS_TOKEN=$(curl -sS --request POST \
-  --url "$DATABRICKS_HOST/oidc/v1/token" \
-  --user "$DATABRICKS_CLIENT_ID:$DATABRICKS_CLIENT_SECRET" \
-  --data 'grant_type=client_credentials&scope=all-apis' \
+export DATABRICKS_TOKEN=$(
+  printf 'grant_type=client_credentials&scope=all-apis&client_id=%s&client_secret=%s' \
+    "$DATABRICKS_CLIENT_ID" "$DATABRICKS_CLIENT_SECRET" \
+  | curl -sS --fail --request POST --url "$DATABRICKS_HOST/oidc/v1/token" --data @- \
   | jq -r .access_token)
 
 lakespeak pack run packs/daily-brief.yaml
 ```
+
+The secret is piped in rather than passed as `curl --user`, which Databricks' own documentation
+shows. An argument is visible in the process table — `ps -ef`, or `/proc/<pid>/cmdline` — to anyone
+else on the machine for as long as the request runs. On a shared or self-hosted CI runner, which is
+exactly what this recipe is for, that is a real way to lose a credential that never appears in any
+log. Reading the body from stdin keeps it out of `argv` entirely.
 
 `DATABRICKS_CLIENT_ID` is the service principal's application ID and `DATABRICKS_CLIENT_SECRET` is
 an OAuth secret generated for it, both supplied by your secret store. The endpoint is workspace-
