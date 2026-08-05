@@ -50,14 +50,22 @@ public sealed class ResultCompletenessTests : IDisposable
                 """));
     }
 
+    private void StubChunk(int index, string body)
+    {
+        _server.Given(Request.Create()
+                .WithPath($"/api/2.0/sql/statements/s1/result/chunks/{index}")
+                .UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBody(body));
+    }
+
     /// <summary>
-    /// The Statement Execution contract splits large results into chunks, and this client reads
-    /// only the first. <c>manifest.truncated</c> reports statement-level truncation by Databricks
-    /// and is false for a merely-chunked result, so relying on it alone hands back the first chunk
-    /// labelled complete — a partial export nobody knows is partial.
+    /// A chunk that advertises a successor but carries no link to it leaves the client with no
+    /// way to complete the result. <c>manifest.truncated</c> reports statement-level truncation
+    /// by Databricks and is false for a merely-chunked result, so relying on it alone hands back
+    /// the first chunk labelled complete — a partial export nobody knows is partial.
     /// </summary>
     [Fact]
-    public async Task A_chunked_result_is_reported_as_truncated()
+    public async Task A_chunked_result_with_no_link_to_follow_is_reported_as_truncated()
     {
         // Arrange
         StubQueryResult(
@@ -71,6 +79,153 @@ public sealed class ResultCompletenessTests : IDisposable
         result.ShouldNotBeNull();
         result.Rows.Count.ShouldBe(2);
         result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The whole point of the change: a result split across chunks comes back whole, in order,
+    /// and is not flagged as truncated because nothing is missing.
+    /// </summary>
+    [Fact]
+    public async Task A_chunked_result_is_assembled_across_every_chunk()
+    {
+        // Arrange — three chunks, each pointing at the next by its documented internal link.
+        StubQueryResult(
+            """
+            {
+              "row_count": 1, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": [["Germany"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 3""");
+
+        StubChunk(1,
+            """
+            {
+              "row_count": 1, "chunk_index": 1, "next_chunk_index": 2,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/2",
+              "data_array": [["France"]]
+            }
+            """);
+
+        StubChunk(2, """{ "row_count": 1, "chunk_index": 2, "data_array": [["Spain"]] }""");
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Rows.Select(r => r[0]).ShouldBe(["Germany", "France", "Spain"]);
+        result.IsTruncated.ShouldBeFalse();
+        result.TotalRowCount.ShouldBe(3);
+    }
+
+    /// <summary>
+    /// A chunk the caller may not read degrades to the rows already in hand. Genie executes the
+    /// statement, so whether the caller can read its remaining chunks is a workspace permission
+    /// question — and losing a good answer over a missing tail would be the worse trade.
+    /// </summary>
+    [Fact]
+    public async Task An_unreachable_chunk_returns_the_rows_so_far_and_reports_truncated()
+    {
+        // Arrange
+        StubQueryResult(
+            """
+            {
+              "row_count": 1, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": [["Germany"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 2""");
+
+        _server.Given(Request.Create()
+                .WithPath("/api/2.0/sql/statements/s1/result/chunks/1").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(403));
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The chunk link is server-supplied and every workspace request carries the bearer token.
+    /// An absolute link would send that token to whatever host it names.
+    /// </summary>
+    [Theory]
+    [InlineData("https://evil.example.com/api/2.0/sql/statements/s1/result/chunks/1")]
+    [InlineData("//evil.example.com/api/2.0/sql/statements/s1/result/chunks/1")]
+    [InlineData("api/2.0/sql/statements/s1/result/chunks/1")]
+    public async Task A_next_chunk_link_that_is_not_a_workspace_path_is_refused(string link)
+    {
+        // Arrange
+        StubQueryResult(
+            $$"""
+            {
+              "row_count": 1, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "{{link}}",
+              "data_array": [["Germany"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 2""");
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert — the rows in hand, flagged, and nothing sent off-host.
+        result!.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeTrue();
+        var chunkRequests = _server.LogEntries.Count(e =>
+            e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
+        chunkRequests.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Following a chunked result to its end is unbounded work against a billed warehouse's
+    /// output. The cap stops it — and says so, rather than reporting a capped result as whole.
+    /// </summary>
+    [Fact]
+    public async Task Reaching_MaxResultRows_stops_the_walk_and_reports_truncated()
+    {
+        // Arrange — chunk zero already meets the cap, so chunk one is never requested.
+        StubQueryResult(
+            """
+            {
+              "row_count": 2, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": [["Germany"],["France"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 4""");
+
+        StubChunk(1, """{ "row_count": 2, "chunk_index": 1, "data_array": [["Spain"],["Italy"]] }""");
+
+        var http = new HttpClient { BaseAddress = new Uri(_server.Url!) };
+        var client = new GenieClient(http, Options.Create(new GenieClientOptions
+        {
+            Host = new Uri("https://example.azuredatabricks.net"),
+            MaxResultRows = 2,
+        }));
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result!.Rows.Count.ShouldBe(2);
+        result.IsTruncated.ShouldBeTrue();
+        var chunkRequests = _server.LogEntries.Count(e =>
+            e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
+        chunkRequests.ShouldBe(0);
     }
 
     [Fact]

@@ -272,10 +272,16 @@ internal sealed record ResultDataWire
     [JsonPropertyName("chunk_index")]
     public int? ChunkIndex { get; init; }
 
-    // Present when the result continues beyond this chunk. The client reads only the first
-    // chunk, so this is what stops a partial result being reported as complete.
+    // Present when the result continues beyond this chunk. Retained alongside the link below
+    // because it is what tells us rows are missing even if the link is absent or unusable.
     [JsonPropertyName("next_chunk_index")]
     public int? NextChunkIndex { get; init; }
+
+    // Databricks documents this as an absolute path to be joined with the workspace host and
+    // treated as opaque. Following it is what completes a chunked result. It is server-supplied,
+    // so the client validates it is a workspace-relative path before sending a bearer token to it.
+    [JsonPropertyName("next_chunk_internal_link")]
+    public string? NextChunkInternalLink { get; init; }
 
     // Under EXTERNAL_LINKS disposition the rows are NOT inline: data_array is absent and the
     // data sits behind presigned URLs. Deserialised solely so that case can be detected and
