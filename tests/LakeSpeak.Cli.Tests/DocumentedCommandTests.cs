@@ -13,9 +13,12 @@ namespace LakeSpeak.Cli.Tests;
 /// </remarks>
 public sealed class DocumentedCommandTests
 {
-    /// <summary>Matches a fenced code block, capturing its body.</summary>
+    /// <summary>
+    /// Matches a fenced code block, capturing its body. Leading whitespace is allowed because a
+    /// fence nested in a numbered list is indented, and this repository's docs already do that.
+    /// </summary>
     private static readonly Regex FencedBlock = new(
-        @"^```[^\n]*\n(.*?)^```", RegexOptions.Multiline | RegexOptions.Singleline);
+        @"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```", RegexOptions.Multiline | RegexOptions.Singleline);
 
     /// <summary>
     /// A placeholder is a synopsis rather than a runnable example — `lakespeak &lt;command&gt;
@@ -43,6 +46,18 @@ public sealed class DocumentedCommandTests
                 {
                     data.Add(invocation, relative);
                 }
+            }
+        }
+
+        // Runnable examples are not only in markdown. The shipped GitHub Actions sample invokes
+        // the CLI for real, and a flag renamed out from under it would otherwise go unnoticed
+        // precisely because nobody re-reads a sample workflow.
+        foreach (var file in Directory.EnumerateFiles(
+            Path.Combine(RepositoryRoot(), "examples"), "*.yml", SearchOption.AllDirectories))
+        {
+            foreach (var invocation in InvocationsIn(File.ReadAllText(file)))
+            {
+                data.Add(invocation, Path.GetRelativePath(RepositoryRoot(), file));
             }
         }
 
@@ -75,9 +90,10 @@ public sealed class DocumentedCommandTests
         // Arrange, Act
         var found = DocumentedInvocations().Count;
 
-        // Assert — a floor, not a count: it catches the extractor silently finding nothing, and
-        // does not need updating when the documentation gains or loses an example.
-        found.ShouldBeGreaterThan(15);
+        // Assert — a floor set near the real total (42 at the time of writing), not a token one.
+        // A floor of 15 would have let a regression silently drop two thirds of the corpus while
+        // still passing, which is the failure this guard exists to catch.
+        found.ShouldBeGreaterThan(35);
     }
 
     /// <summary>
@@ -95,9 +111,12 @@ public sealed class DocumentedCommandTests
             }
 
             // `dotnet tool install --global LakeSpeak.Cli` and prose mentioning a path are not
-            // invocations; a command starts the line or follows an assignment or a prompt.
+            // invocations. A real one starts its line, or follows a shell assignment, a prompt,
+            // or a YAML key — `run: lakespeak …` in a workflow is a command like any other, and
+            // omitting that case made this scan pass by finding nothing.
             var prefix = raw[..start].TrimEnd();
-            if (prefix.Length > 0 && !prefix.EndsWith('=') && !prefix.EndsWith('$'))
+            if (prefix.Length > 0
+                && !prefix.EndsWith('=') && !prefix.EndsWith('$') && !prefix.EndsWith(':'))
             {
                 continue;
             }

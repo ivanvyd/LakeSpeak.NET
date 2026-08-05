@@ -192,6 +192,43 @@ public sealed class ResultCompletenessTests : IDisposable
     }
 
     /// <summary>
+    /// A later chunk arriving under EXTERNAL_LINKS disposition must not destroy the answer.
+    /// </summary>
+    /// <remarks>
+    /// Refusing external links is right when it is the *first* chunk: there is nothing to hand
+    /// back, and an empty result reading as a real one is the worst outcome available. Once rows
+    /// and an answer are already in hand, throwing discards both — and the answer text is the
+    /// primary payload, which is exactly why <c>CompleteAsync</c> tolerates a missing result.
+    /// </remarks>
+    [Fact]
+    public async Task A_later_chunk_under_external_links_keeps_the_rows_and_reports_truncated()
+    {
+        // Arrange — chunk zero is inline and fine; chunk one fetches successfully but carries
+        // links instead of rows.
+        StubQueryResult(
+            """
+            {
+              "row_count": 1, "chunk_index": 0, "next_chunk_index": 1,
+              "next_chunk_internal_link": "/api/2.0/sql/statements/s1/result/chunks/1",
+              "data_array": [["Germany"]]
+            }
+            """,
+            manifestExtra: """, "total_row_count": 2""");
+
+        StubChunk(1, """{ "chunk_index": 1, "external_links": [ { "chunk_index": 1, "row_count": 1 } ] }""");
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert — the rows already assembled survive, flagged short.
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// A chunk that points at itself would spin forever, and a self-pointing chunk carrying no
     /// rows would not even grow toward <c>MaxResultRows</c> — so the row cap is not the backstop
     /// here. This test would hang rather than fail if the guard were removed.

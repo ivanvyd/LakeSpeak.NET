@@ -422,6 +422,12 @@ public sealed partial class GenieClient : IGenieClient
             {
                 chunk = await GetAsync<ResultDataWire>(chunkUri.AbsoluteUri, cancellationToken)
                     .ConfigureAwait(false);
+
+                // Inside the try on purpose. Refusing external links is right for the *first*
+                // chunk, where there is nothing to hand back — but here rows and an answer are
+                // already in hand, and throwing would discard both. Short and flagged beats
+                // losing the answer text, which is the primary payload.
+                RejectExternalLinks(chunk);
             }
             catch (GenieException ex)
             {
@@ -431,7 +437,6 @@ public sealed partial class GenieClient : IGenieClient
                 return true;
             }
 
-            RejectExternalLinks(chunk);
             rows.AddRange(chunk.DataArray ?? []);
         }
 
