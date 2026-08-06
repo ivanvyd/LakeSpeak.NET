@@ -118,7 +118,7 @@ Follow-up questions keep their context, so "and break that down by product" work
 for the slash commands, `/sql` to see the statement behind the last answer, `/export report.csv`
 to save the result, `/exit` to leave.
 
-<img src="assets/chat.svg" alt="a real lakespeak chat session: a question, a follow-up that keeps its context, and /sql showing the generated query" width="880">
+<img src="assets/chat.svg" alt="a real lakespeak chat session: a question, a follow-up that keeps its context, and /sql showing the generated query" width="716">
 
 `chat` needs a real terminal. For scripts, use `ask`.
 
