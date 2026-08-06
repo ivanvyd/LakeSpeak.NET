@@ -112,6 +112,38 @@ public sealed class LiveGenieTests : IDisposable
     }
 
     /// <summary>
+    /// Re-executing an attachment's query returns its rows.
+    /// </summary>
+    /// <remarks>
+    /// This is the documented recovery for <c>QUERY_RESULT_EXPIRED</c>, and it was covered only by
+    /// a contract test that stubbed a completed response — a shape Databricks does not return.
+    /// The real endpoint acknowledges with <c>PENDING</c> and no manifest, so the client used to
+    /// hand back nothing and <c>export last</c> told people to ask the question again. A stub
+    /// could not have caught that, because the stub was the thing that was wrong.
+    /// </remarks>
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
+    public async Task A_re_executed_query_returns_its_rows()
+    {
+        // Arrange — a completed question, so there is an attachment to re-run.
+        var agent = await ResolveAgentAsync();
+        var response = await Client.AskAsync(
+            agent.AgentId, "Total revenue by region", cancellationToken: Ct);
+
+        response.State.ShouldBe(GenieMessageState.Completed);
+        response.Metadata.AttachmentId.ShouldNotBeNull();
+
+        // Act — the path `export last` takes when the cached result has aged out.
+        var result = await Client.ReExecuteQueryAsync(
+            agent.AgentId, response.ConversationId!, response.MessageId!,
+            response.Metadata.AttachmentId!, Ct);
+
+        // Assert — rows, not the acknowledgement.
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBeGreaterThan(0);
+        result.Columns.Count.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
     /// The claim this project makes most loudly: a value is never reformatted on its way out.
     /// Asserted against a live warehouse rather than a fixture, because a fixture cannot catch a
     /// serialiser deciding to parse a DECIMAL somewhere in the middle.

@@ -58,8 +58,31 @@ The live suite in `tests/LakeSpeak.LiveIntegrationTests` reproduces all of this.
 `DATABRICKS_HOST`, `DATABRICKS_TOKEN` and `LAKESPEAK_LIVE_AGENT` set:
 `dotnet test -c Release --filter "Category=Live"`.
 
-What this still does **not** exercise: the Genie full-result download endpoints, visualizations,
-and `QUERY_RESULT_EXPIRED` recovery. Those remain covered by contract tests only.
+What this still does **not** exercise: the Genie full-result download endpoints and visualizations.
+Those remain covered by contract tests only.
+
+## Re-executing an expired result — 2026-08-06
+
+Exercising `execute-query` against the live workspace corrected a wire assumption that a contract
+test had encoded wrongly, and with it a real defect.
+
+| Call | Response |
+|---|---|
+| `POST …/attachments/{id}/execute-query` | HTTP 200, `state: PENDING`, **no manifest, no rows** |
+| `GET …/attachments/{id}/query-result` moments later | `state: SUCCEEDED`, rows present |
+
+`execute-query` only *starts* the re-execution. The client returned that first acknowledgement, so
+`ReExecuteQueryAsync` produced `null` and `export last` told the user to ask the question again —
+while the warehouse work they had just paid for completed and was discarded. It now polls for the
+rows.
+
+The contract test covering this stubbed a *completed* response, which Databricks does not return.
+A stub cannot catch an error in the stub, which is the general lesson and the reason
+`A_re_executed_query_returns_its_rows` is a **live** test rather than another fixture.
+
+Still unreached: the `QUERY_RESULT_EXPIRED` state that triggers recovery. Databricks expires the
+cache on its own schedule, hours later, and there is no way to force it — so the recovery is
+verified, and the condition it recovers from is simulated.
 
 ## `chat`, verified live — 2026-08-06
 
