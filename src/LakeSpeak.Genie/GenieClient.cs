@@ -236,12 +236,50 @@ public sealed partial class GenieClient : IGenieClient
             $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/query-result",
             HttpMethod.Get, cancellationToken);
 
-    public Task<GenieQueryResult?> ReExecuteQueryAsync(
+    public async Task<GenieQueryResult?> ReExecuteQueryAsync(
         string agentId, string conversationId, string messageId, string attachmentId,
         CancellationToken cancellationToken = default)
-        => FetchQueryResultAsync(
+    {
+        // execute-query only *starts* the re-execution. Observed against a live workspace it
+        // answers HTTP 200 with state PENDING and no manifest, and the rows appear on the
+        // ordinary query-result endpoint a moment later. Returning that first response hands the
+        // caller nothing while the warehouse work they just paid for completes and is discarded —
+        // which surfaced as `export last` telling people to ask the question again.
+        var started = await FetchQueryResultAsync(
             $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/execute-query",
-            HttpMethod.Post, cancellationToken);
+            HttpMethod.Post,
+            cancellationToken).ConfigureAwait(false);
+
+        if (started is not null)
+        {
+            return started;
+        }
+
+        var deadline = _time.GetTimestamp();
+        var interval = _options.InitialPollInterval;
+
+        while (_time.GetElapsedTime(deadline) < _options.PollingTimeout)
+        {
+            await Task.Delay(interval, _time, cancellationToken).ConfigureAwait(false);
+
+            var result = await GetQueryResultAsync(
+                agentId, conversationId, messageId, attachmentId, cancellationToken).ConfigureAwait(false);
+
+            if (result is not null)
+            {
+                return result;
+            }
+
+            interval = TimeSpan.FromMilliseconds(
+                Math.Min(interval.TotalMilliseconds * 1.5, _options.MaxPollInterval.TotalMilliseconds));
+        }
+
+        // The caller gets null rather than an exception, exactly as before: a re-execution that
+        // never lands is a missing result, not a transport failure.
+        LogReExecuteTimedOut(_logger, _options.PollingTimeout.TotalSeconds);
+        return null;
+    }
+
 
     public async Task SendFeedbackAsync(
         string agentId,
@@ -740,6 +778,12 @@ public sealed partial class GenieClient : IGenieClient
         Message = "Stopped after {Limit} chunk requests for a single result. " +
                   "The result is reported as truncated.")]
     private static partial void LogChunkFetchLimitReached(ILogger logger, int limit);
+
+    [LoggerMessage(
+        EventId = 9,
+        Level = LogLevel.Warning,
+        Message = "A re-executed query did not produce a result within {Seconds}s.")]
+    private static partial void LogReExecuteTimedOut(ILogger logger, double seconds);
 
     [LoggerMessage(
         EventId = 7,

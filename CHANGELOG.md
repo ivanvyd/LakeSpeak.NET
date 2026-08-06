@@ -8,6 +8,17 @@ here rather than left to be discovered.
 
 ### Fixed
 
+- **Re-executing an expired result now returns the rows.** `execute-query` only *starts* the
+  re-execution: against a live workspace it answers `PENDING` with no manifest, and the rows appear
+  on the ordinary query-result endpoint a moment later. The client returned that acknowledgement,
+  so `ReExecuteQueryAsync` produced `null` and `lakespeak export last` told the user to ask the
+  question again — while the warehouse work they had just paid for completed and was thrown away.
+  It now waits for the rows.
+
+  The contract test covering this stubbed a *completed* response, a shape Databricks does not
+  return, so the test agreed with the bug. The replacement is a **live** test, because a stub
+  cannot catch an error in the stub.
+
 - **Release binaries are now attested.** The provenance attestation covered only the `.nupkg`
   files, so `gh attestation verify` on a downloaded release binary failed — the exact command
   `SECURITY.md` tells an adopter to run. The zips are now attestation subjects too.

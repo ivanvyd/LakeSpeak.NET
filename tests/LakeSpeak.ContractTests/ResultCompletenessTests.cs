@@ -424,6 +424,41 @@ public sealed class ResultCompletenessTests : IDisposable
     }
 
     /// <summary>
+    /// Re-executing an expired result must return the rows, not the acknowledgement.
+    /// </summary>
+    /// <remarks>
+    /// Observed against a live workspace: <c>execute-query</c> answers HTTP 200 with state
+    /// <c>PENDING</c> and no manifest — it only starts the re-execution — and the rows arrive on
+    /// the ordinary query-result endpoint a moment later. Returning that first response gave the
+    /// caller nothing, so <c>export last</c> told people to ask the question again while the
+    /// warehouse work they had just paid for completed and was thrown away.
+    /// </remarks>
+    [Fact]
+    public async Task A_re_executed_query_returns_the_rows_rather_than_the_pending_acknowledgement()
+    {
+        // Arrange — execute-query acknowledges without a manifest, exactly as Databricks does.
+        _server.Given(Request.Create()
+                .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}/attachments/{Attachment}/execute-query")
+                .UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBody(
+                """{ "statement_response": { "status": { "state": "PENDING" } } }"""));
+
+        StubQueryResult(
+            """{ "row_count": 1, "chunk_index": 0, "data_array": [["Germany"]] }""",
+            manifestExtra: """, "total_row_count": 1""");
+
+        var client = CreateClient();
+
+        // Act
+        var result = await client.ReExecuteQueryAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeFalse();
+    }
+
+    /// <summary>
     /// start-conversation is not idempotent: a retry asks Genie the same question again, running
     /// the SQL warehouse a second time and billing for it, and leaves an orphaned conversation
     /// whose id the caller never receives.

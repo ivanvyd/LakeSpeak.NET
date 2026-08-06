@@ -31,7 +31,10 @@ Status: in development.
     stated unknown. What remains unreached is Genie *itself* emitting a multi-chunk result: it
     writes its own SQL and generally bounds it, so this needs a Genie Agent over a large table and
     still cannot be forced. Covered by contract tests meanwhile.
-  - `QUERY_RESULT_EXPIRED` recovery — the cache expires on Databricks' schedule, hours later. No
+  - `QUERY_RESULT_EXPIRED` recovery — **the recovery call itself is now verified live**
+    (2026-08-06), which found that `execute-query` only *starts* the re-execution and the client
+    was returning its `PENDING` acknowledgement instead of the rows. What is still unreached is the
+    *expiry* that triggers it: the cache expires on Databricks' schedule, hours later. No
     way to force it; covered by contract tests only.
 - [x] Command reference and authentication guide
 
