@@ -191,6 +191,10 @@ Your questions and the answers you get back can contain sensitive business infor
 results contain governed data. Once you export a CSV, that file is yours to look after. In CI,
 remember that job logs are usually readable by everyone with repository access.
 
+Every release is signed with a SLSA build provenance attestation, and
+[one command](SECURITY.md#verifying-a-release) checks that a download really came from this
+repository's release workflow.
+
 Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). For how the project's controls
 map to the SOC 2 Trust Services Criteria, and the several places they deliberately stop, see
 [docs/compliance/soc2-mapping.md](docs/compliance/soc2-mapping.md).
