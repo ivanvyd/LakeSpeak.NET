@@ -80,3 +80,39 @@ Recorded in [docs/security/threat-model.md](docs/security/threat-model.md).
   effect of pushing a tag.
 - Live integration tests never run for pull requests from forks, because they need workspace
   credentials.
+
+## Verifying a release
+
+Every release carries a [SLSA build provenance
+attestation](https://slsa.dev/spec/v1.0/provenance), signed through Sigstore using GitHub's OIDC
+identity. No signing key exists to be stolen, and the attestation binds each artifact to the
+workflow, commit and repository that produced it.
+
+Checking it takes one command and needs only the [GitHub
+CLI](https://cli.github.com):
+
+```bash
+gh attestation verify lakespeak-0.1.0-linux-x64.zip --repo ivanvyd/LakeSpeak.NET
+```
+
+The same works on a package:
+
+```bash
+gh attestation verify LakeSpeak.Cli.0.1.0.nupkg --repo ivanvyd/LakeSpeak.NET
+```
+
+A passing check tells you the file was built by `.github/workflows/release.yml` in this
+repository, and not rebuilt or replaced by anyone afterwards. A failing one means the file did not
+come from here — treat it as hostile rather than as a tooling problem.
+
+To check the binaries against their published digests instead:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+`sbom.json` on each release is a CycloneDX bill of materials, which is usually what a security
+review asks for before any of the above.
+
+This is worth doing precisely because this project is small. A widely-used package has many eyes
+on it; a new one from an author you have not heard of has yours.

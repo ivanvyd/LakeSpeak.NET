@@ -76,5 +76,6 @@ matter more than usual here because a scheduler decides what to do from the exit
 
 The image is not attested, because it is not published. The **packages and binaries** on a GitHub
 release are — each release carries a CycloneDX SBOM, SHA-256 checksums, and a SLSA build-provenance
-attestation. If you need a verifiable supply chain, build the image from a tagged commit and check
+attestation. [Verifying a release](../SECURITY.md#verifying-a-release) is the one command that
+checks it. If you need a verifiable supply chain, build the image from a tagged commit and check
 that tag's release artifacts rather than trusting an image you built from a moving branch.
