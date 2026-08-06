@@ -26,6 +26,14 @@ reconstructed is now a real session. What has been verified and what has not is 
 
 ### Security
 
+- **Release tags must now be signed.** The workflow verifies the tag's SSH signature against
+  `.github/allowed_signers` before it builds anything. The provenance attestation proves *what*
+  built an artifact; it cannot prove *who* authorised the release, because anyone able to push a
+  tag starts the workflow and the resulting attestation would be valid. The signing key is the one
+  credential GitHub does not hold, so this is what makes a stolen GitHub account insufficient on
+  its own. See [RELEASING.md](RELEASING.md#signed-tags), including what it does not protect
+  against.
+
 - **The service-principal recipe no longer puts the client secret in a command-line argument.**
   `curl --user "$ID:$SECRET"` — the form Databricks' own documentation shows — makes the secret
   readable from the process table by anything else on the machine while the request runs. On a

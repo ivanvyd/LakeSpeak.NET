@@ -32,6 +32,22 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The provenance attestation proves WHAT built an artifact. It cannot prove WHO authorised
+      # the release: anyone able to push a tag can start this workflow, and the attestation would
+      # be perfectly valid. The signing key is the one credential GitHub never holds, so requiring
+      # a signed tag is what makes a stolen GitHub account insufficient on its own.
+      - name: Require a signed tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git config gpg.ssh.allowedSignersFile .github/allowed_signers
+          if ! git verify-tag "${GITHUB_REF_NAME}"; then
+            echo "::error::Tag ${GITHUB_REF_NAME} is not signed by a key listed in .github/allowed_signers. See RELEASING.md."
+            exit 1
+          fi
+
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'
