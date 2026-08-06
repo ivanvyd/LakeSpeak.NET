@@ -92,8 +92,12 @@ jobs:
             ( cd "publish/$rid" && zip -qr "../../artifacts/lakespeak-${{ steps.version.outputs.version }}-$rid.zip" . )
           done
 
+      # Only over what actually reaches the release. Running this across the whole build directory
+      # put the .nupkg and .snupkg files in the list, and those go to NuGet rather than to the
+      # release - so `sha256sum -c SHA256SUMS.txt` failed on four of seven entries for anyone who
+      # downloaded the release and followed SECURITY.md. Shipped that way in 0.1.0.
       - name: Checksums
-        run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+        run: cd artifacts && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       # An SBOM is the vendor list an adopter's SOC 2 vendor-risk review asks
       # for. Generated from the restored graph, not hand-maintained.
@@ -103,10 +107,15 @@ jobs:
           export PATH="$PATH:$HOME/.dotnet/tools"
           dotnet CycloneDX LakeSpeak.slnx -o artifacts --json --filename sbom.json
 
+      # The zips are attested as well as the packages. Attesting only the .nupkg files left the
+      # three downloadable binaries unattested, so `gh attestation verify` on a downloaded release
+      # binary failed - which is precisely the command SECURITY.md tells an adopter to run.
       - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         id: attest
         with:
-          subject-path: 'artifacts/*.nupkg'
+          subject-path: |
+            artifacts/*.nupkg
+            artifacts/*.zip
 
       # The attestation is reachable through GitHub's Attestations API, but the bundle also has to
       # land on the release itself: tooling that verifies a downloaded artifact offline has no API

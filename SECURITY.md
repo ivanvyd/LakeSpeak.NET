@@ -94,13 +94,16 @@ Checking it takes one command and needs only the [GitHub
 CLI](https://cli.github.com):
 
 ```bash
-gh attestation verify lakespeak-0.1.0-linux-x64.zip --repo ivanvyd/LakeSpeak.NET
+gh attestation verify LakeSpeak.Cli.0.1.0.nupkg --repo ivanvyd/LakeSpeak.NET
 ```
 
-The same works on a package:
+> **Applies from 0.1.1.** In `0.1.0` the attestation covers only the two `.nupkg` files, so running
+> the same command against a downloaded release binary fails. That was a packaging mistake, not a
+> tampered file: the binaries were built by the same workflow run, and their digests are in that
+> release's `SHA256SUMS.txt`. From 0.1.1 the release binaries are attested too:
 
 ```bash
-gh attestation verify LakeSpeak.Cli.0.1.0.nupkg --repo ivanvyd/LakeSpeak.NET
+gh attestation verify lakespeak-0.1.1-linux-x64.zip --repo ivanvyd/LakeSpeak.NET
 ```
 
 A passing check tells you the file was built by `.github/workflows/release.yml` in this
@@ -116,11 +119,17 @@ started by someone holding only the GitHub account. You can check any release ta
 git -c gpg.ssh.allowedSignersFile=.github/allowed_signers verify-tag v0.1.0
 ```
 
-To check the binaries against their published digests instead:
+To check the binaries against their published digests instead, from the directory you downloaded
+them into:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
 ```
+
+> **Also applies from 0.1.1.** `0.1.0`'s `SHA256SUMS.txt` additionally lists the four `.nupkg` and
+> `.snupkg` files, which are published to NuGet rather than attached to the release — so that
+> command reports four missing files there. The three entries for the release binaries are correct
+> and can be checked individually with `sha256sum -c --ignore-missing SHA256SUMS.txt`.
 
 `sbom.json` on each release is a CycloneDX bill of materials, which is usually what a security
 review asks for before any of the above.
