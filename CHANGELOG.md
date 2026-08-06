@@ -4,6 +4,24 @@ Notable changes, newest first. This project follows [semantic versioning](https:
 the caveat that `0.x` minor versions may break the API — that is what `0.x` means, and it is stated
 here rather than left to be discovered.
 
+## Unreleased
+
+### Fixed
+
+- **Release binaries are now attested.** The provenance attestation covered only the `.nupkg`
+  files, so `gh attestation verify` on a downloaded release binary failed — the exact command
+  `SECURITY.md` tells an adopter to run. The zips are now attestation subjects too.
+- **`SHA256SUMS.txt` now lists only what is actually on the release.** It was generated across the
+  whole build directory, so it included the four `.nupkg`/`.snupkg` files that go to NuGet rather
+  than to the release; `sha256sum -c` therefore failed on four of seven entries for anyone who
+  downloaded 0.1.0.
+
+  Both were found by verifying the published 0.1.0 release rather than the build output. The
+  verification instructions had been checked against a rehearsal artifacts directory, which
+  contains the packages — so both commands passed there and failed in reality. `SECURITY.md` now
+  states what applies to 0.1.0 and what changes from 0.1.1, including the
+  `sha256sum -c --ignore-missing` form that does work on 0.1.0.
+
 ## 0.1.0 — 2026-08-06
 
 Results come back whole, the documentation's own claims are under test, and the one image that was
