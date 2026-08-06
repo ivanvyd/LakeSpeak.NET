@@ -11,6 +11,17 @@ because the REPL refuses to start without an interactive terminal and so cannot 
 file. It was captured for real on 2026-08-06 by copying the terminal buffer of a live session --
 which is the only way to do it, and is the way to do it again if the output changes.
 
+That capture came off a 152-column terminal, which rendered an image half again as wide as the
+others and correspondingly smaller once scaled into a page. It has been reflowed to 80 columns to
+match `ask.txt`: the prose is re-wrapped, the tables and the SQL box are narrower, and the wording,
+figures, ordering and command sequence are exactly as the session produced them. Nothing was
+dropped or invented -- but it is reflowed output rather than a byte-exact capture, and that is the
+difference worth knowing before treating it as evidence of anything but layout.
+
+Two rules when editing a transcript by hand. Every box-drawing line in one table or panel must be
+the same length, or the frame renders visibly ragged -- and the widest line in the file sets the
+image width, so a stray long line quietly shrinks the whole thing when it is scaled into a page.
+
 When substituting identifiers, keep the box-drawing borders aligned: the synthetic table name is
 shorter than the real one, and replacing it without restoring the displaced padding leaves a
 visibly ragged box. That had already happened once, in `ask.txt`.
