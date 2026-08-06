@@ -46,6 +46,12 @@ here rather than left to be discovered.
 
 ### Changed
 
+- **The chat image in the documentation is a real session.** It was reconstructed from string
+  literals in `ChatCommand.cs`, because the REPL cannot be piped to a file — a fact disclosed only
+  inside the generator script, where nobody reads it. It was captured by hand against a live
+  workspace on 2026-08-06, which also verified the REPL, a context-keeping follow-up and `/sql`
+  for the first time. `ask.svg`'s SQL box, misaligned since an earlier identifier substitution
+  dropped its padding, is fixed at the same time.
 - The README no longer states a test count. The number had drifted from 89 to 175 without anyone
   noticing, which is what prose claims do.
 - **Positioning corrected.** Databricks CLI v1.10.0 ships `databricks genie ask`, which holds a

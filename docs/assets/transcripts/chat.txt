@@ -2,31 +2,54 @@ LakeSpeak.NET — independent, not a Databricks product
 Agent: Sales Intelligence
 Type /help for commands, /exit to leave.
 
-You: How did revenue change last quarter?
+You: What is the total revenue by region?
+Genie is analyzing your question…
+Waiting for a SQL warehouse…
+Preparing answer…
 
-Revenue increased by 14.2% compared with the previous quarter.
+The total revenue by region is as follows: **Germany** generated €4,500,000.00, **France** generated €3,350,000.50, and
+**Spain** generated €1,780,000.25. Among these regions, Germany had the highest total revenue, while Spain had the
+lowest.
 
-╭────────────────────────┬───────────────────────────╮
-│ region                 │ total_revenue_eur         │
-├────────────────────────┼───────────────────────────┤
-│ Germany                │ 4500000.00                │
-│ France                 │ 3350000.50                │
-│ Spain                  │ 1780000.25                │
-╰────────────────────────┴───────────────────────────╯
+╭───────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────╮
+│ region                            │ total_revenue_eur                                                                │
+├───────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────┤
+│ Germany                           │ 4500000.00                                                                       │
+│ France                            │ 3350000.50                                                                       │
+│ Spain                             │ 1780000.25                                                                       │
+╰───────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────╯
+/sql  /result  /export
 
-You: and break that down by product
+You:  and break that down by quarter
+Genie is analyzing your question…
+Waiting for a SQL warehouse…
+Genie is analyzing your question…
+Preparing answer…
 
-Electronics led in Germany; Home & Garden led in Spain.
+The total revenue by region is broken down by quarter as follows:
+- **France**: €1,650,000.00 in 2025-Q4 and €1,700,000.50 in 2026-Q1
+- **Germany**: €2,100,000.00 in 2025-Q4 and €2,400,000.00 in 2026-Q1
+- **Spain**: €880,000.00 in 2025-Q4 and €900,000.25 in 2026-Q1
+Revenue increased from Q4 2025 to Q1 2026 in all regions, with Germany showing the largest growth.
+
+╭───────────────────────────┬───────────────────────────┬──────────────────────────────────────────────────────────────╮
+│ region                    │ quarter                   │ total_revenue_eur                                            │
+├───────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ France                    │ 2025-Q4                   │ 1650000.00                                                   │
+│ France                    │ 2026-Q1                   │ 1700000.50                                                   │
+│ Germany                   │ 2025-Q4                   │ 2100000.00                                                   │
+│ Germany                   │ 2026-Q1                   │ 2400000.00                                                   │
+│ Spain                     │ 2025-Q4                   │ 880000.00                                                    │
+│ Spain                     │ 2026-Q1                   │ 900000.25                                                    │
+╰───────────────────────────┴───────────────────────────┴──────────────────────────────────────────────────────────────╯
+/sql  /result  /export
 
 You: /sql
-
-╭─Generated SQL──────────────────────────────────────╮
-│ SELECT region, product_line, SUM(revenue_eur)      │
-│ FROM sales.public.regional_revenue                 │
-│ GROUP BY region, product_line                      │
-╰────────────────────────────────────────────────────╯
-
-You: /export q3-by-product.csv
-Wrote q3-by-product.csv (12 rows). It contains governed data; look after it.
-
+╭─Generated SQL──────────────────────────────────────────────────────────────────────╮
+│ SELECT `region`, `quarter`, SUM(`revenue_eur`) AS total_revenue_eur                │
+│ FROM `sales`.`public`.`regional_revenue`                                           │
+│ WHERE `region` IS NOT NULL AND `quarter` IS NOT NULL AND `revenue_eur` IS NOT NULL │
+│ GROUP BY `region`, `quarter`                                                       │
+│ ORDER BY `region`, `quarter`                                                       │
+╰────────────────────────────────────────────────────────────────────────────────────╯
 You: /exit

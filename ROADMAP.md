@@ -21,9 +21,10 @@ Status: in development.
 - [x] CLI output tests across terminal widths, unicode, nulls and escape-sequence injection
 - [ ] Live coverage for three paths that resist automation — each blocked for a different reason,
       recorded here rather than left as one vague gap:
-  - `chat` — the REPL refuses to start without an interactive terminal, by design, so it cannot be
-    driven from CI or an agent session. Its underlying follow-up call *is* covered live; the loop
-    around it is not. Needs a human at a terminal.
+  - ~~`chat`~~ — **done, 2026-08-06.** The REPL refuses to start without an interactive terminal,
+    so it needed a human at one. A live session covering a question, a follow-up that kept its
+    context, and `/sql` is recorded in [compatibility.md](docs/compatibility.md) and is now the
+    transcript behind the documentation's chat image. Its other slash commands remain uncovered.
   - Chunked results — assembled by following the link Databricks supplies
     ([ADR 0004](docs/decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md)).
     The mechanism was verified live on 2026-08-05, including the permission question that was the
