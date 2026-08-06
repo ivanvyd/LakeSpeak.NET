@@ -22,15 +22,15 @@ otherwise, please open an issue. Visualization retrieval is explicitly Beta and 
 |---|---|
 | Linux x64 | Unit and contract tests run in CI |
 | Windows x64 | Unit and contract tests run in CI |
-| macOS arm64 | Release binary is built; **untested** |
+| macOS arm64 | Release binary is built; **untested** — [#53](https://github.com/ivanvyd/LakeSpeak.NET/issues/53) |
 
 ## Clouds
 
 | Cloud | Status |
 |---|---|
 | Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
-| AWS Databricks | Not tested |
-| GCP Databricks | Not tested |
+| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
+| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
 
 ## Live verification, 2026-08-01
 
@@ -152,7 +152,8 @@ row arithmetic the truncation flag depends on.
 **What is still not proven:** Genie itself emitting a result large enough to span chunks. The demo
 Agent's table has six rows, and Genie generally bounds its own SQL, so the two halves above are each
 verified while their composition is not. If Genie never emits a multi-chunk result, this code simply
-never engages; if it does, every mechanism it needs has now been shown to work.
+never engages; if it does, every mechanism it needs has now been shown to work. Tracked as
+[#54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54).
 
 Contract tests continue to cover the paths a live run cannot reach on demand: an unreachable chunk,
 a repeated link, a link resolving off-workspace, and the row cap.
@@ -172,7 +173,7 @@ a repeated link, a link resolving off-workspace, and the row cap.
 | Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The wire contract and the chunk-read permission were verified live on 2026-08-05 — see above; Genie emitting a multi-chunk result was not |
 | Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
 | The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
-| Unattended service-principal auth | **Partly.** The token endpoint accepts the documented request — invalid credentials return `401 invalid_client`, not `404` — so the URL, method, Basic auth and form parameters are right. The exchange with *valid* service-principal credentials has not been run |
+| Unattended service-principal auth | **Partly.** The token endpoint accepts the documented request — invalid credentials return `401 invalid_client`, not `404` — so the URL, method, Basic auth and form parameters are right. The exchange with *valid* service-principal credentials has not been run — [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |
 | Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. |
 
 ## How to update this file

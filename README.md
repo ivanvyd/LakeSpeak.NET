@@ -213,10 +213,10 @@ promise; it is a record of evidence.
 | Feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
 | Chunked results assembled beyond the first chunk | Mechanism verified live on 2026-08-05 — chunk reads on a Genie-executed statement are permitted, and the link, response shape and row arithmetic all behave as the client assumes. Genie emitting a multi-chunk result was **not** reproduced |
 | Unattended service-principal authentication | Request shape verified against the live token endpoint; the exchange with real service-principal credentials was **not** run |
-| AWS Databricks | Not tested |
-| GCP Databricks | Not tested |
+| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
+| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
 | Windows / Linux | Covered by the CI matrix |
-| macOS | Binary is built, not tested |
+| macOS | Binary is built, not tested — [#53](https://github.com/ivanvyd/LakeSpeak.NET/issues/53) |
 
 Paths that have not been exercised against a real workspace are labelled as such in
 [docs/compatibility.md](docs/compatibility.md) rather than being quietly presented as working.
