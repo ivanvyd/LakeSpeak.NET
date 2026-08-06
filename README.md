@@ -5,6 +5,7 @@
 [![LakeSpeak.Genie](https://img.shields.io/nuget/v/LakeSpeak.Genie?label=LakeSpeak.Genie)](https://www.nuget.org/packages/LakeSpeak.Genie/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/LakeSpeak.NET/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/LakeSpeak.NET)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13969/badge)](https://www.bestpractices.dev/projects/13969)
 
 Talk to governed Databricks data from your terminal and .NET applications.
 

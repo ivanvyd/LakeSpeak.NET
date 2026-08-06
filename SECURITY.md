@@ -80,6 +80,8 @@ Recorded in [docs/security/threat-model.md](docs/security/threat-model.md).
   effect of pushing a tag.
 - Live integration tests never run for pull requests from forks, because they need workspace
   credentials.
+- Release tags must be signed by a key in `.github/allowed_signers`; the workflow refuses to build
+  an unsigned tag, so a release cannot be triggered with GitHub access alone.
 
 ## Verifying a release
 
@@ -104,6 +106,15 @@ gh attestation verify LakeSpeak.Cli.0.1.0.nupkg --repo ivanvyd/LakeSpeak.NET
 A passing check tells you the file was built by `.github/workflows/release.yml` in this
 repository, and not rebuilt or replaced by anyone afterwards. A failing one means the file did not
 come from here — treat it as hostile rather than as a tooling problem.
+
+The attestation answers *what built this*. **Who authorised it** is a separate question, answered
+by the release tag: the workflow verifies the tag's SSH signature against
+[`.github/allowed_signers`](.github/allowed_signers) before it builds, so a release cannot be
+started by someone holding only the GitHub account. You can check any release tag yourself:
+
+```bash
+git -c gpg.ssh.allowedSignersFile=.github/allowed_signers verify-tag v0.1.0
+```
 
 To check the binaries against their published digests instead:
 

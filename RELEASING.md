@@ -52,6 +52,36 @@ lakespeak --version
 CI already does this on every PR (the `tool-smoke` job), but doing it by hand once before a real
 release is cheap.
 
+## Signed tags
+
+The release workflow verifies the tag's signature before it builds anything, against the public
+keys in [`.github/allowed_signers`](.github/allowed_signers).
+
+This exists because the provenance attestation answers a different question than people assume. It
+proves **what** built an artifact — this workflow, this repository, this commit. It cannot prove
+**who** authorised the release: anyone able to push a tag starts the workflow, and the attestation
+on the result would be perfectly valid. The signing key is the one credential GitHub does not hold,
+so requiring a signed tag is what makes a stolen GitHub account insufficient by itself.
+
+Signing uses SSH, not GPG — the same key already used for commits, so there is no second key to
+manage:
+
+```bash
+git config gpg.format ssh
+git config user.signingkey ~/.ssh/id_ed25519.pub
+git config tag.gpgSign true
+```
+
+Two consequences worth knowing before relying on this.
+
+**A lost key blocks releases** until a new public key is committed to `.github/allowed_signers`.
+That is the trade: the control is only as available as the key. Keep a second maintainer key in
+that file if the project ever gains one.
+
+**It is not absolute.** Someone holding the GitHub account could open a pull request removing the
+verification step and merge it. Signing makes that a multi-step attack recorded in git history
+rather than a single silent tag push, which is the realistic protection available here.
+
 ## Cut the release
 
 ### Prerequisites, once
@@ -134,11 +164,18 @@ recreating it under the same name, and publishing as if nothing changed.
 2. Confirm `docs/compatibility.md` reflects what has actually been verified for this version.
    An entry there with no evidence behind it is worse than a missing one.
 3. Merge those to `main`.
-4. Tag and push:
+4. Tag and push. **The tag must be signed** — the workflow refuses to build an unsigned one:
 
    ```bash
    git tag -a v1.2.3 -m "v1.2.3"
    git push origin v1.2.3
+   ```
+
+   `tag.gpgSign` is set locally to `true`, so `git tag -a` signs without `-s`. Check before
+   pushing if you want to be sure:
+
+   ```bash
+   git -c gpg.ssh.allowedSignersFile=.github/allowed_signers verify-tag v1.2.3
    ```
 
 5. The workflow runs. If the environment gate is configured (see prerequisites), it stops
