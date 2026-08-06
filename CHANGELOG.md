@@ -4,7 +4,13 @@ Notable changes, newest first. This project follows [semantic versioning](https:
 the caveat that `0.x` minor versions may break the API — that is what `0.x` means, and it is stated
 here rather than left to be discovered.
 
-## Unreleased
+## 0.1.0 — 2026-08-06
+
+Results come back whole, the documentation's own claims are under test, and the one image that was
+reconstructed is now a real session. What has been verified and what has not is recorded in
+[docs/compatibility.md](docs/compatibility.md) rather than implied.
+
+`0.x` still means a minor version may break the API.
 
 ### Fixed
 
