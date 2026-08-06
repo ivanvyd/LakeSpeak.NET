@@ -16,7 +16,7 @@ Germany generated the highest revenue among the listed regions.
 ╰────────────────────────┴─────────────────────────────────────────────────────╯
 ╭─Generated SQL─────────────────────────────────────────────╮
 │ SELECT `region`, SUM(`revenue_eur`) AS total_revenue_eur  │
-│ FROM `sales`.`public`.`regional_revenue` │
+│ FROM `sales`.`public`.`regional_revenue`                  │
 │ WHERE `region` IS NOT NULL AND `revenue_eur` IS NOT NULL  │
 │ GROUP BY `region`                                         │
 ╰───────────────────────────────────────────────────────────╯

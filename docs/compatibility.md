@@ -58,9 +58,27 @@ The live suite in `tests/LakeSpeak.LiveIntegrationTests` reproduces all of this.
 `DATABRICKS_HOST`, `DATABRICKS_TOKEN` and `LAKESPEAK_LIVE_AGENT` set:
 `dotnet test -c Release --filter "Category=Live"`.
 
-What this still does **not** exercise: `chat` (needs an interactive terminal), chunked result
-assembly, the Genie full-result download endpoints, visualizations, and `QUERY_RESULT_EXPIRED`
-recovery. Those remain covered by contract tests only.
+What this still does **not** exercise: the Genie full-result download endpoints, visualizations,
+and `QUERY_RESULT_EXPIRED` recovery. Those remain covered by contract tests only.
+
+## `chat`, verified live — 2026-08-06
+
+The one path that resists automation entirely: the REPL refuses to start without an interactive
+terminal, by design, so no CI job or agent session can drive it. It was run by hand instead.
+
+| Path | Result |
+|---|---|
+| REPL start against a live Agent | Banner, Agent name, prompt |
+| A question | Answer text plus a rendered result table |
+| **A follow-up** — "and break that down by quarter" | Kept its context and re-grouped the same figures by quarter. This is the behaviour the whole project is built around, and it had never been observed end to end before |
+| `/sql` | Printed the generated SQL for the follow-up, not the first question |
+| `/exit` | Clean exit |
+
+`docs/assets/transcripts/chat.txt` is that session, with the workspace's identifiers replaced by
+the synthetic ones the other transcripts use. It was previously reconstructed from string
+literals; it is now captured output like every other transcript here.
+
+Not exercised: `/new`, `/agents`, `/use`, `/result`, `/export`, `/thumbs-up`, `/thumbs-down`.
 
 ## Local verification — 2026-08-05
 

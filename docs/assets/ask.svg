@@ -22,7 +22,7 @@
     <text x="22" y="346" fill="#2a3240" xml:space="preserve">╰────────────────────────┴─────────────────────────────────────────────────────╯</text>
     <text x="22" y="366" fill="#56b6c2" xml:space="preserve">╭─Generated SQL─────────────────────────────────────────────╮</text>
     <text x="22" y="386"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> SELECT `region`, SUM(`revenue_eur`) AS total_revenue_eur  </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
-    <text x="22" y="406"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> FROM `sales`.`public`.`regional_revenue` </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
+    <text x="22" y="406"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> FROM `sales`.`public`.`regional_revenue`                  </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
     <text x="22" y="426"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> WHERE `region` IS NOT NULL AND `revenue_eur` IS NOT NULL  </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
     <text x="22" y="446"><tspan fill="#2a3240" xml:space="preserve">│</tspan><tspan fill="#c8d3e0" xml:space="preserve"> GROUP BY `region`                                         </tspan><tspan fill="#2a3240" xml:space="preserve">│</tspan></text>
     <text x="22" y="466" fill="#2a3240" xml:space="preserve">╰───────────────────────────────────────────────────────────╯</text>

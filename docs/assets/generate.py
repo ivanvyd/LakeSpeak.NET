@@ -3,10 +3,17 @@
 
     python docs/assets/generate.py
 
-The transcripts are real output captured from the CLI against a live Databricks workspace, with
-that workspace's identifiers replaced by synthetic ones before they were stored. `chat.txt` is the
-exception: the chat REPL refuses to start without an interactive terminal, so it cannot be piped
-to a file. That one is reconstructed from the literal strings in `ChatCommand.cs`.
+Every transcript here is real output captured from the CLI against a live Databricks workspace,
+with that workspace's identifiers replaced by synthetic ones before it was stored.
+
+`chat.txt` used to be the exception, reconstructed from the literal strings in `ChatCommand.cs`,
+because the REPL refuses to start without an interactive terminal and so cannot be piped to a
+file. It was captured for real on 2026-08-06 by copying the terminal buffer of a live session --
+which is the only way to do it, and is the way to do it again if the output changes.
+
+When substituting identifiers, keep the box-drawing borders aligned: the synthetic table name is
+shorter than the real one, and replacing it without restoring the displaced padding leaves a
+visibly ragged box. That had already happened once, in `ask.txt`.
 
 SVG rather than screenshots, deliberately: the assets stay text, so they diff, scale, and need no
 binary blobs in the repository -- and when the CLI's output changes, regenerating produces a
