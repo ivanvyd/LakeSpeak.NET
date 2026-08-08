@@ -13,7 +13,7 @@ lakespeak pack run daily-brief.yaml
 ## A pack
 
 ```yaml
-apiVersion: lakespeak.dev/v1alpha1
+apiVersion: lakespeak.net/v1alpha1
 kind: QuestionPack
 
 metadata:

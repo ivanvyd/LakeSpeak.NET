@@ -49,6 +49,17 @@ public static partial class QuestionPackLoader
 {
     private const int MaxQuestions = 50;
 
+    /// <summary>The apiVersion every pack should declare. The domain is the project's own.</summary>
+    public const string CurrentApiVersion = "lakespeak.net/v1alpha1";
+
+    /// <summary>
+    /// The apiVersion packs written before the project moved to lakespeak.net declare. Still
+    /// accepted, and deliberately: the identifier is a name rather than a URL, nothing resolves
+    /// it, and rejecting it would break every pack already committed to someone's repository to
+    /// buy nothing. New packs get <see cref="CurrentApiVersion"/>; both mean the same schema.
+    /// </summary>
+    public const string LegacyApiVersion = "lakespeak.dev/v1alpha1";
+
     [GeneratedRegex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex SafeName();
 
@@ -85,9 +96,9 @@ public static partial class QuestionPackLoader
 
         var errors = new List<string>();
 
-        if (raw.ApiVersion != "lakespeak.dev/v1alpha1")
+        if (raw.ApiVersion != CurrentApiVersion && raw.ApiVersion != LegacyApiVersion)
         {
-            errors.Add($"apiVersion must be 'lakespeak.dev/v1alpha1' (found '{raw.ApiVersion ?? "nothing"}')");
+            errors.Add($"apiVersion must be '{CurrentApiVersion}' (found '{raw.ApiVersion ?? "nothing"}')");
         }
 
         if (raw.Kind != "QuestionPack")
