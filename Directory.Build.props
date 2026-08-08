@@ -55,7 +55,7 @@
     <RepositoryUrl>https://github.com/ivanvyd/LakeSpeak.NET</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/ivanvyd/LakeSpeak.NET</PackageProjectUrl>
+    <PackageProjectUrl>https://lakespeak.net</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReleaseNotes>https://github.com/ivanvyd/LakeSpeak.NET/blob/main/CHANGELOG.md</PackageReleaseNotes>

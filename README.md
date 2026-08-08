@@ -9,6 +9,8 @@
 
 Talk to governed Databricks data from your terminal and .NET applications.
 
+**[lakespeak.net](https://lakespeak.net)** — what it does, with real terminal output.
+
 LakeSpeak.NET is an independent open-source .NET client, terminal application, and automation
 toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents.
 
