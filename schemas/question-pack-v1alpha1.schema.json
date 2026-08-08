@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lakespeak.dev/schemas/question-pack-v1alpha1.schema.json",
+  "$id": "https://lakespeak.net/schemas/question-pack-v1alpha1.schema.json",
   "title": "LakeSpeak Question Pack (v1alpha1)",
   "description": "A version-controlled set of Genie questions that produce a repeatable report. Question Packs are data, never code: nothing here can execute a command, read a file, or widen the permissions of the identity running it.",
   "type": "object",
@@ -8,8 +8,8 @@
   "additionalProperties": false,
   "properties": {
     "apiVersion": {
-      "const": "lakespeak.dev/v1alpha1",
-      "description": "Pinned so a pack written today keeps its meaning when the schema evolves."
+      "enum": ["lakespeak.net/v1alpha1", "lakespeak.dev/v1alpha1"],
+      "description": "Pinned so a pack written today keeps its meaning when the schema evolves. Write lakespeak.net/v1alpha1; the lakespeak.dev spelling predates the project's domain and still loads."
     },
     "kind": { "const": "QuestionPack" },
     "metadata": {

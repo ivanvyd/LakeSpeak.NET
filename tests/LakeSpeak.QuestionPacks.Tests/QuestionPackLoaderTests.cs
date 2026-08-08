@@ -4,7 +4,7 @@ public class QuestionPackLoaderTests
 {
     private const string Valid =
         """
-        apiVersion: lakespeak.dev/v1alpha1
+        apiVersion: lakespeak.net/v1alpha1
         kind: QuestionPack
         metadata:
           name: daily-brief
@@ -45,12 +45,29 @@ public class QuestionPackLoaderTests
     }
 
     [Fact]
+    public void Still_parses_a_pack_written_before_the_domain_moved()
+    {
+        // Arrange — the apiVersion packs declared while the project used lakespeak.dev.
+        var yaml = Valid.Replace(
+            QuestionPackLoader.CurrentApiVersion,
+            QuestionPackLoader.LegacyApiVersion,
+            StringComparison.Ordinal);
+
+        // Act
+        var pack = QuestionPackLoader.Parse(yaml, "/packs");
+
+        // Assert — the same pack, not a degraded one.
+        pack.Name.ShouldBe("daily-brief");
+        pack.Questions.Single().Id.ShouldBe("failed-jobs");
+    }
+
+    [Fact]
     public void Defaults_are_the_safe_ones()
     {
         // Arrange — a pack with no behavior block at all.
         const string minimal =
             """
-            apiVersion: lakespeak.dev/v1alpha1
+            apiVersion: lakespeak.net/v1alpha1
             kind: QuestionPack
             metadata:
               name: minimal
@@ -109,7 +126,7 @@ public class QuestionPackLoaderTests
         // Arrange — a pack broken three different ways.
         const string broken =
             """
-            apiVersion: lakespeak.dev/v1alpha1
+            apiVersion: lakespeak.net/v1alpha1
             kind: QuestionPack
             metadata:
               name: Bad_Name
@@ -134,12 +151,12 @@ public class QuestionPackLoaderTests
     }
 
     [Theory]
-    [InlineData("lakespeak.dev/v1", "apiVersion")]
-    [InlineData("lakespeak.dev/v1alpha1", "kind")]
+    [InlineData("lakespeak.net/v1", "apiVersion")]
+    [InlineData("lakespeak.net/v1alpha1", "kind")]
     public void Rejects_a_wrong_apiVersion_or_kind(string apiVersion, string broken)
     {
         // Arrange
-        var yaml = Valid.Replace("apiVersion: lakespeak.dev/v1alpha1", $"apiVersion: {apiVersion}", StringComparison.Ordinal);
+        var yaml = Valid.Replace("apiVersion: lakespeak.net/v1alpha1", $"apiVersion: {apiVersion}", StringComparison.Ordinal);
         if (broken == "kind")
         {
             yaml = yaml.Replace("kind: QuestionPack", "kind: Something", StringComparison.Ordinal);
@@ -176,7 +193,7 @@ public class QuestionPackLoaderTests
 
         var yaml =
             $"""
-            apiVersion: lakespeak.dev/v1alpha1
+            apiVersion: lakespeak.net/v1alpha1
             kind: QuestionPack
             metadata:
               name: huge

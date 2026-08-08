@@ -153,7 +153,7 @@ compiled against the library rather than written by hand.
 A Question Pack turns a set of business questions into a reviewable, version-controlled report.
 
 ```yaml
-apiVersion: lakespeak.dev/v1alpha1
+apiVersion: lakespeak.net/v1alpha1
 kind: QuestionPack
 metadata:
   name: daily-platform-brief
