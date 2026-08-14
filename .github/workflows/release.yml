@@ -110,7 +110,7 @@ jobs:
       # The zips are attested as well as the packages. Attesting only the .nupkg files left the
       # three downloadable binaries unattested, so `gh attestation verify` on a downloaded release
       # binary failed - which is precisely the command SECURITY.md tells an adopter to run.
-      - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         id: attest
         with:
           subject-path: |
