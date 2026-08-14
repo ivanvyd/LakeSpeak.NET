@@ -158,7 +158,7 @@ internal static class PackCommand
 
     private const string Template =
         """
-        apiVersion: lakespeak.dev/v1alpha1
+        apiVersion: lakespeak.net/v1alpha1
         kind: QuestionPack
 
         metadata:
