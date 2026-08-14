@@ -449,15 +449,6 @@
           "xunit.v3.runner.common": "[3.2.2]"
         }
       },
-      "lakespeak.application": {
-        "type": "Project",
-        "dependencies": {
-          "LakeSpeak.Configuration": "[0.1.0, )",
-          "LakeSpeak.Genie": "[0.1.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.10, )",
-          "Microsoft.Extensions.Logging.Abstractions": "[10.0.10, )"
-        }
-      },
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
@@ -483,7 +474,6 @@
         "type": "Project",
         "dependencies": {
           "JsonSchema.Net": "[9.4.0, )",
-          "LakeSpeak.Application": "[0.1.0, )",
           "LakeSpeak.Genie": "[0.1.0, )",
           "LakeSpeak.Rendering": "[0.1.0, )",
           "YamlDotNet": "[18.1.0, )"

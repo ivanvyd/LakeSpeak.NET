@@ -475,7 +475,7 @@
           "LakeSpeak.Rendering": "[0.1.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.10, )",
           "Spectre.Console": "[0.57.2, )",
-          "System.CommandLine": "[2.0.10, )"
+          "System.CommandLine": "[2.0.11, )"
         }
       },
       "lakespeak.configuration": {
@@ -624,9 +624,9 @@
       },
       "System.CommandLine": {
         "type": "CentralTransitive",
-        "requested": "[2.0.10, )",
-        "resolved": "2.0.10",
-        "contentHash": "6i1D6/U3i1f/PiXTt9pDvbJwdXEe0F2DZPup6BHzeIu5yPk/lkFzgtrJnPbj54JWUh8Y9vJeKG/TZIT6MkF8TA=="
+        "requested": "[2.0.11, )",
+        "resolved": "2.0.11",
+        "contentHash": "Pmg3/T0M37ZS3ovwPHtfBNTCdqNpnxo+tnZMg8JDHVR0qD8KwcPUKlheEiZysb1En8IyH7yDoa9QDq97Ny/vhQ=="
       },
       "YamlDotNet": {
         "type": "CentralTransitive",
