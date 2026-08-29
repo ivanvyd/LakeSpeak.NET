@@ -6,6 +6,65 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.2.0 — 2026-08-29
+
+The two gaps the README's verification table already named as "not tested" or "not yet done" —
+the macOS arm64 matrix entry and OAuth M2M, the first item on the v0.2 roadmap — are addressed.
+A re-runnable live smoke workflow now runs the `Category=Live` suite behind a repo secret on
+`workflow_dispatch` and weekly, so the live path does not rot between uses.
+
+`0.x` still means a minor version may break the API. Nothing in the public surface has changed;
+this is additive.
+
+### Added
+
+- **OAuth M2M token provider** — `LakeSpeak.Genie.Authentication.M2mTokenProvider` exchanges
+  `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` for short-lived access tokens at
+  `{host}/oidc/v1/token` with HTTP Basic auth, caches them in memory, and refreshes proactively
+  on a 60s grace window. The DI registration order is `DATABRICKS_TOKEN` (PAT, the local-debug
+  path) → OAuth M2M (the unattended path) → Databricks CLI broker (the interactive default).
+  Setting only one of the two M2M variables throws a clear error at first DI resolve. A
+  Question Pack on a schedule no longer needs to hold a long-lived personal access token. The
+  exchange with valid service-principal credentials against a real workspace is the contribution
+  that closes #55.
+- **macOS arm64 in the CI test matrix.** `macos-latest` is now exercised alongside `ubuntu-latest`
+  and `windows-latest`. The compat table's row for macOS moves from "Release binary is built;
+  untested" to "Unit and contract tests run in CI". Closes #53.
+- **A re-runnable Live smoke workflow** — `.github/workflows/live-smoke.yml` runs the
+  `Category=Live` suite behind `secrets.DATABRICKS_TOKEN`, `vars.LAKESPEAK_LIVE_HOST`, and
+  `vars.LAKESPEAK_LIVE_AGENT` on `workflow_dispatch` and a weekly cron. A fork or unconfigured
+  maintainer run sees a `::notice::` and exits 0, so PR review is unaffected.
+
+### Changed
+
+- `auth check` now names the OAuth M2M provider in its source-of-credentials output, alongside
+  the existing Databricks CLI broker and `DATABRICKS_TOKEN` entries. The PAT path still prints
+  a redacted token length; the M2M path prints the configured env-var names, not the values.
+- `docs/authentication.md` documents native OAuth M2M as the recommended unattended path. The
+  old `curl`-based recipe is retained as a "legacy" reference for readers pinned to an older
+  LakeSpeak version, with a note that it is no longer needed.
+- `docs/compatibility.md` spells out the contribution that closes the AWS and GCP rows
+  (a PR that runs the live suite on the relevant cloud and records the result here) rather
+  than leaving them as bare "not tested" entries.
+
+### Verified
+
+- `dotnet build -c Release` clean, warnings-as-errors, on `ubuntu-latest`, `windows-latest`,
+  and `macos-latest` in CI.
+- `dotnet test -c Release --filter "Category!=Live"`: 282 passed, 0 failed.
+- 9 M2M contract tests against a stubbed token endpoint cover Basic auth, form parameters,
+  response parsing, refresh, error mapping, non-JSON error bodies, and concurrent first-callers
+  sharing a single fetch.
+- `Live smoke` has not been run against a real workspace on this release. The contract tests
+  cover the wire shape; the live exchange is the next contribution that closes #55.
+
+## 0.1.1 — 2026-08-14
+
+Two fixes that did not make it into 0.1.0. Both were caught by verifying the published release
+rather than the build output, and both are correctness defects with the same shape: a behaviour
+that the build accepted silently because the test or the verification command was checking the
+wrong artefact.
+
 ### Fixed
 
 - **Re-executing an expired result now returns the rows.** `execute-query` only *starts* the
