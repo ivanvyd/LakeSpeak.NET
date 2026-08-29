@@ -1,0 +1,69 @@
+name: Live smoke (Databricks Genie)
+
+# Exercises the real Databricks Genie Conversation API against a live workspace, behind a
+# repository secret. The suite is opt-in: a fork without the secret sees a notice and exits
+# cleanly, so a contributor's PR can still be reviewed. The maintainer runs the job from
+# `Actions` on demand and a weekly schedule keeps the live path from rotting between uses.
+#
+# `docs/compatibility.md` records what this job has actually run against. The job is not a
+# gate; failures here do not block a PR. A live failure is a signal to update the compat
+# table and the live test, not to revert a code change that passes the contract suite.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Once a week is enough to catch a Databricks-side change in wire shape or auth flow
+    # before it surprises a release. Earlier in the week gives a few days to investigate
+    # before anyone cites the failure.
+    - cron: '27 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    # The job is gated on all three pieces: the workspace host (so the live tests see a real
+    # `DATABRICKS_HOST` and do not all skip), the Agent name (so there is something to ask),
+    # and the bearer token (so the call authenticates). A maintainer who has not configured
+    # any of them sees the job succeed with a notice rather than red — the failure mode of
+    # "not configured" is "I cannot verify", not "I tried and failed".
+    if: ${{ vars.LAKESPEAK_LIVE_HOST != '' && vars.LAKESPEAK_LIVE_AGENT != '' && secrets.DATABRICKS_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      # The host is the URL the token was issued against. Keeping it out of secrets makes the
+      # configuration trivial to inspect in PR review and means rotating the host (moving
+      # the workspace) does not require rotating a secret.
+      DATABRICKS_HOST: ${{ vars.LAKESPEAK_LIVE_HOST }}
+      LAKESPEAK_LIVE_AGENT: ${{ vars.LAKESPEAK_LIVE_AGENT }}
+      # GitHub Actions masks a value in job logs only if the value is set as an env var from
+      # a secret. Reading the secret directly into an env block masks it for the rest of
+      # the run.
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet test --no-restore -c Release --filter "Category=Live" --logger trx --results-directory TestResults
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: live-test-results
+          path: TestResults/
+
+  not-configured:
+    # A separate job for the "not configured" case so the run shows a clear status and the
+    # maintainer can tell at a glance which configuration they have.
+    if: ${{ vars.LAKESPEAK_LIVE_HOST == '' || vars.LAKESPEAK_LIVE_AGENT == '' || secrets.DATABRICKS_TOKEN == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped — secrets not configured
+        run: |
+          echo "::notice title=Live smoke skipped::Set secrets.DATABRICKS_TOKEN, vars.LAKESPEAK_LIVE_HOST, and vars.LAKESPEAK_LIVE_AGENT to run the live suite. See docs/authentication.md and docs/compatibility.md."

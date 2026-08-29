@@ -67,7 +67,11 @@ jobs:
         # The CLI reads terminal width, honours NO_COLOR and shells out to the
         # Databricks CLI. All three behave differently on Windows, so a
         # Linux-only matrix would not cover the primary maintainer's own platform.
-        os: [ubuntu-latest, windows-latest]
+        # macOS is added because a tool that is only ever tested on Windows and
+        # Linux can quietly depend on case-insensitive file paths or LF line
+        # endings; running the suite on a third platform catches that class of
+        # defect before users do.
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

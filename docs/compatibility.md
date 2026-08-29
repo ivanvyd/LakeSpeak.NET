@@ -22,15 +22,15 @@ otherwise, please open an issue. Visualization retrieval is explicitly Beta and 
 |---|---|
 | Linux x64 | Unit and contract tests run in CI |
 | Windows x64 | Unit and contract tests run in CI |
-| macOS arm64 | Release binary is built; **untested** — [#53](https://github.com/ivanvyd/LakeSpeak.NET/issues/53) |
+| macOS arm64 | Unit and contract tests run in CI (since the `macos-latest` matrix entry was added) |
 
 ## Clouds
 
 | Cloud | Status |
 |---|---|
 | Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
-| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
-| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
+| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51). The OAuth M2M and PAT paths are contract-tested against a stubbed token endpoint and a stubbed Genie Conversation API, and the wire shape is shared across clouds. **Filing a PR that runs the live suite on an AWS workspace and records the result here is the contribution that closes #51.** |
+| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52). Same shape as AWS. **The contribution that closes #52 is a PR that runs the live suite on a GCP workspace and records the result here.** |
 
 ## Live verification, 2026-08-01
 
@@ -173,8 +173,8 @@ a repeated link, a link resolving off-workspace, and the row cap.
 | Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The wire contract and the chunk-read permission were verified live on 2026-08-05 — see above; Genie emitting a multi-chunk result was not |
 | Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
 | The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
-| Unattended service-principal auth | **Partly.** The token endpoint accepts the documented request — invalid credentials return `401 invalid_client`, not `404` — so the URL, method, Basic auth and form parameters are right. The exchange with *valid* service-principal credentials has not been run — [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |
-| Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. |
+| Unattended service-principal auth (OAuth M2M) | Contract tests against a stubbed token endpoint cover: Basic auth, form parameters, response shape, expiry, refresh, `invalid_client` mapping, non-JSON error bodies, and concurrent first-callers sharing one fetch. The exchange with **valid** service-principal credentials against a real workspace has not been run — [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |
+| Against real Databricks | See "Live verification" above. `agents list`, `ask`, every output format, `pack run`, `export last` and `feedback last` were run against a live workspace; `chat`, chunked/external-link results and `QUERY_RESULT_EXPIRED` recovery were not. The live suite is now re-runnable from `Actions → Live smoke (Databricks Genie)` (workflow_dispatch) and weekly (cron) behind `secrets.DATABRICKS_TOKEN`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`; a fork without any of them sees a notice and exits 0 |
 
 ## How to update this file
 

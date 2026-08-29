@@ -40,12 +40,21 @@ Status: in development.
 
 ## v0.2 — automation
 
-- OAuth M2M, so unattended use does not depend on a personal access token
+- [x] OAuth M2M, so unattended use does not depend on a personal access token — the
+  `DATABRICKS_CLIENT_ID` + `DATABRICKS_CLIENT_SECRET` path is wired and contract-tested; the
+  exchange with **valid** credentials against a real workspace is the contribution that closes
+  [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55)
+- [x] macOS validation — `macos-latest` is in the CI test matrix. The path that closes
+  [#53](https://github.com/ivanvyd/LakeSpeak.NET/issues/53) is the maintainer running the
+  weekly Live smoke against a workspace reachable from the runner; the tool itself is now
+  exercised on the platform
+- [x] A GitHub Actions example running a Question Pack on a schedule — the `Live smoke`
+  workflow runs the live suite behind a secret, weekly and on demand
 - `conversations list` and `resume`
 - Shell completion for PowerShell, Bash and Zsh
 - A Claude Code skill wrapping the JSON output
-- A GitHub Actions example running a Question Pack on a schedule
-- AWS Databricks and macOS validation
+- AWS Databricks validation — closes [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51)
+  when someone with an AWS workspace records a live run in `compatibility.md`
 
 ## v0.3 — packs that do more
 

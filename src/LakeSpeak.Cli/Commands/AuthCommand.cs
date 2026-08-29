@@ -72,6 +72,7 @@ internal static class AuthCommand
     {
         DatabricksCliTokenProvider => "the Databricks CLI",
         EnvironmentTokenProvider => "DATABRICKS_TOKEN",
+        M2mTokenProvider => "OAuth M2M (DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET)",
         _ => "the registered token provider",
     };
 }

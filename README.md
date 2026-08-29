@@ -108,6 +108,10 @@ databricks auth login --profile company
 lakespeak chat --profile company
 ```
 
+For unattended use — a scheduled Question Pack, a CI job — set `DATABRICKS_CLIENT_ID` and
+`DATABRICKS_CLIENT_SECRET` to a Databricks service principal and LakeSpeak will mint and refresh
+its own OAuth tokens; see [Authentication → OAuth M2M](docs/authentication.md#unattended-use-oauth-m2m-native).
+
 Ask a one-shot question:
 
 ```bash
@@ -209,16 +213,16 @@ promise; it is a record of evidence.
 
 | Area | Status |
 |---|---|
-| Unit and contract tests | Run on Windows and Linux in CI, on every push and pull request |
+| Unit and contract tests | Run on Windows, Linux and macOS in CI, on every push and pull request |
 | Azure Databricks, live workspace | `agents list`, `ask`, `pack run` and every output format verified against a real Genie Agent on 2026-08-01 |
 | `chat` | Verified live on 2026-08-06 — the REPL, a follow-up keeping its context, and `/sql`. Its other slash commands were not exercised |
 | Feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
 | Chunked results assembled beyond the first chunk | Mechanism verified live on 2026-08-05 — chunk reads on a Genie-executed statement are permitted, and the link, response shape and row arithmetic all behave as the client assumes. Genie emitting a multi-chunk result was **not** reproduced |
-| Unattended service-principal authentication | Request shape verified against the live token endpoint; the exchange with real service-principal credentials was **not** run |
+| Unattended service-principal authentication (OAuth M2M) | Contract tests cover Basic auth, form parameters, response parsing, refresh, and `invalid_client` mapping. Exchange with **valid** service-principal credentials against a real workspace is the contribution that closes [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |
+| Live smoke, re-runnable from `Actions` | Behind `secrets.DATABRICKS_TOKEN`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`; weekly and on demand. Forks without any of them see a notice and exit 0 |
 | AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
 | GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
-| Windows / Linux | Covered by the CI matrix |
-| macOS | Binary is built, not tested — [#53](https://github.com/ivanvyd/LakeSpeak.NET/issues/53) |
+| Windows / Linux / macOS | Covered by the CI matrix |
 
 Paths that have not been exercised against a real workspace are labelled as such in
 [docs/compatibility.md](docs/compatibility.md) rather than being quietly presented as working.

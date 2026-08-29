@@ -49,64 +49,54 @@ export DATABRICKS_TOKEN=$(az account get-access-token \
 This is the path used to verify LakeSpeak against a live workspace; see
 [compatibility.md](compatibility.md).
 
-## Unattended runs: a service principal
+## Unattended use: OAuth M2M (native)
 
-For CI, a scheduled Question Pack, or anything with no human at a terminal, use a **Databricks
-service principal** rather than someone's personal access token. LakeSpeak has no M2M flow of its
-own — deliberately, since delegating credentials is why its security story is short — so the token
-is minted by the one documented call and handed over in `DATABRICKS_TOKEN`.
+The cleanest path for CI, a scheduled Question Pack, or anything with no human at a terminal is a
+**Databricks service principal** authenticated via the OAuth machine-to-machine flow. Set
+`DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` and LakeSpeak handles the rest — token endpoint,
+refresh, expiry window — the same way the CLI broker does, but without the CLI and without a
+long-lived `DATABRICKS_TOKEN` left in the environment.
 
 ```bash
 export DATABRICKS_HOST="https://adb-1234567890123456.7.azuredatabricks.net"
-
-export DATABRICKS_TOKEN=$(
-  printf 'grant_type=client_credentials&scope=all-apis&client_id=%s&client_secret=%s' \
-    "$DATABRICKS_CLIENT_ID" "$DATABRICKS_CLIENT_SECRET" \
-  | curl -sS --fail --request POST --url "$DATABRICKS_HOST/oidc/v1/token" --data @- \
-  | jq -r .access_token)
-
+export DATABRICKS_CLIENT_ID="<service-principal-application-id>"
+export DATABRICKS_CLIENT_SECRET="<oauth-secret>"
 lakespeak pack run packs/daily-brief.yaml
 ```
 
-The secret is piped in rather than passed as `curl --user`, which Databricks' own documentation
-shows. An argument is visible in the process table — `ps -ef`, or `/proc/<pid>/cmdline` — to anyone
-else on the machine for as long as the request runs. On a shared or self-hosted CI runner, which is
-exactly what this recipe is for, that is a real way to lose a credential that never appears in any
-log. Reading the body from stdin keeps it out of `argv` entirely.
+The token is fetched from `{host}/oidc/v1/token` with HTTP Basic auth, cached in memory and
+refreshed before it expires. The credential is never written to disk, never placed in a URL, and
+never appears in `argv` — see [ADR 0003](decisions/0003-broker-credentials-through-the-databricks-cli.md)
+for the reasoning that this principle was built around.
 
-`DATABRICKS_CLIENT_ID` is the service principal's application ID and `DATABRICKS_CLIENT_SECRET` is
-an OAuth secret generated for it, both supplied by your secret store. The endpoint is workspace-
-level; the account-level equivalent is `https://accounts.<cloud>/oidc/accounts/<account-id>/v1/token`
-and is not what you want here.
+`DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` must be set together. Setting only one is a
+misconfiguration that produces an OAuth failure indistinguishable from a wrong credential; the
+client throws a clear message at start-up rather than letting that ambiguity reach the first
+Databricks call.
 
-Four things worth knowing before relying on this.
+Resolution order when more than one credential is set: `DATABRICKS_TOKEN` first (the local-debug
+shortcut), then M2M (the unattended path), then the Databricks CLI broker (the interactive
+default). `lakespeak auth check` names the path it picked, so the diagnostic value of "it
+worked" is "it worked via M2M" when that is the surprise.
 
-**The token lasts one hour.** `expires_in` is 3600 and there is no refresh. LakeSpeak holds an
-environment token in memory for the life of the process, so a single pack run is fine; a run that
-could exceed an hour is not, and neither is a long-lived daemon. Mint the token immediately before
-the run.
+The service principal sees what it is granted, and nothing else. It needs explicit access to the
+Genie Agent and its SQL warehouse; it does not inherit your permissions. `lakespeak agents list`
+under the service principal is the fastest way to confirm what it can actually reach.
 
-**The service principal sees what it is granted, and nothing else.** It needs access to the Genie
-Agent and its SQL warehouse, granted explicitly — it does not inherit yours. That is the point:
-`lakespeak agents list` under the service principal is the fastest way to confirm what it can
-actually reach.
+## Unattended runs: a service principal (legacy)
 
-**Never echo the token.** The command above assigns it without printing it. In CI, mask it, and
-remember that job logs are usually readable by everyone with repository access.
+Before LakeSpeak implemented the OAuth M2M flow directly, a service principal was used through a
+short shell snippet that minted a token with `curl` and passed it as `DATABRICKS_TOKEN`. Native
+M2M removes the need for that recipe, so it is no longer the recommended path.
 
-**This recipe is documented, not tested here.** It follows Databricks' published M2M flow and has
-not been exercised against a live workspace by this project. See
-[compatibility.md](compatibility.md) for what has.
+If you cannot move to native M2M yet — for example, you are pinned to an older version — the same
+shape still works, with the caveats that applied to it: the secret must travel through stdin
+rather than `argv`, the token expires in an hour, and a long-running daemon is not what this is
+for. The current release no longer needs it.
 
 ## What is not supported
 
-**OAuth M2M client-credential profiles.** `databricks auth token` covers user-to-machine profiles
-only — the command says so itself — so a profile configured with `DATABRICKS_CLIENT_ID` and
-`DATABRICKS_CLIENT_SECRET` cannot be brokered through the CLI. The recipe above is the supported
-path; native M2M inside LakeSpeak is deferred, because implementing it would make this project a
-credential broker, which is the thing it deliberately is not.
-
-**OIDC workload federation**, GitHub Actions OIDC, and Azure DevOps OIDC. Also v0.2 or later.
+**OIDC workload federation**, GitHub Actions OIDC, and Azure DevOps OIDC. v0.2 or later.
 
 ## Resolving the workspace host
 
