@@ -26,12 +26,12 @@ concurrency:
 
 jobs:
   live:
-    # The job is gated on all three pieces: the workspace host (so the live tests see a real
-    # `DATABRICKS_HOST` and do not all skip), the Agent name (so there is something to ask),
-    # and the bearer token (so the call authenticates). A maintainer who has not configured
-    # any of them sees the job succeed with a notice rather than red — the failure mode of
-    # "not configured" is "I cannot verify", not "I tried and failed".
-    if: ${{ vars.LAKESPEAK_LIVE_HOST != '' && vars.LAKESPEAK_LIVE_AGENT != '' && secrets.DATABRICKS_TOKEN != '' }}
+    # The job is gated on the workspace host and the Agent name. The bearer token is
+    # checked at the step level because `secrets.*` is not allowed in workflow-level
+    # `if:` expressions — a job that *references* `secrets.DATABRICKS_TOKEN` in its gate
+    # would never start. The not-configured job covers the case where the host or agent
+    # is unset. The token check is a step that fails fast with a clear message.
+    if: ${{ vars.LAKESPEAK_LIVE_HOST != '' && vars.LAKESPEAK_LIVE_AGENT != '' }}
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: 'true'
@@ -50,6 +50,11 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Fail early if the bearer token is missing
+        if: ${{ env.DATABRICKS_TOKEN == '' }}
+        run: |
+          echo "::error::secrets.DATABRICKS_TOKEN is not set. See docs/authentication.md and docs/compatibility.md."
+          exit 1
       - run: dotnet restore --locked-mode
       - run: dotnet test --no-restore -c Release --filter "Category=Live" --logger trx --results-directory TestResults
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -61,9 +66,9 @@ jobs:
   not-configured:
     # A separate job for the "not configured" case so the run shows a clear status and the
     # maintainer can tell at a glance which configuration they have.
-    if: ${{ vars.LAKESPEAK_LIVE_HOST == '' || vars.LAKESPEAK_LIVE_AGENT == '' || secrets.DATABRICKS_TOKEN == '' }}
+    if: ${{ vars.LAKESPEAK_LIVE_HOST == '' || vars.LAKESPEAK_LIVE_AGENT == '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Skipped — secrets not configured
+      - name: Skipped — variables not configured
         run: |
-          echo "::notice title=Live smoke skipped::Set secrets.DATABRICKS_TOKEN, vars.LAKESPEAK_LIVE_HOST, and vars.LAKESPEAK_LIVE_AGENT to run the live suite. See docs/authentication.md and docs/compatibility.md."
+          echo "::notice title=Live smoke skipped::Set vars.LAKESPEAK_LIVE_HOST and vars.LAKESPEAK_LIVE_AGENT, and secrets.DATABRICKS_TOKEN, to run the live suite. See docs/authentication.md and docs/compatibility.md."
