@@ -39,13 +39,42 @@ public static class ServiceCollectionExtensions
         {
             var options = sp.GetRequiredService<IOptions<GenieClientOptions>>().Value;
 
-            // DATABRICKS_TOKEN wins when set. Unattended environments — CI, a container, a
-            // scheduled Question Pack — have no browser and often no Databricks CLI, so the
-            // environment has to be a real path rather than a documented one that silently
-            // falls through to a CLI that is not installed.
+            // PAT wins when set. It is the only path that works without configuration and is
+            // documented as the local-debugging option, so the rule of least surprise says it
+            // stays the first check.
             if (Environment.GetEnvironmentVariable(EnvironmentTokenProvider.TokenVariable) is { Length: > 0 })
             {
                 return new EnvironmentTokenProvider();
+            }
+
+            // OAuth M2M is the unattended path. A service principal's client_id + client_secret
+            // rotate via the Databricks token endpoint, so a Question Pack on a schedule does
+            // not have to hold a long-lived personal credential. The two variables have to be
+            // set together: a half-set pair is a misconfiguration, not a fallback.
+            var clientId = Environment.GetEnvironmentVariable(M2mTokenProvider.ClientIdVariable);
+            var clientSecret = Environment.GetEnvironmentVariable(M2mTokenProvider.ClientSecretVariable);
+            if (!string.IsNullOrEmpty(clientId) || !string.IsNullOrEmpty(clientSecret))
+            {
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    throw new InvalidOperationException(
+                        $"{M2mTokenProvider.ClientIdVariable} and {M2mTokenProvider.ClientSecretVariable} " +
+                        "must be set together. Setting only one causes an OAuth failure that reads as a " +
+                        "credential problem; unset both to use the Databricks CLI broker, or set both to " +
+                        "use the OAuth M2M flow.");
+                }
+
+                if (options.Host is null)
+                {
+                    // M2M cannot derive a token URL without a workspace host. Throw at start-up so
+                    // a misconfigured environment fails loudly, not on the first Genie call.
+                    throw new InvalidOperationException(
+                        "OAuth M2M requires a Databricks host. Set GenieClientOptions.Host, DATABRICKS_HOST, " +
+                        "or a profile in .databrickscfg.");
+                }
+
+                var tokenEndpoint = new Uri(options.Host, "/oidc/v1/token");
+                return new M2mTokenProvider(tokenEndpoint, clientId, clientSecret);
             }
 
             return new DatabricksCliTokenProvider(options.Profile);
