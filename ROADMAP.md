@@ -63,6 +63,13 @@ Status: in development.
 - Report comparison between runs
 - Pluggable exporters
 - Conversation aliases
+- **Migrate the test infrastructure to Microsoft Testing Platform** — the .NET 10 SDK with
+  `Microsoft.NET.Test.Sdk` 18.9+ drops VSTest support, so the next test-framework major bump
+  (Dependabot PR #77, closed 2026-08-29) cannot land without it. The migration is
+  `global.json` + a CI command update (`--logger trx` → `--report-trx` or equivalent) + a
+  small ADR. Until this lands, the test-group Dependabot bumps will keep producing red PRs
+  and we should ignore the major-version group on `Microsoft.NET.Test.Sdk`, `xunit.v3`,
+  `xunit.runner.visualstudio`, and `Verify.XunitV3`.
 
 ## Deliberately deferred
 
