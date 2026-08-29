@@ -29,7 +29,7 @@ otherwise, please open an issue. Visualization retrieval is explicitly Beta and 
 | Cloud | Status |
 |---|---|
 | Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
-| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51). The OAuth M2M and PAT paths are contract-tested against a stubbed token endpoint and a stubbed Genie Conversation API, and the wire shape is shared across clouds. **Filing a PR that runs the live suite on an AWS workspace and records the result here is the contribution that closes #51.** |
+| AWS Databricks | **Verified against a live workspace on 2026-08-29** — see [Live verification, AWS](#live-verification-aws-2026-08-29) below. The PAT path was exercised; the OAuth M2M path is contract-tested. Closes [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
 | GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52). Same shape as AWS. **The contribution that closes #52 is a PR that runs the live suite on a GCP workspace and records the result here.** |
 
 ## Live verification, 2026-08-01
@@ -191,3 +191,29 @@ finds its Agent, and a contract test cannot tell you whether a real workspace ag
 
 Still not exercised live, with the reason each resists it, are the three paths listed under v0.1 in
 [ROADMAP.md](../ROADMAP.md).
+
+## Live verification, AWS — 2026-08-29
+
+Run against an AWS Databricks workspace at `dbc-7169d377-476d.cloud.databricks.com`. Authentication was a
+PAT for the maintainer's `DEFAULT` profile in `.databrickscfg`. The verified agent was
+`Northstar Revenue Analyst` (one of three Genie spaces in the workspace, the other two being
+`Student Academic Performance` and `Bakehouse Sales Starter Space`).
+
+| Path | Result |
+|---|---|
+| `lakespeak auth check` against AWS | Profiles in `.databrickscfg`: 2 (DEFAULT → `dbc-7169d377-476d.cloud.databricks.com`). Token obtained (788 characters, not shown). Workspace answered; 3 Agents visible |
+| `lakespeak ask --agent "Northstar Revenue Analyst" "How many rows are in the data?"` | Real answer: 12 rows in `customer_dim`, 12 rows in `customer_health_view`, 24 rows in `customer_revenue_monthly`. Result table rendered with three rows of real data. |
+| Wire shape on AWS | Identical to Azure. The PAT path works unchanged. The OAuth M2M path is contract-tested against a stubbed token endpoint; an AWS M2M verification is the next step but requires a service principal on the AWS account. |
+
+The CI matrix is `ubuntu-latest`, `windows-latest`, `macos-latest`. The Azure verification ran on the
+maintainer's primary machine. The AWS verification ran from the maintainer's machine on 2026-08-29 with
+the same `lakespeak` v0.2.0 binary. The two workspaces answer the same wire contract.
+
+What remains untested on AWS:
+
+- OAuth M2M (the M2M token exchange is cloud-agnostic but was not exercised against this AWS account; the
+  service principal has to be created in the AWS account's Databricks console first).
+- `chat` REPL — the REPL refuses to start without an interactive terminal, by design.
+- `pack run` against a third-party-defined Question Pack — the bundled `daily-brief.yaml` references
+  Azure-only table names and the run failed with `FileNotFoundException` on AWS, which is a question-pack
+  authoring issue, not a wire-shape one.
