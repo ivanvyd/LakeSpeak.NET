@@ -9,6 +9,10 @@
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
+    <!-- MTP mode: the .NET 10 SDK's `dotnet test` discovers each test project as a
+         Microsoft.Testing.Platform test app. The runner flag is what `dotnet test`
+         uses to launch it correctly. -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,9 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- MTP v2 protocol for the .NET 10 SDK's `dotnet test` MTP mode. The v1 default
+         that xunit.v3 3.x ships pulls `xunit.v3.core.mtp-v1`, which conflicts with
+         `xunit.v3.mtp-v2`'s v2 protocol package — both define a `TestPlatformTestFramework`
+         type and the C# compiler refuses to link the test project. The v2 meta-package
+         alone brings everything the v1 version did, plus the v2 protocol. See ADR 0005. -->
+    <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit.v3" />
-    <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Shouldly" />
   </ItemGroup>
