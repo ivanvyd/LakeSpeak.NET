@@ -56,7 +56,7 @@ jobs:
           echo "::error::secrets.DATABRICKS_TOKEN is not set. See docs/authentication.md and docs/compatibility.md."
           exit 1
       - run: dotnet restore --locked-mode
-      - run: dotnet test --no-restore -c Release --filter-trait "Category=Live" --report-trx --output TestResults
+      - run: dotnet test --no-restore -c Release --filter-trait 'Category=Live' --results-directory TestResults
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
