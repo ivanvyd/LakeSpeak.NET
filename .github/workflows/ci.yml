@@ -81,7 +81,10 @@ jobs:
 
       # Live tests need a real workspace and real credentials. They are excluded
       # here by trait rather than omitted from the solution, so they still compile.
-      - run: dotnet test --no-restore -c Release --filter "Category!=Live" --logger trx --results-directory TestResults
+      # MTP mode is enabled by global.json's `test.runner: Microsoft.Testing.Platform`;
+      # xunit v3's MTP filter syntax is `--filter-not-trait "Category=Live"`.
+      # `--results-directory TestResults` writes test results to ./TestResults/.
+      - run: dotnet test --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

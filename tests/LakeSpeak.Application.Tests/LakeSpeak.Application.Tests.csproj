@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-<ItemGroup>
+  <!-- All test project package references come from tests/Directory.Build.props,
+       including the MTP-native xunit v3 setup. -->
+
+  <ItemGroup>
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <ProjectReference Include="..\..\src\LakeSpeak.Application\LakeSpeak.Application.csproj" />

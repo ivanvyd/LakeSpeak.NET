@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-<ItemGroup>
+  <ItemGroup>
     <PackageReference Include="NSubstitute" />
     <ProjectReference Include="..\..\src\LakeSpeak.QuestionPacks\LakeSpeak.QuestionPacks.csproj" />
     <ProjectReference Include="..\..\src\LakeSpeak.Configuration\LakeSpeak.Configuration.csproj" />

@@ -33,8 +33,17 @@
   </ItemGroup>
 
   <ItemGroup Label="Test">
+    <!-- MTP v2 protocol for the .NET 10 SDK's `dotnet test` MTP mode. We deliberately
+         do NOT centralise `xunit.v3 3.2.2` here, because that package transitively
+         pulls `xunit.v3.core.mtp-v1` (the v1 protocol) which conflicts with
+         `xunit.v3.mtp-v2` (which pulls `xunit.v3.core.mtp-v2`). The test projects
+         reference `xunit.v3.mtp-v2` directly; that brings `xunit.v3.assert`,
+         `xunit.v3.core.mtp-v2`, `xunit.v3.common`, `xunit.v3.extensibility.core`,
+         and `xunit.analyzers` — all the v2 components, none of the v1.
+         xunit v3 4.x would default to v2 and this package would no longer be
+         needed. See ADR 0005. -->
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />

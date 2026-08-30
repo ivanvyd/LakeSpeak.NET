@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-<ItemGroup>
+  <ItemGroup>
     <PackageReference Include="WireMock.Net" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <ProjectReference Include="..\..\src\LakeSpeak.Genie\LakeSpeak.Genie.csproj" />
