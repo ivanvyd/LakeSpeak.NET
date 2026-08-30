@@ -11,6 +11,7 @@ evidence that a cloud works.
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
 | 0.1.x | 10.0 | 1.10.0 | `/api/2.0/genie`, Public Preview | In development |
+| 0.3.x | 8.0, 10.0 (library); 10.0 (CLI) | 1.10.0 | `/api/2.0/genie`, Public Preview | Multi-targeting landed; see [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
 
 The Genie Conversation API is treated as **Public Preview**. Public Preview was announced
 2025-03-11, and no GA announcement was found in the 2026 release notes; if you have a source saying
