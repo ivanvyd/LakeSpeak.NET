@@ -43,7 +43,8 @@ Path 1 is what the maintainer asked for, and the technical work to do it is mech
   `PackAsTool` shape. Library consumers who need the net8 path take a `LakeSpeak.Genie`
   reference; the CLI is for human and CI shells.
 
-There is one functional regression on net8 worth recording here.
+The one place the two TFMs would have diverged on behaviour: the unsafe-method
+exclusion for the standard resilience handler.
 
 `Microsoft.Extensions.Http.Resilience` 8.10.0 does not expose
 `HttpRetryStrategyOptions.DisableForUnsafeHttpMethods()`; that helper landed in 9.x.
@@ -53,22 +54,20 @@ retries for POST, PATCH, PUT, DELETE, and CONNECT — and the Genie `start-conve
 question again, runs the SQL warehouse a second time, and leaves an orphaned conversation
 whose id the client never returns).
 
-On `net8.0` the call is guarded with `#if NET9_0_OR_GREATER`, so the standard handler
-**will** retry POSTs on that TFM. The contract test that pins "exactly one attempt" for a
-failing `start-conversation` skips on net8 (`Assert.SkipWhen(RuntimeInformation.FrameworkDescription
-.StartsWith(".NET 8"))`) with a comment that points at this ADR. The intent of the
-regression — the consumer-visible behaviour — is unchanged on net10; the only difference is
-the test's confidence in it on net8. Following this PR, the right fix is to backport the
-extension to the net8 line of the resilience package, or to write the equivalent predicate
-inline (`ShouldHandle = args => IsTransient(args.Outcome) && args.Outcome.Result.RequestMessage
-.Method != HttpMethod.Post`). Either is small; both were out of scope for the multi-target
-patch.
+The fix is the same shape on both TFMs: install the unsafe-method exclusion by hand
+at the `ShouldHandle` predicate, using the public `HttpClientResiliencePredicates.IsTransient`
+helper for the transient check and comparing the request method against the unsafe set.
+The predicate is portable because the underlying `RetryStrategyOptions<HttpResponseMessage>`
+type is the same on both 8.10.0 and 9.x+; only the helper that wraps the predicate is
+absent on the older line. This keeps the contract test for "exactly one attempt on a
+failing `start-conversation`" green on both TFMs.
 
 ## Decision
 
-Multi-target the library family at `net8.0;net10.0`, keep the CLI at `net10.0`-only, and
-document the one functional regression (POST retries on net8) as a known follow-up. The
-mechanical parts:
+Multi-target the library family at `net8.0;net10.0` and keep the CLI at `net10.0`-only.
+The unsafe-method exclusion (POST/PATCH/PUT/DELETE/CONNECT) is installed at the
+`ShouldHandle` predicate on both TFMs, so the resilience behaviour is identical across
+the two. The mechanical parts:
 
 1. `Directory.Build.props` — `<TargetFramework>net10.0</TargetFramework>` becomes
    `<TargetFrameworks>net8.0;net10.0</TargetFrameworks>`.
@@ -83,29 +82,31 @@ mechanical parts:
    overriding the root. The project that exercises it (`tests/LakeSpeak.Cli.Tests`) takes
    the same explicit `net10.0` target so the net8.0 CI cell does not try to restore against
    a project that does not support it.
-5. CI matrix — `tfm: [net8.0, net10.0]` on the `test` job, with a `matrix.exclude` that
-   drops the entire `net8.0` column (the CLI is net10.0-only). The net10.0 cell is the
-   source of truth for CLI tests.
-6. `src/LakeSpeak.Genie/ServiceCollectionExtensions.cs` — `#if NET9_0_OR_GREATER` guard
-   around `DisableForUnsafeHttpMethods()`. The `else` branch is the documented regression
-   and the contract test skips on net8.
+5. CI matrix — `tfm: [net8.0, net10.0]` on the `test` job. The net8.0 cell runs the
+   multi-targeted library test projects individually (the slnx-level runner refuses
+   to proceed under MTP discovery when one of the solution's test projects is
+   net10.0-only and the cell asks for `net8.0`); the net10.0 cell runs the full
+   slnx-level test, which includes the CLI tests.
+6. `src/LakeSpeak.Genie/ServiceCollectionExtensions.cs` — install the unsafe-method
+   exclusion at the `ShouldHandle` predicate (see Context above), so the standard
+   resilience handler skips POST/PATCH/PUT/DELETE/CONNECT retries on both TFMs
+   without a TFM-specific code path.
 
 ## Consequences
 
 **Positive.** Library consumers on the LTS track (`net8.0`) can take a
 `<PackageReference Include="LakeSpeak.Genie" />` without target-redirecting their app. The
 package ships `lib/net8.0/` and `lib/net10.0/`. The two test jobs in CI exercise both
-TFMs, so a TFM-specific regression cannot merge silently.
+TFMs, so a TFM-specific regression cannot merge silently. The unsafe-method exclusion
+behaviour is identical on both TFMs (the contract test that pins "exactly one attempt on
+a failing `start-conversation`" runs and passes on both).
 
-**Negative.** The `Microsoft.Extensions.Http.Resilience` POST-retry regression on net8.
-Documented above; the fix is small and the contract test that pins the behaviour skips
-with a comment that points at this ADR. The lock file now has a per-TFM entry for every
-multi-targeted project, which makes the lockfile diff in this PR large. Expected.
+**Negative.** The lock file now has a per-TFM entry for every multi-targeted project,
+which makes the lockfile diff in this PR large. Expected.
 
 **Local dev cost.** Two .NET SDKs on the build machine. The `global.json` pin selects the
 .NET 10 SDK for MSBuild; `setup-dotnet` in CI installs the .NET 8 SDK additionally for
 the net8.0 cell. The dual install costs ~30 seconds in CI per net8.0 cell.
 
 **Not in this PR.** Lowering the floor to .NET 6 or 7 — explicitly out of scope.
-Multi-targeting the CLI — out of scope by the tradeoff above. Backporting
-`DisableForUnsafeHttpMethods` to the net8 resilience package — a follow-up.
+Multi-targeting the CLI — out of scope by the tradeoff above.

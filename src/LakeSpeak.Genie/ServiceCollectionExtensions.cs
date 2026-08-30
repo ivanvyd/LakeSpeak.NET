@@ -1,3 +1,4 @@
+using System.Net.Http;
 using LakeSpeak.Genie.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -96,21 +97,34 @@ public static class ServiceCollectionExtensions
                 resilience.Retry.MaxRetryAttempts = 3;
                 resilience.Retry.UseJitter = true;
 
-#if NET9_0_OR_GREATER
                 // The standard handler retries POST by default. That is wrong for this API:
                 // start-conversation and create-message are not idempotent, so a retry after a
                 // transient 5xx asks Genie the SAME question a second time — running the SQL
                 // warehouse twice, billing twice, and leaving an orphaned conversation whose
                 // id the client never returns. Reads stay retryable, which is where retrying
                 // actually helps: the polling loop is almost all of the request volume.
-                resilience.Retry.DisableForUnsafeHttpMethods();
-#else
-                // The net8 line of Microsoft.Extensions.Http.Resilience (8.10.0) does not
-                // expose DisableForUnsafeHttpMethods; that helper landed in 9.x. On net8 the
-                // standard handler will retry POSTs too. This is a known regression; tracked
-                // in the multi-target ADR (0006) as a follow-up. Reads are still the bulk of
-                // the request volume, so the practical impact is bounded.
-#endif
+                //
+                // On net9.0+ the helper DisableForUnsafeHttpMethods excludes POST/PATCH/PUT/
+                // DELETE/CONNECT in one call. The net8 line of Microsoft.Extensions.Http.Resilience
+                // (8.10.0) does not expose that helper — it landed in 9.x — so we install the same
+                // exclusion by hand at the predicate level, matching the net9+ behaviour on both
+                // TFMs. The exception branch of the outcome has no request method to inspect, so it
+                // falls through to the transient check; the net9+ line is in the same place.
+                resilience.Retry.ShouldHandle = args =>
+                {
+                    if (!HttpClientResiliencePredicates.IsTransient(args.Outcome))
+                    {
+                        return new ValueTask<bool>(false);
+                    }
+
+                    var method = args.Outcome.Result?.RequestMessage?.Method;
+                    var isUnsafe = method == HttpMethod.Post
+                        || method == HttpMethod.Put
+                        || method == HttpMethod.Patch
+                        || method == HttpMethod.Delete
+                        || method == HttpMethod.Connect;
+                    return new ValueTask<bool>(!isUnsafe);
+                };
 
                 // These sit under the default 100s RequestTimeout. Nothing enforces that
                 // relationship, so a caller who lowers RequestTimeout below 30s can have a
