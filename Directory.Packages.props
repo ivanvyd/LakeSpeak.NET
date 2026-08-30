@@ -16,10 +16,26 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
   </ItemGroup>
 
+  <!-- The Microsoft.Extensions.* packages follow the .NET runtime cadence. On net8.0 they
+       must resolve to the 8.x line; the net10.0 line is the default. The `Update` attribute on
+       a `PackageVersion` element is the central-package-management way to override per-TFM;
+       the central version above is the default for every TFM not listed here. See ADR 0006. -->
+  <ItemGroup Label="Runtime net8.0 overrides">
+    <PackageVersion Update="Microsoft.Extensions.Configuration" Version="8.0.0" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection" Version="8.0.1" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.Http" Version="8.0.1" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.Options" Version="8.0.2" Condition="'$(TargetFramework)' == 'net8.0'" />
+  </ItemGroup>
+
   <ItemGroup Label="Resilience">
     <!-- Brings the standard resilience handler (retry, circuit breaker, timeout)
          so the client does not hand-roll a retry loop around HttpClient. -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
+    <PackageVersion Update="Microsoft.Extensions.Http.Resilience" Version="8.10.0" Condition="'$(TargetFramework)' == 'net8.0'" />
   </ItemGroup>
 
   <ItemGroup Label="CLI">
@@ -43,6 +59,11 @@
          xunit v3 4.x would default to v2 and this package would no longer be
          needed. See ADR 0005. -->
     <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <!-- The default xunit.v3 package is included here so a net8.0 PackageReference to
+         it resolves under Central Package Management. The net10.0 test cell does not
+         reference xunit.v3 (it references xunit.v3.mtp-v2 above) and the default
+         version below is therefore only seen by net8.0 builds. -->
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -55,6 +76,16 @@
          most tempting to test with real delays; a fake clock keeps the suite fast
          and makes timeout assertions exact rather than flaky. -->
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
+  </ItemGroup>
+
+  <!-- Per-TFM test-stack overrides. On .NET 8, the test host is the MTP bridge (TestingPlatformDotnetTestSupport),
+       so we want the v1 protocol package that `xunit.v3` ships by default. `xunit.v3.mtp-v2` is
+       net10-only because its v2-protocol assembly targets net10. `Microsoft.NET.Test.Sdk` 18.x and
+       `coverlet.collector` 10.x both require the .NET 9 runtime; the net8 line is 17.11.x / 6.0.x. -->
+  <ItemGroup Label="Test net8.0 overrides">
+    <PackageVersion Update="Microsoft.NET.Test.Sdk" Version="17.11.1" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="coverlet.collector" Version="6.0.4" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Update="Microsoft.Extensions.TimeProvider.Testing" Version="8.10.0" Condition="'$(TargetFramework)' == 'net8.0'" />
   </ItemGroup>
 
 </Project>

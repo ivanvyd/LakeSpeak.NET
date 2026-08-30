@@ -30,6 +30,10 @@ including what a Genie Agent is and how to tell whether you have one.
 what has not. Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public
 API may both change, and before `v1.0` a minor version is allowed to break them.
 
+The `LakeSpeak.Genie` library multi-targets `net8.0` and `net10.0`. The `LakeSpeak.Cli` tool
+is `net10.0`-only. See [ADR 0006](docs/decisions/0006-multi-target-net8-and-net10.md) for the
+reasoning.
+
 ```bash
 dotnet tool install --global LakeSpeak.Cli
 ```

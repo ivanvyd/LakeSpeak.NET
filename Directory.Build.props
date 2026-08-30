@@ -1,7 +1,9 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Two TFMs: net8.0 is the floor; net10.0 is the head. Library projects consume both;
+         the CLI opts back to net10.0-only in its own csproj (see ADR 0006). -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

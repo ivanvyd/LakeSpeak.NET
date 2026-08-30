@@ -72,11 +72,27 @@ jobs:
         # endings; running the suite on a third platform catches that class of
         # defect before users do.
         os: [ubuntu-latest, windows-latest, macos-latest]
+        # Multi-target at the project level (see ADR 0006): the library family builds
+        # and tests on both net8.0 and net10.0. Each TFM gets its own matrix cell so a
+        # failure on one does not mask a pass on the other. The TFM is an OS x TFM
+        # cross-product: 3 OSes x 2 TFMs = 6 cells. `dotnet test -f $tfm` skips any
+        # project whose TargetFrameworks does not include the requested TFM, so the
+        # net10.0-only CLI projects (LakeSpeak.Cli, LakeSpeak.Cli.Tests) are skipped
+        # automatically in the net8.0 cells.
+        tfm: [net8.0, net10.0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # global.json pins the .NET 10 SDK with rollForward=latestPatch. The net8.0 cells
+      # need both SDKs on PATH so the .NET 8 toolchain resolves and the lockfile
+      # still restores against the .NET 10 SDK the lock was generated for. Adding
+      # `8.0.x` alongside the global.json-resolved `10.0.x` is a superset install.
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - if: matrix.tfm == 'net8.0'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
       - run: dotnet restore --locked-mode
 
       # Live tests need a real workspace and real credentials. They are excluded
@@ -84,11 +100,33 @@ jobs:
       # MTP mode is enabled by global.json's `test.runner: Microsoft.Testing.Platform`;
       # xunit v3's MTP filter syntax is `--filter-not-trait "Category=Live"`.
       # `--results-directory TestResults` writes test results to ./TestResults/.
-      - run: dotnet test --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+      #
+      # The test matrix here targets a single TFM cell (matrix.tfm). On net10.0 the
+      # whole suite runs, including the CLI tests. On net8.0 the CLI test project
+      # is net10.0-only (LakeSpeak.Cli is net10.0-only; see ADR 0006), so the
+      # solution-level test runner would refuse to proceed under MTP discovery
+      # ("LakeSpeak.Cli.Tests is not compatible with net8.0"). Run the multi-targeted
+      # library test projects individually instead.
+      - name: Test (all targets, ${{ matrix.tfm }})
+        if: matrix.tfm == 'net10.0'
+        run: dotnet test --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+      - name: Test (library targets, ${{ matrix.tfm }})
+        if: matrix.tfm == 'net8.0'
+        run: >-
+          dotnet test --no-restore -c Release tests/LakeSpeak.Application.Tests
+          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+          && dotnet test --no-restore -c Release tests/LakeSpeak.ContractTests
+          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+          && dotnet test --no-restore -c Release tests/LakeSpeak.Genie.Tests
+          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+          && dotnet test --no-restore -c Release tests/LakeSpeak.LiveIntegrationTests
+          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+          && dotnet test --no-restore -c Release tests/LakeSpeak.QuestionPacks.Tests
+          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: test-results-${{ matrix.os }}
+          name: test-results-${{ matrix.os }}-${{ matrix.tfm }}
           path: TestResults/
 
   # The install path users actually take. Packing proves the package builds;

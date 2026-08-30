@@ -9,10 +9,21 @@
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
-    <!-- MTP mode: the .NET 10 SDK's `dotnet test` discovers each test project as a
-         Microsoft.Testing.Platform test app. The runner flag is what `dotnet test`
-         uses to launch it correctly. -->
+  </PropertyGroup>
+
+  <!-- The two TFMs use different MTP shapes:
+       * net10.0 — native MTP via the .NET 10 SDK's `dotnet test`, xunit.v3's v2 protocol
+         (UseMicrosoftTestingPlatformRunner, xunit.v3.mtp-v2).
+       * net8.0 — the .NET 8 SDK's `dotnet test` is VSTest-mode, so we add the MTP bridge
+         and let xunit.v3 3.x ship its default v1 protocol. The two protocol packages
+         cannot both be on the classpath at once (both define a TestPlatformTestFramework
+         type), so the reference is conditioned on the TFM. See ADR 0006. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,12 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- MTP v2 protocol for the .NET 10 SDK's `dotnet test` MTP mode. The v1 default
-         that xunit.v3 3.x ships pulls `xunit.v3.core.mtp-v1`, which conflicts with
-         `xunit.v3.mtp-v2`'s v2 protocol package — both define a `TestPlatformTestFramework`
-         type and the C# compiler refuses to link the test project. The v2 meta-package
-         alone brings everything the v1 version did, plus the v2 protocol. See ADR 0005. -->
-    <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="xunit.v3.mtp-v2" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="xunit.v3" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Shouldly" />

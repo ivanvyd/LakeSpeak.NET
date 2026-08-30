@@ -466,6 +466,7 @@ public sealed class ResultCompletenessTests : IDisposable
     [Fact]
     public async Task A_failed_start_conversation_is_never_retried()
     {
+
         // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
