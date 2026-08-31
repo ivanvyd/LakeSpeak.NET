@@ -10,7 +10,8 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
-| 0.1.x | 10.0 | 1.10.0 | `/api/2.0/genie`, Public Preview | In development |
+| 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, Public Preview | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
+| 0.1.x — 0.2.x | 10.0 | 1.10.0 | `/api/2.0/genie`, Public Preview | Library family and CLI are 10.0-only |
 
 The Genie Conversation API is treated as **Public Preview**. Public Preview was announced
 2025-03-11, and no GA announcement was found in the 2026 release notes; if you have a source saying
@@ -217,3 +218,23 @@ What remains untested on AWS:
 - `pack run` against a third-party-defined Question Pack — the bundled `daily-brief.yaml` references
   Azure-only table names and the run failed with `FileNotFoundException` on AWS, which is a question-pack
   authoring issue, not a wire-shape one.
+
+## Local verification — 2026-08-31
+
+The packaging changes for v0.3.0 (multi-targeting the library family, MTP migration, the
+post-ship-review resilience fix). What reaches a consumer is what was checked, not what the
+build output happened to look like.
+
+| Check | Result |
+|---|---|
+| Full suite, `Category!=Live`, both TFMs, all three OSes | Green on `ubuntu-latest`, `windows-latest` and `macos-latest`, for `net8.0` and `net10.0` |
+| Build under warnings-as-errors, both TFMs | Clean on all six cells |
+| `dotnet format --verify-no-changes` | Clean on all six cells |
+| `dotnet list package --vulnerable --include-transitive` | No moderate-or-higher advisories on either TFM |
+| `dotnet restore --locked-mode` | Clean on all three OSes (lock files unchanged for the new matrix) |
+| `dotnet pack` of `LakeSpeak.Genie` | `lib/net8.0/LakeSpeak.Genie.dll` and `lib/net10.0/LakeSpeak.Genie.dll` both present in the nupkg |
+| `dotnet pack` of `LakeSpeak.Cli` | `tools/net10.0/any/` populated, `lakespeak.dll` present |
+| Packaged tool installed to an isolated `--tool-path` | `lakespeak --version` → `0.3.0`, matching the release tag |
+| Throwaway consumer against `LakeSpeak.Genie.0.3.0.nupkg` with `<TargetFramework>net8.0</TargetFramework>` | Compiles, instantiates `GenieClient`, resolves the registered `IGenieTokenProvider`. Proves the `net8.0` package is the *package*, not just the build output |
+| Resilience contract on net8 — exception path | `A_connection_refused_start_conversation_is_never_retried` passes: a transient `HttpRequestException` on `start-conversation` is not retried. The pre-fix code retries 4 times in well under the Genie timeout; the fix retries 0 |
+| Resilience contract on net8 — response path | `A_failed_start_conversation_is_never_retried` passes: a 503 on `start-conversation` is not retried |

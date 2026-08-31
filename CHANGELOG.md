@@ -6,6 +6,118 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.3.0 — 2026-08-31
+
+The test infrastructure migrates to Microsoft Testing Platform, and the library family multi-targets
+`net8.0` and `net10.0` so consumers on the LTS track no longer have to target-redirect their app.
+Both were forced by the .NET 10 SDK's VSTest removal (Dependabot could no longer bump
+`Microsoft.NET.Test.Sdk`) and by adopter demand. A post-ship review caught a security defect on the
+new resilience branch and a coverage gap that masked it: both are fixed in the same release.
+
+`0.x` still means a minor version may break the API. The public surface is unchanged — the
+multi-targeting is a packaging change, not a binary one.
+
+### Added
+
+- **Multi-target `net8.0` and `net10.0` for the library family** — `LakeSpeak.Genie`,
+  `LakeSpeak.Application`, `LakeSpeak.Configuration`, `LakeSpeak.QuestionPacks` and
+  `LakeSpeak.Rendering` now ship `lib/net8.0/` and `lib/net10.0/`. A consumer on the LTS track
+  can take a `<PackageReference Include="LakeSpeak.Genie" />` without target-redirecting their
+  app. The `LakeSpeak.Cli` tool stays `net10.0`-only: .NET 10 is where MTP runs cleanly without a
+  per-TFM test-harness split, and the maintainer's local machine is on the .NET 10 SDK. The
+  reasoning is recorded in [ADR 0006](docs/decisions/0006-multi-target-net8-and-net10.md).
+- **Microsoft Testing Platform across the test suite** — `xunit.v3` with the `Microsoft.Testing.Platform`
+  runner, `global.json`'s `test.runner: Microsoft.Testing.Platform`, and a slnx-level
+  `dotnet test` invocation. The .NET 10 SDK drops VSTest in `Microsoft.NET.Test.Sdk` 18.9+, so
+  the major-version test-group Dependabot bumps (the ones in PR #77) could not land without
+  this. MTP discovery is wired end-to-end on `ubuntu-latest`, `windows-latest` and
+  `macos-latest`. The v1 protocol runs on `net8.0` (`xunit.v3`); the v2 protocol runs on
+  `net10.0` (`xunit.v3.mtp-v2`). The CLI is excluded from the net8.0 cell via a second
+  slnx, `tests/libraries-only.slnx`, so the slnx-level runner can proceed with `-f net8.0`
+  against a multi-targeted project set.
+
+### Changed
+
+- **CI matrix splits the build per TFM** — `matrix.tfm: [net8.0, net10.0]` on the `build` job, so
+  each TFM compiles once in parallel rather than the matrix walking every project for every
+  TFM. The `pack` step runs on a single non-matrix job because the libraries are multi-targeted:
+  `dotnet pack` walks every TFM of every project, and a per-TFM cell leaves the other TFM's
+  artefacts missing. `tool-smoke` now depends on `pack`. Net effect: same coverage, roughly
+  half the wall time on cold-cache runners, and the test job is no longer behind the
+  per-TFM compile.
+- The `build (net8.0)` cell installs the .NET 8 SDK from `setup-dotnet@v6.0.0`; the previous
+  shape assumed the .NET 10 SDK from `global.json` was enough.
+- `Directory.Build.props` `<VersionPrefix>` is now `0.3.0` for the local development default.
+  The release workflow continues to override it from the tag.
+
+### Security
+
+- **The `ShouldHandle` predicate for the standard resilience handler no longer retries unsafe
+  HTTP methods on transient exceptions** — a `POST` to `start-conversation` whose underlying
+  socket reset will no longer be retried. The standard handler's `ShouldHandle` only sees
+  the request method via `args.Context` on the exception path; the previous `GenieRetryPolicy`
+  helper read it from `args.Outcome.Result?.RequestMessage`, which is `null` when the call
+  has not produced a response yet. Without the context fallback a socket reset on
+  `start-conversation` re-issued the POST, ran the SQL warehouse a second time and left an
+  orphaned conversation whose id the client never returns. The fix uses
+  `HttpResilienceContextExtensions.GetRequestMessage(ResilienceContext)`, which is marked
+  `[Experimental]` in the resilience package; the warning is suppressed at the Genie project
+  level (`<NoWarn>$(NoWarn);EXTEXP0001</NoWarn>`) with a comment explaining why. The net9
+  and net10 paths keep the official `HttpRetryStrategyOptions.DisableForUnsafeHttpMethods()`
+  helper, which makes the same context fallback internally.
+
+### Fixed
+
+- **`A_connection_refused_start_conversation_is_never_retried`** — a sibling to
+  `A_failed_start_conversation_is_never_retried` that covers the exception path the
+  previous test did not. The previous test stubbed a 503 response, so it covered the path
+  the standard handler classifies through `args.Outcome.Result`. The new test points the
+  client at a closed port (a TCP listener bound to port 0 and immediately released, so the
+  OS will refuse subsequent connects) and counts attempts through the resilience pipeline
+  via a counter `DelegatingHandler` wired in by an `IHttpMessageHandlerBuilderFilter`.
+  Without the security fix above this test counts 4 attempts (1 + 3 retries) in well under
+  the Genie timeout; with the fix it counts 1.
+- **CI: build and test jobs use `tests/libraries-only.slnx` on the net8.0 cell** — the
+  default slnx includes the net10.0-only `LakeSpeak.Cli` and `LakeSpeak.Cli.Tests`
+  projects, and `dotnet build -f net8.0` over the full slnx fails with NETSDK1005 ("Assets
+  file doesn't have a target for 'net8.0'"). The libraries-only slnx excludes those
+  projects and is multi-targetable end to end.
+- **CI: pack runs in its own non-matrix job** — the per-TFM build cells leave the
+  multi-targeted libraries' artefacts asymmetric (the net8.0 cell builds only net8.0
+  outputs; the net10.0 cell builds only net10.0), and `dotnet pack` over a project
+  whose only net8.0 outputs are missing fails with NU5026. The single-shot `pack` job
+  restores the full slnx, builds every TFM of every project, and packs them in one shot.
+- **CI: per-step `shell: bash` on the multi-line `run:` blocks** — Windows runners
+  default to PowerShell 7, which does not parse the bash-only `slnx=$([ ... ] && echo ...
+  || echo ...)` command substitution. The four steps that use it now pin `shell: bash`
+  so the matrix runs the same script on all three OSes.
+
+### Verified
+
+- `dotnet restore --locked-mode` clean on `ubuntu-latest`, `windows-latest` and
+  `macos-latest`.
+- `dotnet build -c Release` clean, warnings-as-errors, for both `net8.0` and `net10.0` on
+  all three OSes, in CI.
+- `dotnet format --verify-no-changes` clean on all six cells.
+- `dotnet list package --vulnerable --include-transitive`: no moderate-or-higher advisories.
+- The full non-live test suite, both TFMs, all three OSes: green. The two new
+  resilience-path tests (response and exception) both pass on both TFMs; the exception-path
+  test is the one that would have failed on the pre-fix code, and was demonstrated to do
+  so before the fix landed.
+- `dotnet pack` produces `LakeSpeak.Genie.0.3.0.nupkg` (with `lib/net8.0/` and
+  `lib/net10.0/`), `LakeSpeak.Cli.0.3.0.nupkg` (with `tools/net10.0/any/`), and matching
+  `.snupkg` symbol packages.
+- The packaged tool installs from `./artifacts` and `lakespeak --version` returns `0.3.0`,
+  in CI on every PR via the `tool-smoke` job.
+- Multi-targeting against a real consumer — the `examples/dotnet-quickstart` project
+  builds and runs against the freshly packed `LakeSpeak.Genie.0.3.0.nupkg` with
+  `<TargetFramework>net8.0</TargetFramework>`.
+- Live (`Category=Live`) coverage unchanged from 0.2.0: Azure verified 2026-08-01,
+  AWS verified 2026-08-29, GCP untested. The `Live smoke` workflow is still
+  `workflow_dispatch` + weekly cron behind `secrets.DATABRICKS_TOKEN` and the live
+  variables. As of 2026-08-31 the workflow has not yet been re-run against the
+  v0.3.0 binary.
+
 ## 0.2.0 — 2026-08-29
 
 The two gaps the README's verification table already named as "not tested" or "not yet done" —
