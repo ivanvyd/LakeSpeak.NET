@@ -20,6 +20,11 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each TFM compiles once, in parallel. Tool-smoke downloads both packages.
+        tfm: [net8.0, net10.0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -38,7 +43,7 @@ jobs:
             echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow against ${{ github.head_ref || github.ref_name }}, then re-run these checks."
             exit 1
           fi
-      - run: dotnet build --no-restore -c Release
+      - run: dotnet build --no-restore -c Release -f ${{ matrix.tfm }}
 
       # Formatting is enforced in-build by EnforceCodeStyleInBuild; this catches
       # whitespace-only drift the analyzers do not see.
@@ -53,8 +58,10 @@ jobs:
       # A tool package that does not install is a broken release, and the failure
       # only appears at `dotnet tool install` time unless it is checked here.
       - name: Pack
+        if: matrix.tfm == 'net10.0'
         run: dotnet pack --no-build -c Release -o artifacts
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.tfm == 'net10.0'
         with:
           name: packages
           path: artifacts/*.nupkg
@@ -93,25 +100,15 @@ jobs:
       # xunit v3's MTP filter syntax is `--filter-not-trait "Category=Live"`.
       # `--results-directory TestResults` writes test results to ./TestResults/.
       #
-      # The net8.0 cell lists the multi-targeted test projects individually because
-      # LakeSpeak.Cli.Tests is net10.0-only, and the slnx-level runner refuses to
-      # proceed under MTP discovery when one project is not compatible with -f net8.0.
+      # The net8.0 cell uses a second slnx that excludes the net10.0-only CLI projects
+      # so the slnx-level runner can proceed under MTP discovery with -f net8.0. See
+      # tests/libraries-only.slnx.
       - name: Test (all targets, ${{ matrix.tfm }})
         if: matrix.tfm == 'net10.0'
         run: dotnet test --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - name: Test (library targets, ${{ matrix.tfm }})
         if: matrix.tfm == 'net8.0'
-        run: >-
-          dotnet test --no-restore -c Release tests/LakeSpeak.Application.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.ContractTests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.Genie.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.LiveIntegrationTests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.QuestionPacks.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+        run: dotnet test tests/libraries-only.slnx --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

@@ -506,11 +506,11 @@ public sealed class ResultCompletenessTests : IDisposable
     [Fact]
     public async Task A_connection_refused_start_conversation_is_never_retried()
     {
-        // Use a port nothing is listening on. The first attempt raises HttpRequestException
-        // ("No connection could be made"); the standard handler then asks ShouldHandle whether
-        // to retry. The counter DelegatingHandler is added by the IHttpMessageHandlerBuilderFilter
-        // inside the resilience pipeline, so every attempt the resilience pipeline makes
-        // re-runs the counter.
+        // The host must satisfy the GenieClientOptions URL validator (https only — a bearer
+        // token over http is silently disclosed), but the actual request is routed to the
+        // refused-port URL via the named HttpClient's BaseAddress. The validator runs at
+        // options-validation time, before the request is sent, so the validator is satisfied
+        // by the https URL while the OS-level connect attempt goes to the refused port.
         var refusedPort = FindClosedPort();
         var counter = new StartConversationCounter();
 
@@ -518,13 +518,16 @@ public sealed class ResultCompletenessTests : IDisposable
         services.AddSingleton(counter);
         services.AddSingleton<IHttpMessageHandlerBuilderFilter, StartConversationCountingFilter>();
         services.AddGenieTokenProvider(_ => ValueTask.FromResult("token"));
-        services.AddLakeSpeak(o => o.Host = new Uri($"http://127.0.0.1:{refusedPort}"));
+        services.AddLakeSpeak(o => o.Host = new Uri("https://example.azuredatabricks.net"));
         using var provider = services.BuildServiceProvider();
 
         var http = provider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(IGenieClient));
+        // Override the BaseAddress that AddLakeSpeak set from the options. The validator is
+        // already satisfied; the resolver is what GenieClient actually uses for outgoing calls.
+        http.BaseAddress = new Uri($"http://127.0.0.1:{refusedPort}");
         var client = new GenieClient(http, Options.Create(new GenieClientOptions
         {
-            Host = new Uri($"http://127.0.0.1:{refusedPort}"),
+            Host = new Uri("https://example.azuredatabricks.net"),
         }));
 
         // Act

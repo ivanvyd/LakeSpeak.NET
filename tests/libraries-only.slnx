@@ -1,0 +1,23 @@
+<Solution>
+  <!--
+    A second slnx that excludes the net10.0-only LakeSpeak.Cli and LakeSpeak.Cli.Tests
+    projects. The net8.0 CI cell runs `dotnet test tests/libraries-only.slnx -f net8.0`
+    on this solution, which is a single invocation instead of the &&-chained 5
+    invocations the net8.0 cell needed when this slnx did not exist. The library and
+    library-test projects are all multi-targeted and restore + build on net8.0.
+  -->
+  <Folder Name="/src/">
+    <Project Path="../src/LakeSpeak.Application/LakeSpeak.Application.csproj" />
+    <Project Path="../src/LakeSpeak.Configuration/LakeSpeak.Configuration.csproj" />
+    <Project Path="../src/LakeSpeak.Genie/LakeSpeak.Genie.csproj" />
+    <Project Path="../src/LakeSpeak.QuestionPacks/LakeSpeak.QuestionPacks.csproj" />
+    <Project Path="../src/LakeSpeak.Rendering/LakeSpeak.Rendering.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="LakeSpeak.Application.Tests/LakeSpeak.Application.Tests.csproj" />
+    <Project Path="LakeSpeak.ContractTests/LakeSpeak.ContractTests.csproj" />
+    <Project Path="LakeSpeak.Genie.Tests/LakeSpeak.Genie.Tests.csproj" />
+    <Project Path="LakeSpeak.LiveIntegrationTests/LakeSpeak.LiveIntegrationTests.csproj" />
+    <Project Path="LakeSpeak.QuestionPacks.Tests/LakeSpeak.QuestionPacks.Tests.csproj" />
+  </Folder>
+</Solution>
