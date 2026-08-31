@@ -4,6 +4,12 @@
     <IsPackable>true</IsPackable>
     <PackageId>LakeSpeak.Genie</PackageId>
     <Description>A focused .NET client for the Databricks Genie Conversation API: stateful conversations, generated SQL, query results, and typed failures. Independent open-source project, not affiliated with Databricks.</Description>
+    <!-- HttpResilienceContextExtensions.GetRequestMessage is [Experimental] in the resilience
+         package. The .NET 8 line of Microsoft.Extensions.Http.Resilience (8.10.0) has no
+         DisableForUnsafeHttpMethods helper, so we mirror it at the ShouldHandle predicate
+         and need the context fallback to avoid retrying unsafe methods on transient
+         exceptions. The suppression is scoped to the one call site. -->
+    <NoWarn>$(NoWarn);EXTEXP0001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

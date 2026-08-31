@@ -11,13 +11,8 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!-- The two TFMs use different MTP shapes:
-       * net10.0 — native MTP via the .NET 10 SDK's `dotnet test`, xunit.v3's v2 protocol
-         (UseMicrosoftTestingPlatformRunner, xunit.v3.mtp-v2).
-       * net8.0 — the .NET 8 SDK's `dotnet test` is VSTest-mode, so we add the MTP bridge
-         and let xunit.v3 3.x ship its default v1 protocol. The two protocol packages
-         cannot both be on the classpath at once (both define a TestPlatformTestFramework
-         type), so the reference is conditioned on the TFM. See ADR 0006. -->
+  <!-- net10 uses native MTP (v2 protocol); net8 uses the MTP bridge (v1 protocol). The two
+       protocol packages cannot both be on the classpath at once. See ADR 0006. -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
   </PropertyGroup>
