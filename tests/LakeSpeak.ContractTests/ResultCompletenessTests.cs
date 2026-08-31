@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Net.Sockets;
 using LakeSpeak.Genie;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -466,7 +468,6 @@ public sealed class ResultCompletenessTests : IDisposable
     [Fact]
     public async Task A_failed_start_conversation_is_never_retried()
     {
-
         // Arrange
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/start-conversation").UsingPost())
@@ -492,6 +493,100 @@ public sealed class ResultCompletenessTests : IDisposable
         var attempts = _server.LogEntries.Count(e =>
             e.RequestMessage?.Path?.EndsWith("start-conversation", StringComparison.Ordinal) == true);
         attempts.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Same idempotency contract as <see cref="A_failed_start_conversation_is_never_retried"/>,
+    /// but on the exception path: a transient <see cref="HttpRequestException"/> (connection
+    /// refused on a closed port) must not be retried on POST either. The standard resilience
+    /// handler's <c>ShouldHandle</c> predicate only sees the request method via
+    /// <c>args.Context</c> on this branch — without the context fallback, a socket reset on
+    /// <c>start-conversation</c> re-issues the POST and runs the SQL warehouse twice.
+    /// </summary>
+    [Fact]
+    public async Task A_connection_refused_start_conversation_is_never_retried()
+    {
+        // The host must satisfy the GenieClientOptions URL validator (https only — a bearer
+        // token over http is silently disclosed), but the actual request is routed to the
+        // refused-port URL via the named HttpClient's BaseAddress. The validator runs at
+        // options-validation time, before the request is sent, so the validator is satisfied
+        // by the https URL while the OS-level connect attempt goes to the refused port.
+        var refusedPort = FindClosedPort();
+        var counter = new StartConversationCounter();
+
+        var services = new ServiceCollection();
+        services.AddSingleton(counter);
+        services.AddSingleton<IHttpMessageHandlerBuilderFilter, StartConversationCountingFilter>();
+        services.AddGenieTokenProvider(_ => ValueTask.FromResult("token"));
+        services.AddLakeSpeak(o => o.Host = new Uri("https://example.azuredatabricks.net"));
+        using var provider = services.BuildServiceProvider();
+
+        var http = provider.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(IGenieClient));
+        // Override the BaseAddress that AddLakeSpeak set from the options. The validator is
+        // already satisfied; the resolver is what GenieClient actually uses for outgoing calls.
+        http.BaseAddress = new Uri($"http://127.0.0.1:{refusedPort}");
+        var client = new GenieClient(http, Options.Create(new GenieClientOptions
+        {
+            Host = new Uri("https://example.azuredatabricks.net"),
+        }));
+
+        // Act
+        await Should.ThrowAsync<GenieException>(() => client.AskAsync(Agent, "q", cancellationToken: Ct));
+
+        // Assert
+        counter.StartConversationCount.ShouldBe(1);
+    }
+
+    private static int FindClosedPort()
+    {
+        // Bind to port 0 to let the OS pick a free port, then close the listener so the
+        // port is "free but refused on connect" — the canonical "connection refused" target.
+        var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    private sealed class StartConversationCounter
+    {
+        public int StartConversationCount;
+    }
+
+    private sealed class StartConversationCountingFilter : IHttpMessageHandlerBuilderFilter
+    {
+        public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) =>
+            builder =>
+            {
+                next(builder);
+                var counter = builder.Services.GetRequiredService<StartConversationCounter>();
+                builder.AdditionalHandlers.Add(new StartConversationCounterHandler(counter));
+            };
+    }
+
+    private sealed class StartConversationCounterHandler : DelegatingHandler
+    {
+        private readonly StartConversationCounter _counter;
+
+        public StartConversationCounterHandler(StartConversationCounter counter)
+        {
+            _counter = counter;
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("start-conversation", StringComparison.Ordinal) == true)
+            {
+                _counter.StartConversationCount++;
+            }
+            return await base.SendAsync(request, cancellationToken);
+        }
     }
 
     public void Dispose() => _server.Dispose();

@@ -1,5 +1,11 @@
 {
   "sdk": {
+    // Pin to the latest 10.0.3xx the maintainer's local SDK install has. With
+    // rollForward: latestPatch, this resolves to whichever 10.0.30x is installed
+    // locally and to 10.0.30x in CI regardless of the exact patch number, so a
+    // bump from 10.0.302 to 10.0.303 is a no-op for everyone who already has a
+    // 10.0.30x. Kept as a floor so a 10.0.20x install (which would change the
+    // runtime shape) does not silently satisfy the constraint.
     "version": "10.0.302",
     "rollForward": "latestPatch",
     "allowPrerelease": false

@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- The CLI is net10.0-only (see ADR 0006), so the project that exercises it
-         is too. The library family continues to multi-target, and the
-         non-CLI test projects (Application, Genie, QuestionPacks, Contract,
-         Live) inherit `net8.0;net10.0` from tests/Directory.Build.props. -->
+    <!-- Pin to net10.0 because the project under test (LakeSpeak.Cli) is net10.0-only. -->
     <TargetFrameworks>net10.0</TargetFrameworks>
   </PropertyGroup>
 

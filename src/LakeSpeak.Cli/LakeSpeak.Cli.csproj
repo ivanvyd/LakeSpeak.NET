@@ -10,10 +10,7 @@
     <PackageId>LakeSpeak.Cli</PackageId>
     <Description>Interactive and scriptable terminal client for Databricks Genie Agents. Ask questions, inspect generated SQL, export results, and run version-controlled Question Packs. Independent open-source project, not affiliated with Databricks.</Description>
 
-    <!-- The CLI is net10.0-only by deliberate scope choice (ADR 0006). Library consumers
-         can target net8.0 via LakeSpeak.Genie. The library family multi-targets
-         `net8.0;net10.0` from the root Directory.Build.props, and a per-project
-         <TargetFrameworks> here overrides that for this one assembly. -->
+    <!-- The CLI is net10.0-only by deliberate scope (ADR 0006). -->
     <TargetFrameworks>net10.0</TargetFrameworks>
 
     <!-- A tool package bundles its published closure, so the internal projects

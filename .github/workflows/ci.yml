@@ -20,11 +20,20 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each TFM compiles once, in parallel. Tool-smoke downloads both packages.
+        tfm: [net8.0, net10.0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - if: matrix.tfm == 'net8.0'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
 
       # --locked-mode makes packages.lock.json authoritative: a transitive
       # version that drifted since review fails here instead of shipping.
@@ -32,34 +41,87 @@ jobs:
       # the lock files were not regenerated, which is a chore rather than a defect -- and the
       # error NuGet prints for it does not mention the fix.
       - name: Restore
+        shell: bash
         run: |
           set -euo pipefail
-          if ! dotnet restore --locked-mode; then
+          # The net8.0 cell uses the libraries-only slnx because LakeSpeak.Cli and
+          # LakeSpeak.Cli.Tests are net10.0-only. Building them on net8.0 fails with
+          # NETSDK1005 ("Assets file doesn't have a target for 'net8.0'"), and the
+          # `-f net8.0` filter still walks every project in the slnx.
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          if ! dotnet restore "$slnx" --locked-mode; then
             echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow against ${{ github.head_ref || github.ref_name }}, then re-run these checks."
             exit 1
           fi
-      - run: dotnet build --no-restore -c Release
+      - name: Build
+        shell: bash
+        run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet build "$slnx" --no-restore -c Release -f ${{ matrix.tfm }}
 
       # Formatting is enforced in-build by EnforceCodeStyleInBuild; this catches
       # whitespace-only drift the analyzers do not see.
-      - run: dotnet format --verify-no-changes --no-restore
+      - name: Format
+        shell: bash
+        run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet format "$slnx" --verify-no-changes --no-restore
 
       - name: Fail on vulnerable packages
+        shell: bash
         run: |
-          dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln.txt
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet list "$slnx" package --vulnerable --include-transitive 2>&1 | tee vuln.txt
           grep -q -E '>\s+\S+\s+\S+\s+\S+\s+(Moderate|High|Critical)' vuln.txt && exit 1
           echo "no moderate-or-higher advisories"
 
       # A tool package that does not install is a broken release, and the failure
       # only appears at `dotnet tool install` time unless it is checked here.
-      - name: Pack
-        run: dotnet pack --no-build -c Release -o artifacts
+      # Done in a separate job below: the per-TFM matrix build cannot satisfy the
+      # pack step, because LakeSpeak.Genie and friends are multi-targeted
+      # (net8.0;net10.0) and `dotnet pack` walks every TFM of every project in
+      # the slnx. Building -f net10.0 only on the net10.0 cell leaves the net8.0
+      # artefacts missing, and pack fails with NU5026.
+
+  # Produces the nupkg/snipkg artefacts that tool-smoke installs. Has to be a
+  # single-shot job (not a matrix cell) because the libraries are multi-targeted
+  # (net8.0;net10.0). `dotnet pack` walks every TFM of every project in the
+  # slnx, so packing on a cell that built only one TFM leaves the other TFM's
+  # artefacts missing and pack fails with NU5026.
+  pack:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! dotnet restore LakeSpeak.slnx --locked-mode; then
+            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow against ${{ github.head_ref || github.ref_name }}, then re-run these checks."
+            exit 1
+          fi
+      - name: Build and pack
+        # `dotnet pack` builds any project whose output the pack step needs, so
+        # both TFMs of the multi-targeted libraries end up in bin/ before pack
+        # gathers them into the nupkg. The previous shape used `--no-build`
+        # because the build job had already produced the artefacts, but with the
+        # build split per TFM the per-TFM artefacts were not symmetric.
+        run: |
+          dotnet pack LakeSpeak.slnx -c Release -o artifacts --no-restore -p:PackParallel=true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: packages
           path: artifacts/*.nupkg
 
   test:
+    needs: build
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -72,20 +134,12 @@ jobs:
         # endings; running the suite on a third platform catches that class of
         # defect before users do.
         os: [ubuntu-latest, windows-latest, macos-latest]
-        # Multi-target at the project level (see ADR 0006): the library family builds
-        # and tests on both net8.0 and net10.0. Each TFM gets its own matrix cell so a
-        # failure on one does not mask a pass on the other. The TFM is an OS x TFM
-        # cross-product: 3 OSes x 2 TFMs = 6 cells. `dotnet test -f $tfm` skips any
-        # project whose TargetFrameworks does not include the requested TFM, so the
-        # net10.0-only CLI projects (LakeSpeak.Cli, LakeSpeak.Cli.Tests) are skipped
-        # automatically in the net8.0 cells.
+        # Each TFM gets its own cell so a regression on one does not mask a pass on the
+        # other. The net10.0-only CLI projects are skipped automatically in net8.0 cells
+        # when we invoke them individually below. See ADR 0006.
         tfm: [net8.0, net10.0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # global.json pins the .NET 10 SDK with rollForward=latestPatch. The net8.0 cells
-      # need both SDKs on PATH so the .NET 8 toolchain resolves and the lockfile
-      # still restores against the .NET 10 SDK the lock was generated for. Adding
-      # `8.0.x` alongside the global.json-resolved `10.0.x` is a superset install.
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
@@ -93,7 +147,10 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore --locked-mode
+      - shell: bash
+        run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet restore "$slnx" --locked-mode
 
       # Live tests need a real workspace and real credentials. They are excluded
       # here by trait rather than omitted from the solution, so they still compile.
@@ -101,28 +158,15 @@ jobs:
       # xunit v3's MTP filter syntax is `--filter-not-trait "Category=Live"`.
       # `--results-directory TestResults` writes test results to ./TestResults/.
       #
-      # The test matrix here targets a single TFM cell (matrix.tfm). On net10.0 the
-      # whole suite runs, including the CLI tests. On net8.0 the CLI test project
-      # is net10.0-only (LakeSpeak.Cli is net10.0-only; see ADR 0006), so the
-      # solution-level test runner would refuse to proceed under MTP discovery
-      # ("LakeSpeak.Cli.Tests is not compatible with net8.0"). Run the multi-targeted
-      # library test projects individually instead.
+      # The net8.0 cell uses a second slnx that excludes the net10.0-only CLI projects
+      # so the slnx-level runner can proceed under MTP discovery with -f net8.0. See
+      # tests/libraries-only.slnx.
       - name: Test (all targets, ${{ matrix.tfm }})
         if: matrix.tfm == 'net10.0'
         run: dotnet test --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - name: Test (library targets, ${{ matrix.tfm }})
         if: matrix.tfm == 'net8.0'
-        run: >-
-          dotnet test --no-restore -c Release tests/LakeSpeak.Application.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.ContractTests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.Genie.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.LiveIntegrationTests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-          && dotnet test --no-restore -c Release tests/LakeSpeak.QuestionPacks.Tests
-          --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
+        run: dotnet test tests/libraries-only.slnx --no-restore -c Release --filter-not-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -132,7 +176,7 @@ jobs:
   # The install path users actually take. Packing proves the package builds;
   # this proves it installs and the entry point runs.
   tool-smoke:
-    needs: build
+    needs: pack
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

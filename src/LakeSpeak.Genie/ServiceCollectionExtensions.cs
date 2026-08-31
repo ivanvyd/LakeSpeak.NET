@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Retry;
 
 namespace LakeSpeak.Genie;
 
@@ -103,28 +105,11 @@ public static class ServiceCollectionExtensions
                 // warehouse twice, billing twice, and leaving an orphaned conversation whose
                 // id the client never returns. Reads stay retryable, which is where retrying
                 // actually helps: the polling loop is almost all of the request volume.
-                //
-                // On net9.0+ the helper DisableForUnsafeHttpMethods excludes POST/PATCH/PUT/
-                // DELETE/CONNECT in one call. The net8 line of Microsoft.Extensions.Http.Resilience
-                // (8.10.0) does not expose that helper — it landed in 9.x — so we install the same
-                // exclusion by hand at the predicate level, matching the net9+ behaviour on both
-                // TFMs. The exception branch of the outcome has no request method to inspect, so it
-                // falls through to the transient check; the net9+ line is in the same place.
-                resilience.Retry.ShouldHandle = args =>
-                {
-                    if (!HttpClientResiliencePredicates.IsTransient(args.Outcome))
-                    {
-                        return new ValueTask<bool>(false);
-                    }
-
-                    var method = args.Outcome.Result?.RequestMessage?.Method;
-                    var isUnsafe = method == HttpMethod.Post
-                        || method == HttpMethod.Put
-                        || method == HttpMethod.Patch
-                        || method == HttpMethod.Delete
-                        || method == HttpMethod.Connect;
-                    return new ValueTask<bool>(!isUnsafe);
-                };
+#if NET9_0_OR_GREATER
+                resilience.Retry.DisableForUnsafeHttpMethods();
+#else
+                resilience.Retry.ShouldHandle = GenieRetryPolicy.ShouldRetryResilience;
+#endif
 
                 // These sit under the default 100s RequestTimeout. Nothing enforces that
                 // relationship, so a caller who lowers RequestTimeout below 30s can have a
@@ -164,4 +149,38 @@ internal static class UserAgent
     // indistinguishable from a script when someone is investigating workspace load.
     internal static string Value { get; } =
         $"LakeSpeak.NET/{typeof(UserAgent).Assembly.GetName().Version?.ToString(3) ?? "0.0.0"}";
+}
+
+/// <summary>
+/// Retry predicate for the standard resilience handler on the net8 line of
+/// Microsoft.Extensions.Http.Resilience (8.10.0), which does not expose
+/// DisableForUnsafeHttpMethods. Mirrors that helper: transient check first, then
+/// unsafe-method exclusion against the request method. The official helper falls back
+/// to args.Context when the outcome's Result is null (a transient exception), and
+/// so do we — otherwise a socket reset on a POST would still be retried. See ADR 0006.
+/// </summary>
+internal static class GenieRetryPolicy
+{
+    private static readonly HttpMethod[] UnsafeMethods =
+    {
+        HttpMethod.Post,
+        HttpMethod.Put,
+        HttpMethod.Patch,
+        HttpMethod.Delete,
+        HttpMethod.Connect,
+    };
+
+    internal static ValueTask<bool> ShouldRetryResilience(
+        RetryPredicateArguments<HttpResponseMessage> args)
+    {
+        if (!HttpClientResiliencePredicates.IsTransient(args.Outcome))
+        {
+            return new ValueTask<bool>(false);
+        }
+
+        var method = args.Outcome.Result?.RequestMessage?.Method
+            ?? args.Context.GetRequestMessage()?.Method;
+        var isUnsafe = Array.IndexOf(UnsafeMethods, method) >= 0;
+        return new ValueTask<bool>(!isUnsafe);
+    }
 }
