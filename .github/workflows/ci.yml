@@ -77,16 +77,51 @@ jobs:
 
       # A tool package that does not install is a broken release, and the failure
       # only appears at `dotnet tool install` time unless it is checked here.
-      - name: Pack
-        if: matrix.tfm == 'net10.0'
-        run: dotnet pack LakeSpeak.slnx --no-build -c Release -o artifacts
+      # Done in a separate job below: the per-TFM matrix build cannot satisfy the
+      # pack step, because LakeSpeak.Genie and friends are multi-targeted
+      # (net8.0;net10.0) and `dotnet pack` walks every TFM of every project in
+      # the slnx. Building -f net10.0 only on the net10.0 cell leaves the net8.0
+      # artefacts missing, and pack fails with NU5026.
+
+  # Produces the nupkg/snipkg artefacts that tool-smoke installs. Has to be a
+  # single-shot job (not a matrix cell) because the libraries are multi-targeted
+  # (net8.0;net10.0). `dotnet pack` walks every TFM of every project in the
+  # slnx, so packing on a cell that built only one TFM leaves the other TFM's
+  # artefacts missing and pack fails with NU5026.
+  pack:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! dotnet restore LakeSpeak.slnx --locked-mode; then
+            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow against ${{ github.head_ref || github.ref_name }}, then re-run these checks."
+            exit 1
+          fi
+      - name: Build and pack
+        # `dotnet pack` builds any project whose output the pack step needs, so
+        # both TFMs of the multi-targeted libraries end up in bin/ before pack
+        # gathers them into the nupkg. The previous shape used `--no-build`
+        # because the build job had already produced the artefacts, but with the
+        # build split per TFM the per-TFM artefacts were not symmetric.
+        run: |
+          dotnet pack LakeSpeak.slnx -c Release -o artifacts --no-restore -p:PackParallel=true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: matrix.tfm == 'net10.0'
         with:
           name: packages
           path: artifacts/*.nupkg
 
   test:
+    needs: build
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -141,7 +176,7 @@ jobs:
   # The install path users actually take. Packing proves the package builds;
   # this proves it installs and the entry point runs.
   tool-smoke:
-    needs: build
+    needs: pack
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
