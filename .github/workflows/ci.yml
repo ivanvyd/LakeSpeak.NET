@@ -30,6 +30,10 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - if: matrix.tfm == 'net8.0'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
 
       # --locked-mode makes packages.lock.json authoritative: a transitive
       # version that drifted since review fails here instead of shipping.
@@ -39,19 +43,31 @@ jobs:
       - name: Restore
         run: |
           set -euo pipefail
-          if ! dotnet restore --locked-mode; then
+          # The net8.0 cell uses the libraries-only slnx because LakeSpeak.Cli and
+          # LakeSpeak.Cli.Tests are net10.0-only. Building them on net8.0 fails with
+          # NETSDK1005 ("Assets file doesn't have a target for 'net8.0'"), and the
+          # `-f net8.0` filter still walks every project in the slnx.
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          if ! dotnet restore "$slnx" --locked-mode; then
             echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow against ${{ github.head_ref || github.ref_name }}, then re-run these checks."
             exit 1
           fi
-      - run: dotnet build --no-restore -c Release -f ${{ matrix.tfm }}
+      - name: Build
+        run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet build "$slnx" --no-restore -c Release -f ${{ matrix.tfm }}
 
       # Formatting is enforced in-build by EnforceCodeStyleInBuild; this catches
       # whitespace-only drift the analyzers do not see.
-      - run: dotnet format --verify-no-changes --no-restore
+      - name: Format
+        run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet format "$slnx" --verify-no-changes --no-restore
 
       - name: Fail on vulnerable packages
         run: |
-          dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln.txt
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet list "$slnx" package --vulnerable --include-transitive 2>&1 | tee vuln.txt
           grep -q -E '>\s+\S+\s+\S+\s+\S+\s+(Moderate|High|Critical)' vuln.txt && exit 1
           echo "no moderate-or-higher advisories"
 
@@ -59,7 +75,7 @@ jobs:
       # only appears at `dotnet tool install` time unless it is checked here.
       - name: Pack
         if: matrix.tfm == 'net10.0'
-        run: dotnet pack --no-build -c Release -o artifacts
+        run: dotnet pack LakeSpeak.slnx --no-build -c Release -o artifacts
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: matrix.tfm == 'net10.0'
         with:
@@ -92,7 +108,9 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore --locked-mode
+      - run: |
+          slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
+          dotnet restore "$slnx" --locked-mode
 
       # Live tests need a real workspace and real credentials. They are excluded
       # here by trait rather than omitted from the solution, so they still compile.
