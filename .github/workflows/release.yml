@@ -84,12 +84,17 @@ jobs:
 
       # Self-contained binaries for people who do not have the .NET SDK. macOS
       # is built but is listed as untested in the compatibility matrix until
-      # someone has actually run it on a Mac.
+      # someone has actually run it on a Mac. `-f net10.0` is required because
+      # the CLI's project graph includes the multi-targeted libraries
+      # (net8.0;net10.0). Without it publish fails with NETSDK1129 ("The
+      # 'Publish' target is not supported without specifying a target
+      # framework"). The CLI is net10.0-only by deliberate scope (ADR 0006),
+      # so net10.0 is the only TFM that has a published binary.
       - name: Publish binaries
         run: |
           for rid in win-x64 linux-x64 osx-arm64; do
             dotnet publish src/LakeSpeak.Cli/LakeSpeak.Cli.csproj \
-              -c Release -r "$rid" --self-contained true \
+              -c Release -f net10.0 -r "$rid" --self-contained true \
               -p:Version=${{ steps.version.outputs.version }} \
               -p:PublishSingleFile=true \
               -o "publish/$rid"
