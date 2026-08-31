@@ -41,6 +41,7 @@ jobs:
       # the lock files were not regenerated, which is a chore rather than a defect -- and the
       # error NuGet prints for it does not mention the fix.
       - name: Restore
+        shell: bash
         run: |
           set -euo pipefail
           # The net8.0 cell uses the libraries-only slnx because LakeSpeak.Cli and
@@ -53,6 +54,7 @@ jobs:
             exit 1
           fi
       - name: Build
+        shell: bash
         run: |
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           dotnet build "$slnx" --no-restore -c Release -f ${{ matrix.tfm }}
@@ -60,11 +62,13 @@ jobs:
       # Formatting is enforced in-build by EnforceCodeStyleInBuild; this catches
       # whitespace-only drift the analyzers do not see.
       - name: Format
+        shell: bash
         run: |
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           dotnet format "$slnx" --verify-no-changes --no-restore
 
       - name: Fail on vulnerable packages
+        shell: bash
         run: |
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           dotnet list "$slnx" package --vulnerable --include-transitive 2>&1 | tee vuln.txt
@@ -108,7 +112,8 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '8.0.x'
-      - run: |
+      - shell: bash
+        run: |
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           dotnet restore "$slnx" --locked-mode
 
