@@ -34,7 +34,10 @@ public sealed class ResultCompletenessTests : IDisposable
         }));
     }
 
-    private void StubQueryResult(string resultJson, string manifestExtra = "")
+    private void StubQueryResult(
+        string resultJson,
+        string manifestExtra = "",
+        string statementExtra = "")
     {
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}/attachments/{Attachment}/query-result")
@@ -43,6 +46,7 @@ public sealed class ResultCompletenessTests : IDisposable
                 $$"""
                 {
                   "statement_response": {
+                    {{statementExtra}}
                     "manifest": {
                       "truncated": false{{manifestExtra}},
                       "schema": { "columns": [ { "name": "region", "type_text": "STRING" } ] }
@@ -82,6 +86,32 @@ public sealed class ResultCompletenessTests : IDisposable
         result.ShouldNotBeNull();
         result.Rows.Count.ShouldBe(2);
         result.IsTruncated.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The Genie query-result endpoint omits <c>next_chunk_internal_link</c> even when the SQL
+    /// Statement response has a readable next chunk. The statement id and next index are enough
+    /// to use the documented chunk endpoint without guessing another host.
+    /// </summary>
+    [Fact]
+    public async Task A_Genie_result_without_a_chunk_link_uses_its_statement_id()
+    {
+        // Arrange — observed live: Genie keeps the statement id and next index but drops the link.
+        StubQueryResult(
+            """{ "row_count": 1, "chunk_index": 0, "next_chunk_index": 1, "data_array": [["Germany"]] }""",
+            manifestExtra: """, "total_row_count": 2""",
+            statementExtra: "\"statement_id\": \"s1\",");
+        StubChunk(1, """{ "row_count": 1, "chunk_index": 1, "data_array": [["France"]] }""");
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Rows.Select(r => r[0]).ShouldBe(["Germany", "France"]);
+        result.IsTruncated.ShouldBeFalse();
+        result.TotalRowCount.ShouldBe(2);
     }
 
     /// <summary>

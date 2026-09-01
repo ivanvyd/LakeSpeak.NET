@@ -278,8 +278,8 @@ internal sealed record ResultDataWire
     public int? NextChunkIndex { get; init; }
 
     // Databricks documents this as an absolute path to be joined with the workspace host and
-    // treated as opaque. Following it is what completes a chunked result. It is server-supplied,
-    // so the client validates it is a workspace-relative path before sending a bearer token to it.
+    // treated as opaque. The Genie query-result endpoint can omit it while retaining the statement
+    // id and next index; that pair supplies the documented chunk endpoint as a fallback.
     [JsonPropertyName("next_chunk_internal_link")]
     public string? NextChunkInternalLink { get; init; }
 

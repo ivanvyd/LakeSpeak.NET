@@ -9,8 +9,8 @@
 #   - repository secrets DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET
 #   - a pack committed at packs/daily-brief.yaml
 #
-# See docs/authentication.md for how the service principal token is minted, and the one-hour
-# expiry that makes it minted here rather than stored.
+# See docs/authentication.md for the native OAuth M2M flow. LakeSpeak acquires and refreshes the
+# short-lived access token in memory; the workflow stores only the service principal credential.
 
 name: Daily brief
 
@@ -39,32 +39,11 @@ jobs:
       - name: Install LakeSpeak
         run: dotnet tool install --global LakeSpeak.Cli
 
-      - name: Run the pack
+      - name: Write the report
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-        run: |
-          set -euo pipefail
-
-          # Minted here rather than stored: the token is valid for one hour, so a stored one
-          # would be expired by the next scheduled run. ::add-mask:: keeps it out of the log
-          # even if a later step echoes it by accident.
-          #
-          # The secret is piped in, not passed as `curl --user`. An argument is readable from the
-          # process table by anything else on the runner while the request is in flight, which
-          # masking does not address and which matters most on self-hosted runners.
-          TOKEN=$(
-            printf 'grant_type=client_credentials&scope=all-apis&client_id=%s&client_secret=%s' \
-              "$DATABRICKS_CLIENT_ID" "$DATABRICKS_CLIENT_SECRET" \
-            | curl -sS --fail --request POST --url "$DATABRICKS_HOST/oidc/v1/token" --data @- \
-            | jq -r .access_token)
-          echo "::add-mask::$TOKEN"
-          echo "DATABRICKS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
-
-      - name: Write the report
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         run: lakespeak pack run packs/daily-brief.yaml
 
       - name: Commit the report

@@ -73,8 +73,18 @@ of 2, `manifest.truncated` **false** on a merely-chunked result — the defect's
 a `next_chunk_internal_link` of `/api/2.0/sql/statements/{id}/result/chunks/1`, and following it
 returning the remaining rows with no `next_chunk_index`, summing exactly to `total_row_count`.
 
-What remains unproven is Genie *itself* emitting a multi-chunk result, which needs a large table in
-a Genie Agent and cannot be forced, since Genie bounds its own SQL. Both halves are verified; their
-composition is not. The unreachable-chunk path therefore stays — not because the permission answer
-is expected to be "no", but because a path that returns rows to a user must not depend on an
-assumption nobody re-checks. See [compatibility.md](../compatibility.md) for the evidence.
+## Verification — 2026-09-01
+
+The missing composition was driven end to end against an existing AWS Genie Agent without creating
+a table or changing the Agent. Genie generated a 1,000-row diagnostic result with three repeated
+review-text columns. Its SQL Statement manifest reported four chunks, `truncated: false`, and 1,000
+total rows. LakeSpeak assembled all 1,000 rows and reported the result as complete.
+
+The probe exposed one more difference between the two APIs. The SQL Statement response included
+`next_chunk_internal_link`; the Genie query-result response kept the statement id and
+`next_chunk_index` but omitted that link. The original implementation therefore returned only the
+first chunk and correctly marked it truncated. LakeSpeak now falls back to the documented
+`/api/2.0/sql/statements/{statement_id}/result/chunks/{next_chunk_index}` endpoint when Genie omits
+the link. The statement id is escaped as one path segment and the resolved URI still has to match
+the workspace before the credential is sent. See [compatibility.md](../compatibility.md) for the
+full evidence.

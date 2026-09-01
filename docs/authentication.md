@@ -33,9 +33,10 @@ lakespeak ask --agent finance --format json "Revenue yesterday?"
 
 Two honest caveats.
 
-A **personal access token** is a standing credential with no refresh and no expiry pressure.
-Databricks documents it as a local-debugging path rather than a production one, and `auth check`
-warns when it finds one in a profile.
+A **personal access token** is a standing credential with no automatic refresh. Databricks
+documents it as a local-debugging path rather than a production one, and `auth check` warns when it
+finds one in a profile. A short-lived OAuth access token also works in `DATABRICKS_TOKEN`, but it
+must not be stored for a scheduled job: it will be expired by a later run.
 
 On **Azure**, a better option exists: an Entra ID access token for the Databricks resource works
 directly as a bearer token, for a user principal or a managed identity. It is short-lived, and a
@@ -83,16 +84,16 @@ The service principal sees what it is granted, and nothing else. It needs explic
 Genie Agent and its SQL warehouse; it does not inherit your permissions. `lakespeak agents list`
 under the service principal is the fastest way to confirm what it can actually reach.
 
-## Unattended runs: a service principal (legacy)
+## Unattended runs: minting the token outside LakeSpeak (legacy)
 
 Before LakeSpeak implemented the OAuth M2M flow directly, a service principal was used through a
 short shell snippet that minted a token with `curl` and passed it as `DATABRICKS_TOKEN`. Native
 M2M removes the need for that recipe, so it is no longer the recommended path.
 
-If you cannot move to native M2M yet — for example, you are pinned to an older version — the same
-shape still works, with the caveats that applied to it: the secret must travel through stdin
-rather than `argv`, the token expires in an hour, and a long-running daemon is not what this is
-for. The current release no longer needs it.
+If you cannot move to native M2M yet—for example, you are pinned to an older version—the same shape
+still works, with the caveats that applied to it: the secret must travel through stdin rather than
+`argv`, the token expires in an hour, and a long-running daemon is not what this is for. The current
+release no longer needs it.
 
 ## What is not supported
 

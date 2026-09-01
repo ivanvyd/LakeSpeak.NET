@@ -150,11 +150,16 @@ table was created):
 That covers the link's shape, the chunk response's shape, the loop's termination condition, and the
 row arithmetic the truncation flag depends on.
 
-**What is still not proven:** Genie itself emitting a result large enough to span chunks. The demo
-Agent's table has six rows, and Genie generally bounds its own SQL, so the two halves above are each
-verified while their composition is not. If Genie never emits a multi-chunk result, this code simply
-never engages; if it does, every mechanism it needs has now been shown to work. Tracked as
-[#54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54).
+**Genie composition probe, 2026-09-01:** an existing AWS Genie Agent generated a 1,000-row result
+with three repeated review-text columns. The SQL Statement manifest reported four chunks,
+`truncated: false`, and 1,000 total rows. The Genie query-result response returned 316 rows with
+`next_chunk_index: 1`, but omitted `next_chunk_internal_link`; the SQL Statement response included
+the link. That live difference exposed why the original client could not complete the composition.
+
+LakeSpeak now constructs the documented workspace-relative chunk endpoint from the statement id
+and next index when Genie omits the link. The fixed client returned all 1,000 rows with
+`IsTruncated: false`, closing [#54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54). All
+conversations created for the probes were deleted afterward.
 
 Contract tests continue to cover the paths a live run cannot reach on demand: an unreachable chunk,
 a repeated link, a link resolving off-workspace, and the row cap.
@@ -171,7 +176,7 @@ a repeated link, a link resolving off-workspace, and the row cap.
 | Credential redaction, both signature fields | Unit tests using realistic JSON payloads |
 | Question Pack validation, including path traversal | Unit tests, plus the CLI run by hand |
 | CLI parsing, help, exit codes, `config show` leaking nothing | The built binary run by hand |
-| Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The wire contract and the chunk-read permission were verified live on 2026-08-05 — see above; Genie emitting a multi-chunk result was not |
+| Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The complete Genie composition was verified live on AWS on 2026-09-01: four chunks, 1,000 rows assembled, no truncation. The probe also found and fixed Genie's omission of `next_chunk_internal_link` from its query-result response |
 | Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
 | The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
 | Unattended service-principal auth (OAuth M2M) | Contract tests against a stubbed token endpoint cover: Basic auth, form parameters, response shape, expiry, refresh, `invalid_client` mapping, non-JSON error bodies, and concurrent first-callers sharing one fetch. The exchange with **valid** service-principal credentials against a real workspace has not been run — [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |

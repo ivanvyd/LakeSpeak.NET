@@ -1,9 +1,9 @@
 name: Live smoke (Databricks Genie)
 
-# Exercises the real Databricks Genie Conversation API against a live workspace, behind a
-# repository secret. The suite is opt-in: a fork without the secret sees a notice and exits
-# cleanly, so a contributor's PR can still be reviewed. The maintainer runs the job from
-# `Actions` on demand and a weekly schedule keeps the live path from rotting between uses.
+# Exercises the real Databricks Genie Conversation API against a live workspace, using a
+# repository-scoped service principal. The suite is opt-in: a fork without the variables sees a
+# notice and exits cleanly, so a contributor's PR can still be reviewed. The maintainer runs the
+# job from `Actions` on demand and a weekly schedule keeps the live path from rotting between uses.
 #
 # `docs/compatibility.md` records what this job has actually run against. The job is not a
 # gate; failures here do not block a PR. A live failure is a signal to update the compat
@@ -26,34 +26,30 @@ concurrency:
 
 jobs:
   live:
-    # The job is gated on the workspace host and the Agent name. The bearer token is
-    # checked at the step level because `secrets.*` is not allowed in workflow-level
-    # `if:` expressions — a job that *references* `secrets.DATABRICKS_TOKEN` in its gate
-    # would never start. The not-configured job covers the case where the host or agent
-    # is unset. The token check is a step that fails fast with a clear message.
+    # The job is gated on non-secret configuration. OAuth credentials are checked at the step
+    # level because `secrets.*` is not allowed in workflow-level `if:` expressions. The
+    # not-configured job covers the host/Agent case; the credential check gives a clear error for
+    # an incomplete M2M setup.
     if: ${{ vars.LAKESPEAK_LIVE_HOST != '' && vars.LAKESPEAK_LIVE_AGENT != '' }}
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: 'true'
       DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
-      # The host is the URL the token was issued against. Keeping it out of secrets makes the
-      # configuration trivial to inspect in PR review and means rotating the host (moving
-      # the workspace) does not require rotating a secret.
+      # Keeping the host out of secrets makes the configuration inspectable in PR review and
+      # means moving the workspace does not require rotating the OAuth credential.
       DATABRICKS_HOST: ${{ vars.LAKESPEAK_LIVE_HOST }}
       LAKESPEAK_LIVE_AGENT: ${{ vars.LAKESPEAK_LIVE_AGENT }}
-      # GitHub Actions masks a value in job logs only if the value is set as an env var from
-      # a secret. Reading the secret directly into an env block masks it for the rest of
-      # the run.
-      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
-      - name: Fail early if the bearer token is missing
-        if: ${{ env.DATABRICKS_TOKEN == '' }}
+      - name: Fail early if OAuth M2M is not configured
+        if: ${{ env.DATABRICKS_CLIENT_ID == '' || env.DATABRICKS_CLIENT_SECRET == '' }}
         run: |
-          echo "::error::secrets.DATABRICKS_TOKEN is not set. See docs/authentication.md and docs/compatibility.md."
+          echo "::error::secrets.DATABRICKS_CLIENT_ID and secrets.DATABRICKS_CLIENT_SECRET must both be set. See docs/authentication.md and docs/compatibility.md."
           exit 1
       - run: dotnet restore --locked-mode
       # Pin to net10.0 — the net8.0 cell is the CI matrix's job.
@@ -72,4 +68,4 @@ jobs:
     steps:
       - name: Skipped — variables not configured
         run: |
-          echo "::notice title=Live smoke skipped::Set vars.LAKESPEAK_LIVE_HOST and vars.LAKESPEAK_LIVE_AGENT, and secrets.DATABRICKS_TOKEN, to run the live suite. See docs/authentication.md and docs/compatibility.md."
+          echo "::notice title=Live smoke skipped::Set vars.LAKESPEAK_LIVE_HOST and vars.LAKESPEAK_LIVE_AGENT, and secrets.DATABRICKS_CLIENT_ID and secrets.DATABRICKS_CLIENT_SECRET, to run the live suite. See docs/authentication.md and docs/compatibility.md."
