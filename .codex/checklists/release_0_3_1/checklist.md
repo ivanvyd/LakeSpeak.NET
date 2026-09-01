@@ -2,6 +2,15 @@
 
 **Source:** Release request and `RELEASING.md`
 
+**Status:** Completed on 2026-09-01. This file preserves the v0.3.1 acceptance checks and is not
+the procedure for a future release; `RELEASING.md` remains canonical.
+
+**Evidence:** [rehearsal run 33535149754](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33535149754),
+[tag release run 33535667215](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33535667215),
+[GitHub release v0.3.1](https://github.com/ivanvyd/LakeSpeak.NET/releases/tag/v0.3.1), and the public
+[`LakeSpeak.Genie`](https://www.nuget.org/packages/LakeSpeak.Genie/0.3.1) and
+[`LakeSpeak.Cli`](https://www.nuget.org/packages/LakeSpeak.Cli/0.3.1) packages.
+
 ---
 
 ## Setup & Test Data
@@ -11,7 +20,7 @@
 - Run commands from the repository root.
 - Start from a clean branch based on `origin/main`.
 - Keep GCP validation issue #52 open; this release does not claim GCP evidence.
-- Confirm `v0.3.1` does not already exist on GitHub or NuGet before publishing.
+- Before the initial publication, confirm `v0.3.1` does not already exist on GitHub or NuGet.
 - Confirm the `nuget` GitHub environment and `NUGET_USER` secret are configured.
 
 ---

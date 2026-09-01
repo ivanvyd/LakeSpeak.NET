@@ -85,30 +85,35 @@ Recorded in [docs/security/threat-model.md](docs/security/threat-model.md).
 
 ## Verifying a release
 
-Every release carries a [SLSA build provenance
+Every GitHub release binary carries a [SLSA build provenance
 attestation](https://slsa.dev/spec/v1.0/provenance), signed through Sigstore using GitHub's OIDC
-identity. No signing key exists to be stolen, and the attestation binds each artifact to the
+identity. No signing key exists to be stolen, and the attestation binds each archive to the
 workflow, commit and repository that produced it.
 
 Checking it takes one command and needs only the [GitHub
 CLI](https://cli.github.com):
 
 ```bash
-gh attestation verify LakeSpeak.Cli.0.1.0.nupkg --repo ivanvyd/LakeSpeak.NET
+gh attestation verify lakespeak-0.3.1-linux-x64.zip --repo ivanvyd/LakeSpeak.NET
 ```
 
-> **Applies from 0.1.1.** In `0.1.0` the attestation covers only the two `.nupkg` files, so running
-> the same command against a downloaded release binary fails. That was a packaging mistake, not a
-> tampered file: the binaries were built by the same workflow run, and their digests are in that
-> release's `SHA256SUMS.txt`. From 0.1.1 the release binaries are attested too:
+NuGet.org adds its repository signature after LakeSpeak submits each package. That changes the
+`.nupkg` archive hash, so the public NuGet download cannot match the pre-submission build
+attestation. Verify the public package's NuGet repository signature instead:
 
 ```bash
-gh attestation verify lakespeak-0.1.1-linux-x64.zip --repo ivanvyd/LakeSpeak.NET
+dotnet nuget verify --all LakeSpeak.Cli.0.3.1.nupkg
 ```
 
-A passing check tells you the file was built by `.github/workflows/release.yml` in this
-repository, and not rebuilt or replaced by anyone afterwards. A failing one means the file did not
-come from here — treat it as hostile rather than as a tooling problem.
+The release workflow also attests the unsigned package bytes it submits, but NuGet's post-upload
+signature means those hashes are not a verification interface for downloaded packages. A passing
+archive attestation proves the GitHub release file came from this repository's release workflow. A
+passing NuGet verification proves the package carries NuGet.org's repository signature; it does not
+by itself prove the source commit.
+
+> **GitHub archive attestations apply from 0.1.1.** In `0.1.0` only the submitted `.nupkg` files
+> were attested, so verification of a downloaded release binary fails. The binaries were built by
+> the same workflow run, and their digests remain available in that release's `SHA256SUMS.txt`.
 
 The attestation answers *what built this*. **Who authorised it** is a separate question, answered
 by the release tag: the workflow verifies the tag's SSH signature against
