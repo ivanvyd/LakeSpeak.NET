@@ -26,7 +26,7 @@ including what a Genie Agent is and how to tell whether you have one.
 
 ## Status
 
-**v0.3.0.** See [Verification status](#verification-status) for what has actually been tested and
+**v0.3.1.** See [Verification status](#verification-status) for what has actually been tested and
 what has not. Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public
 API may both change, and before `v1.0` a minor version is allowed to break them.
 
@@ -221,10 +221,10 @@ promise; it is a record of evidence.
 | Azure Databricks, live workspace | `agents list`, `ask`, `pack run` and every output format verified against a real Genie Agent on 2026-08-01 |
 | `chat` | Verified live on 2026-08-06 — the REPL, a follow-up keeping its context, and `/sql`. Its other slash commands were not exercised |
 | Feedback, full-result download, visualizations | Contract tests only — **not** exercised live |
-| Chunked results assembled beyond the first chunk | Mechanism verified live on 2026-08-05 — chunk reads on a Genie-executed statement are permitted, and the link, response shape and row arithmetic all behave as the client assumes. Genie emitting a multi-chunk result was **not** reproduced |
-| Unattended service-principal authentication (OAuth M2M) | Contract tests cover Basic auth, form parameters, response parsing, refresh, and `invalid_client` mapping. Exchange with **valid** service-principal credentials against a real workspace is the contribution that closes [#55](https://github.com/ivanvyd/LakeSpeak.NET/issues/55) |
-| Live smoke, re-runnable from `Actions` | Behind `secrets.DATABRICKS_TOKEN`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`; weekly and on demand. Forks without any of them see a notice and exit 0 |
-| AWS Databricks | Not tested — [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
+| Chunked results assembled beyond the first chunk | Verified live on AWS on 2026-09-01: Genie omitted the next-chunk link, LakeSpeak recovered it from the statement id, and assembled four chunks into all 1,000 rows without truncation |
+| Unattended service-principal authentication (OAuth M2M) | Verified against the live AWS workspace on 2026-09-01. A GitHub Actions run completed all 9 live tests using native token acquisition and refresh |
+| Live smoke, re-runnable from `Actions` | Behind `secrets.DATABRICKS_CLIENT_ID`, `secrets.DATABRICKS_CLIENT_SECRET`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`; weekly and on demand. Forks without the variables see a notice and exit 0 |
+| AWS Databricks | Verified live on 2026-09-01, including native OAuth M2M and multi-chunk result assembly — see [docs/compatibility.md](docs/compatibility.md) |
 | GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
 | Windows / Linux / macOS | Covered by the CI matrix |
 

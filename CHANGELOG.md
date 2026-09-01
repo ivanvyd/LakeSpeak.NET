@@ -6,6 +6,37 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.3.1 — 2026-09-01
+
+This patch release fixes complete-result assembly for a Genie response shape observed in the live
+AWS workspace and moves the scheduled live smoke test from a stored bearer token to LakeSpeak's
+native OAuth M2M provider. The public API is unchanged.
+
+### Fixed
+
+- **Chunked results are assembled when Genie omits the next-chunk link.** Genie's query-result
+  response can advertise `next_chunk_index` while omitting `next_chunk_internal_link`, even though
+  the underlying SQL Statement response contains the link. LakeSpeak now constructs the
+  workspace-relative chunk endpoint from the statement id, keeps the existing host validation,
+  and continues until the result is complete. A live four-chunk result returned all 1,000 rows
+  with `Truncated = false`. This closes [#54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54).
+
+### Changed
+
+- **The scheduled live smoke workflow uses native OAuth M2M.** It now receives only the service
+  principal client id and secret; LakeSpeak acquires and refreshes the short-lived access token in
+  memory. The Question Pack workflow example uses the same direct configuration instead of a
+  separate `curl` token exchange.
+
+### Verified
+
+- The M2M-backed GitHub Actions run completed all 9 live tests against the AWS workspace:
+  [run 33510178485](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33510178485).
+- The retry regression was replayed red/green: without the request-method context fallback the
+  non-idempotent test made four attempts and failed; with the fallback restored it passed on both
+  `net8.0` and `net10.0`.
+- The full local suite passed on both target frameworks, and release builds were warning-free.
+
 ## 0.3.0 — 2026-08-31
 
 The test infrastructure migrates to Microsoft Testing Platform, and the library family multi-targets

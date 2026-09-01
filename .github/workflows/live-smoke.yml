@@ -1,9 +1,10 @@
 name: Live smoke (Databricks Genie)
 
 # Exercises the real Databricks Genie Conversation API against a live workspace, using a
-# repository-scoped service principal. The suite is opt-in: a fork without the variables sees a
-# notice and exits cleanly, so a contributor's PR can still be reviewed. The maintainer runs the
-# job from `Actions` on demand and a weekly schedule keeps the live path from rotting between uses.
+# dedicated service-principal credential stored in this repository. The suite is opt-in: a fork
+# without the variables sees a notice and exits cleanly, so a contributor's PR can still be
+# reviewed. The maintainer runs the job from `Actions` on demand and a weekly schedule keeps the
+# live path from rotting between uses.
 #
 # `docs/compatibility.md` records what this job has actually run against. The job is not a
 # gate; failures here do not block a PR. A live failure is a signal to update the compat
