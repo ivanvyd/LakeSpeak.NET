@@ -108,7 +108,8 @@ For the profile:
 2. The profile the last answer came from, for `export last` and `feedback last` — so they address
    the workspace the conversation actually lives in
 3. `defaults.profile` in this file
-4. `DATABRICKS_HOST` / `DATABRICKS_TOKEN` in the environment, then `.databrickscfg`
+4. Environment configuration: `DATABRICKS_HOST`, then `DATABRICKS_TOKEN` or the
+   `DATABRICKS_CLIENT_ID` / `DATABRICKS_CLIENT_SECRET` pair; otherwise `.databrickscfg`
 
 ## Checking what was loaded
 

@@ -46,15 +46,22 @@ arguments ending in `DOWNLOAD_ID_SIGNATURE`.
 
 ## Completing a chunked result
 
-There is no Genie endpoint that takes a chunk index. Genie returns the Statement Execution
-response verbatim, and that contract pairs `next_chunk_index` with `next_chunk_internal_link` —
-documented as an absolute path to be joined with the workspace host and treated as opaque. The
-client follows that link and composes no path of its own; see
+There is no Genie endpoint that takes a chunk index. Genie returns a nested Statement Execution
+response, but it does not always preserve every result field. A live 2026-09-01 response retained
+the statement id and `next_chunk_index` while omitting `next_chunk_internal_link`; the underlying
+SQL Statement response still exposed the next chunk at
+`/api/2.0/sql/statements/{statement_id}/result/chunks/{next_chunk_index}`.
+
+The client follows `next_chunk_internal_link` when present. When Genie omits it, the client rejects
+dot-only statement ids and escapes every other id into the documented workspace-relative SQL
+Statement chunk endpoint. Both forms go through the same workspace scheme, host and port validation
+before an authenticated request; see
 [ADR 0004](../decisions/0004-complete-a-chunked-result-by-following-the-link-databricks-supplies.md).
 
-**UNVERIFIED**: whether the caller's identity may read the remaining chunks of a statement Genie
-executed on their behalf. No documentation settles it, and it has not been tried live. The client
-treats a refusal as a truncated result rather than a failure.
+The caller's identity can read remaining chunks of a statement Genie executed on its behalf. A
+live AWS probe assembled four chunks and all 1,000 rows. Permission denial remains possible under
+different workspace grants; the client treats a refusal as a truncated result rather than a
+failure.
 | Send message feedback | POST | `…/messages/{message_id}/feedback` |
 | List conversations | GET | `/spaces/{space_id}/conversations` |
 | List conversation messages | GET | `/spaces/{space_id}/conversations/{conversation_id}/messages` |

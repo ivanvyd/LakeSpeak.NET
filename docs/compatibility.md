@@ -179,7 +179,7 @@ a repeated link, a link resolving off-workspace, and the row cap.
 | Chunked result assembly, and every way it can stop short | Contract tests against a stubbed multi-chunk server. The complete Genie composition was verified live on AWS on 2026-09-01: four chunks, 1,000 rows assembled, no truncation. The probe also found and fixed Genie's omission of `next_chunk_internal_link` from its query-result response |
 | Documented CLI commands still existing | A test parses every fenced `lakespeak …` example in this repository against the real command tree |
 | The packaged public API, as opposed to the build output | A consumer project compiled against the `.nupkg` from `./artifacts`, 2026-08-05 |
-| Unattended service-principal auth (OAuth M2M) | Contract tests against a stubbed token endpoint cover: Basic auth, form parameters, response shape, expiry, refresh, `invalid_client` mapping, non-JSON error bodies, and concurrent first-callers sharing one fetch. Valid credentials were verified against the AWS workspace on 2026-09-01: [GitHub Actions run 33510178485](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33510178485) passed all 9 live tests using native M2M |
+| Unattended service-principal auth (OAuth M2M) | Contract tests against a stubbed token endpoint cover: Basic auth, form parameters, response shape, expiry, refresh, `invalid_client` mapping, non-JSON error bodies, and concurrent first-callers sharing one fetch. Valid credentials were verified against the AWS workspace on 2026-09-01: [main-branch GitHub Actions run 33512379180](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33512379180) passed all 9 live tests using native M2M |
 | Against real Databricks | See "Live verification" above. The suite is re-runnable from `Actions → Live smoke (Databricks Genie)` and weekly behind `secrets.DATABRICKS_CLIENT_ID`, `secrets.DATABRICKS_CLIENT_SECRET`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`. On 2026-09-01 the M2M-backed workflow passed all 9 live tests against AWS. Multi-chunk composition was also verified separately: four chunks and all 1,000 rows returned without truncation. Full-result download endpoints, visualizations and forced `QUERY_RESULT_EXPIRED` recovery remain contract-test-only |
 
 ## How to update this file
@@ -210,13 +210,13 @@ The verified agents were `Northstar Revenue Analyst`, `Student Academic Performa
 |---|---|
 | `lakespeak auth check` against AWS | Profiles in `.databrickscfg`: 2 (DEFAULT → `dbc-7169d377-476d.cloud.databricks.com`). Token obtained (788 characters, not shown). Workspace answered; 3 Agents visible |
 | `lakespeak ask --agent "Northstar Revenue Analyst" "How many rows are in the data?"` | Real answer: 12 rows in `customer_dim`, 12 rows in `customer_health_view`, 24 rows in `customer_revenue_monthly`. Result table rendered with three rows of real data. |
-| Wire shape on AWS | Identical to Azure. The PAT path works unchanged. Native OAuth M2M was verified through all 9 live tests in [GitHub Actions run 33510178485](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33510178485). |
+| Wire shape on AWS | Identical to Azure. The PAT path works unchanged. Native OAuth M2M was verified through all 9 live tests in [main-branch GitHub Actions run 33512379180](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33512379180). |
 | Chunk composition | A wide 1,000-row query produced four chunks. Genie advertised `next_chunk_index` but omitted its link; LakeSpeak constructed the statement chunk endpoint and returned all rows with no truncation. |
 
 The CI matrix is `ubuntu-latest`, `windows-latest`, `macos-latest`. The Azure verification ran on
 the maintainer's primary machine. The first AWS verification ran locally on 2026-08-29 with the
 same `lakespeak` v0.2.0 binary; the 2026-09-01 M2M verification ran on GitHub's Ubuntu runner from
-the v0.3.1 branch. The two workspaces answer the same wire contract.
+the merged v0.3.1 candidate on `main`. The two workspaces answer the same wire contract.
 
 What remains untested on AWS:
 

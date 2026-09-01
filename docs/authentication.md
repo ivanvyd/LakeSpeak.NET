@@ -20,10 +20,10 @@ for why that trade was made.
 The CLI is invoked with an argument vector, never through a shell, because profile names can come
 from a config file or a Question Pack.
 
-## Unattended use: an environment token
+## An explicit environment token (legacy and local debugging)
 
-CI runners and containers have no browser, and often no Databricks CLI. Set `DATABRICKS_TOKEN` and
-LakeSpeak uses it directly, taking precedence over the CLI broker.
+Set `DATABRICKS_TOKEN` when you already have a short-lived access token or need the local-debugging
+PAT path. LakeSpeak uses it directly, taking precedence over native M2M and the CLI broker.
 
 ```bash
 export DATABRICKS_HOST="https://adb-xxxxxxxxxxxx.n.azuredatabricks.net"
@@ -37,6 +37,8 @@ A **personal access token** is a standing credential with no automatic refresh. 
 documents it as a local-debugging path rather than a production one, and `auth check` warns when it
 finds one in a profile. A short-lived OAuth access token also works in `DATABRICKS_TOKEN`, but it
 must not be stored for a scheduled job: it will be expired by a later run.
+
+For CI, containers and other scheduled workloads, use the native M2M path below.
 
 On **Azure**, a better option exists: an Entra ID access token for the Databricks resource works
 directly as a bearer token, for a user principal or a managed identity. It is short-lived, and a
