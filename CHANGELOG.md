@@ -32,7 +32,7 @@ LakeSpeak's native OAuth M2M provider. The public API is unchanged.
 ### Verified
 
 - The M2M-backed GitHub Actions run completed all 9 live tests against the AWS workspace from the
-  merged `main` revision: [run 33512379180](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33512379180).
+  merged runtime-bearing `main` revision `6b27140`: [run 33516431819](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33516431819).
 - The retry regression was replayed red/green: without the request-method context fallback the
   non-idempotent test made four attempts and failed; with the fallback restored it passed on both
   `net8.0` and `net10.0`.

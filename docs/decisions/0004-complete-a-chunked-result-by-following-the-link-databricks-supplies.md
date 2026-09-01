@@ -1,6 +1,6 @@
-# 0004 — Complete a chunked result by following the link Databricks supplies
+# 0004 — Complete a chunked result through its Statement Execution continuation
 
-**Status:** Accepted
+**Status:** Accepted; amended 2026-09-01
 **Date:** 2026-08-05
 
 ## Context
@@ -20,38 +20,42 @@ Squarely inside the Genie API. It is a second workflow with its own polling loop
 expiry semantics, and the response it returns is itself subject to the same chunking — so it
 completes nothing on its own.
 
-**The link Databricks already sends.** The Statement Execution contract pairs `next_chunk_index`
-with `next_chunk_internal_link`, documented as an absolute path to be joined with the workspace
-host and treated as opaque. Genie returns the statement response verbatim, so this client was
-already receiving that link on every chunked result and discarding it during deserialization.
+**The Statement Execution continuation.** The Statement Execution contract pairs
+`next_chunk_index` with a workspace-relative `next_chunk_internal_link`. The link is documented as
+opaque. Genie returns a nested statement response, but live verification later showed that its
+query-result endpoint can retain the statement id and next index while omitting the link.
 
 ## Decision
 
-Follow `next_chunk_internal_link` until the result is complete.
+Follow `next_chunk_internal_link` until the result is complete when Databricks supplies it.
 
-The link is treated as opaque, as documented, and is **not** reconstructed from a template. This
-is deliberately not an implementation of the Statement Execution API: no path is composed, no
-statement id is used, and nothing but a link the workspace itself supplied is ever requested. That
-distinction is what keeps this inside `GOVERNANCE.md`'s scope rather than making LakeSpeak a
-client for a second Databricks API.
+The supplied link is treated as opaque. If Genie advertises a successor with `next_chunk_index`
+but omits the link, use the statement id and index to construct only the documented
+`/api/2.0/sql/statements/{statement_id}/result/chunks/{next_chunk_index}` continuation. Reject a
+missing, empty, `.` or `..` statement id instead of composing a path. This narrow fallback does not
+make LakeSpeak a general Statement Execution client: it exposes no Statement Execution API and
+uses the endpoint only to finish a result Genie already returned.
 
-Because the link is server-supplied and the bearer token rides on every workspace request, only a
-workspace-relative path is accepted. An absolute or protocol-relative link is refused rather than
-followed, and is not logged — the case worth logging is precisely the one where an attacker chose
-its contents.
+Because a bearer token rides on every chunk request, both a supplied link and a constructed
+continuation must resolve to the configured workspace's scheme, host and port. An off-workspace
+link is refused rather than followed, and is not logged — the case worth logging is precisely the
+one where an attacker chose its contents.
 
-`GenieClientOptions.MaxResultRows` bounds the walk, defaulting to 100,000 rows. Following a
-chunked result to its end is otherwise unbounded work whose output is held in memory.
+`GenieClientOptions.MaxResultRows` stops another fetch after the rows already held reach its
+threshold, which defaults to 100,000. It is not a hard row cap: the last chunk is retained whole
+and may take the result past the threshold. An internal 1,000-fetch ceiling also stops malformed
+streams that keep returning empty chunks under fresh continuations. Without these guards, a
+chunked result could cause unbounded requests and memory growth.
 
 ## Consequences
 
 Results are complete. `IsTruncated` now means what a reader would assume it means, rather than
 "there were more chunks and we stopped".
 
-Every way of failing to complete a result still reports truncation: no link accompanying the
-index, a link that is not a workspace path, a chunk the caller may not read, or the row cap. The
-property that mattered before this change — a partial result is never reported as complete — is
-unchanged, and is now enforced across five exits rather than one.
+Every way of failing to complete a result still reports truncation: neither a link nor a usable
+statement id accompanies the index, a link resolves outside the workspace, a chunk cannot be read,
+or a row or request cap is reached. The property that mattered before this change — a partial
+result is never reported as complete — is unchanged.
 
 A chunk that cannot be fetched degrades to the rows already in hand rather than throwing. The
 answer text is the primary payload and a missing tail should not discard it; the truncation flag
