@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Sockets;
+using System.Text.Json;
 using LakeSpeak.Genie;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
@@ -37,8 +38,12 @@ public sealed class ResultCompletenessTests : IDisposable
     private void StubQueryResult(
         string resultJson,
         string manifestExtra = "",
-        string statementExtra = "")
+        string? statementId = null)
     {
+        var statementIdProperty = statementId is null
+            ? string.Empty
+            : $"\"statement_id\": {JsonSerializer.Serialize(statementId)},";
+
         _server.Given(Request.Create()
                 .WithPath($"/api/2.0/genie/spaces/{Agent}/conversations/{Conversation}/messages/{Message}/attachments/{Attachment}/query-result")
                 .UsingGet())
@@ -46,7 +51,7 @@ public sealed class ResultCompletenessTests : IDisposable
                 $$"""
                 {
                   "statement_response": {
-                    {{statementExtra}}
+                    {{statementIdProperty}}
                     "manifest": {
                       "truncated": false{{manifestExtra}},
                       "schema": { "columns": [ { "name": "region", "type_text": "STRING" } ] }
@@ -100,7 +105,7 @@ public sealed class ResultCompletenessTests : IDisposable
         StubQueryResult(
             """{ "row_count": 1, "chunk_index": 0, "next_chunk_index": 1, "data_array": [["Germany"]] }""",
             manifestExtra: """, "total_row_count": 2""",
-            statementExtra: "\"statement_id\": \"s1\",");
+            statementId: "s1");
         StubChunk(1, """{ "row_count": 1, "chunk_index": 1, "data_array": [["France"]] }""");
         var client = CreateClient();
 
