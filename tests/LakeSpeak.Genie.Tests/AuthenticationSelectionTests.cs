@@ -46,6 +46,21 @@ public sealed class AuthenticationSelectionTests : IDisposable
         providerType.ShouldBe(typeof(EnvironmentTokenProvider));
     }
 
+    [Fact]
+    public void A_PAT_takes_precedence_over_a_complete_M2M_pair()
+    {
+        // Arrange
+        Environment.SetEnvironmentVariable(EnvironmentTokenProvider.TokenVariable, "pat");
+        Environment.SetEnvironmentVariable(M2mTokenProvider.ClientIdVariable, "client-id");
+        Environment.SetEnvironmentVariable(M2mTokenProvider.ClientSecretVariable, "client-secret");
+
+        // Act
+        var providerType = ResolveProviderType();
+
+        // Assert
+        providerType.ShouldBe(typeof(EnvironmentTokenProvider));
+    }
+
     [Theory]
     [InlineData(M2mTokenProvider.ClientIdVariable)]
     [InlineData(M2mTokenProvider.ClientSecretVariable)]
