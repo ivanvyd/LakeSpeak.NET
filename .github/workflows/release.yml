@@ -109,10 +109,11 @@ jobs:
         run: cd artifacts && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       # An SBOM is the vendor list an adopter's SOC 2 vendor-risk review asks
-      # for. Generated from the restored graph, not hand-maintained.
+      # for. Generated from the restored graph, not hand-maintained. Pin the tool because this
+      # privileged job attests and publishes the files produced after the SBOM step.
       - name: SBOM
         run: |
-          dotnet tool install --global CycloneDX
+          dotnet tool install --global CycloneDX --version 6.2.0
           export PATH="$PATH:$HOME/.dotnet/tools"
           dotnet CycloneDX LakeSpeak.slnx -o artifacts --json --filename sbom.json
 

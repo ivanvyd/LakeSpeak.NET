@@ -14,7 +14,7 @@ head is a release process that stops when they do.
 | `lakespeak-<version>-osx-arm64.zip` | GitHub release (built, **not tested** — see `docs/compatibility.md`) |
 | `SHA256SUMS.txt` | GitHub release |
 | `sbom.json` | GitHub release — CycloneDX, the vendor list an adopter's review will ask for |
-| Build provenance attestation | Attached to each `.nupkg` |
+| Build provenance attestation | GitHub Attestations API and release bundle; covers submitted `.nupkg` files and release archives |
 
 ## Versioning
 

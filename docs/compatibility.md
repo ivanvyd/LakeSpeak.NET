@@ -233,7 +233,7 @@ The v0.3.1 release candidate was checked as a package, not only as source:
 | Check | Result |
 |---|---|
 | Locked restore and release build | Clean; 0 warnings and 0 errors |
-| Full non-live suite | 258/258 passed on `net10.0`; 165/165 passed on `net8.0` |
+| Full non-live suite | Explicit target runs: 264/264 passed on `net10.0`; 165/165 passed on `net8.0`. The tag workflow's default multi-target selection separately passed 417/417 |
 | Formatting and dependency audit | `dotnet format --verify-no-changes` clean; no vulnerable direct or transitive packages reported |
 | `LakeSpeak.Genie.0.3.1.nupkg` | Contains both `lib/net8.0/` and `lib/net10.0/` assemblies and XML documentation |
 | `LakeSpeak.Cli.0.3.1.nupkg` | Installed to an isolated tool path; `lakespeak --version` returned `0.3.1` with commit metadata |
