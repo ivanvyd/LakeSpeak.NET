@@ -6,7 +6,9 @@ here rather than left to be discovered.
 
 ## Unreleased
 
-The next patch release fixes complete-result assembly for a Genie response shape observed in the
+## 0.3.1 — 2026-09-01
+
+This patch release fixes complete-result assembly for a Genie response shape observed in the
 live AWS workspace and moves the scheduled live smoke test from a stored bearer token to
 LakeSpeak's native OAuth M2M provider. The public API is unchanged.
 

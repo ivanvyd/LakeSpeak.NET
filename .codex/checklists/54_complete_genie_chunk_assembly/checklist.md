@@ -20,6 +20,7 @@
 ### Prerequisites
 
 - Run commands from the repository root.
+- Run `dotnet restore LakeSpeak.slnx --locked-mode` before commands that use `--no-restore`.
 - Do not print or echo credential values. Store the client id and secret through the GitHub secrets
   interface or `gh secret set` over standard input.
 - Leave `DATABRICKS_TOKEN` unset for M2M tests.
@@ -77,11 +78,12 @@ no request to the external host.
 
 1. Run:
    ```powershell
-   dotnet test tests/LakeSpeak.ContractTests/LakeSpeak.ContractTests.csproj --no-restore -c Release -f net10.0 -- --filter-method "*chunk*"
+   dotnet test tests/LakeSpeak.ContractTests/LakeSpeak.ContractTests.csproj --no-restore -c Release -f net10.0 -- --filter-class "*ResultCompletenessTests*"
    ```
 
-**Expected:** The chunk-completeness tests pass, including repeated-link, request-limit, row-limit,
-unreachable-chunk, and row-order cases. The run completes instead of looping indefinitely.
+**Expected:** All 18 result-completeness tests pass, including repeated-link, request-limit,
+row-limit, unreachable-chunk, and row-order cases. The run completes instead of looping
+indefinitely.
 
 ### 3. Cross-framework and packaging compatibility
 
@@ -140,6 +142,11 @@ values, contains no `DATABRICKS_TOKEN`, and prints no credential value.
 
 **Expected:** The credential-check step exits with an error naming both required secret names.
 Restore fails to start, and the log contains no credential value.
+
+**Recorded evidence, 2026-09-01:** [run 33524613970](https://github.com/ivanvyd/LakeSpeak.NET-live-smoke-negative-20260901/actions/runs/33524613970)
+in the archived private disposable repository failed at the credential-check step with the two
+required secret names. The restore and test steps were both skipped, and no credential value was
+printed.
 
 ---
 
