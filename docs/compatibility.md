@@ -226,6 +226,23 @@ What remains untested on AWS:
   Azure-only table names and the run failed with `FileNotFoundException` on AWS, which is a question-pack
   authoring issue, not a wire-shape one.
 
+## Local verification — 2026-09-01 (v0.3.1)
+
+The v0.3.1 release candidate was checked as a package, not only as source:
+
+| Check | Result |
+|---|---|
+| Locked restore and release build | Clean; 0 warnings and 0 errors |
+| Full non-live suite | 258/258 passed on `net10.0`; 165/165 passed on `net8.0` |
+| Formatting and dependency audit | `dotnet format --verify-no-changes` clean; no vulnerable direct or transitive packages reported |
+| `LakeSpeak.Genie.0.3.1.nupkg` | Contains both `lib/net8.0/` and `lib/net10.0/` assemblies and XML documentation |
+| `LakeSpeak.Cli.0.3.1.nupkg` | Installed to an isolated tool path; `lakespeak --version` returned `0.3.1` with commit metadata |
+| Missing M2M secret | [Disposable-repository run 33524613970](https://github.com/ivanvyd/LakeSpeak.NET-live-smoke-negative-20260901/actions/runs/33524613970) failed at the credential guard; restore and tests were skipped |
+| Independent post-ship review | Correctness, security, performance and structure found no production-code defect. Requirements review found stale roadmap claims; correctness review found two checklist reproducibility defects. Both are corrected in the release-prep change |
+
+The current runtime and `live-smoke.yml` are identical to revision `6b27140`, whose native-M2M
+AWS run passed all nine live tests. GCP remains untested and issue #52 remains open by decision.
+
 ## Local verification — 2026-08-31
 
 The packaging changes for v0.3.0 (multi-targeting the library family, MTP migration, the

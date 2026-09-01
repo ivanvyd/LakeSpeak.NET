@@ -67,8 +67,9 @@ Databricks workspace.
 
 ---
 
-## Explicitly Uncovered
+## External workflow evidence
 
-This checklist does not prove the GitHub-hosted `live-smoke.yml` branch for a missing repository
-secret. That end-to-end case remains Test 5.2 in the #54 checklist and requires a disposable
-repository or fork whose secret configuration can be changed safely.
+The local commands in this checklist do not prove the GitHub-hosted `live-smoke.yml` branch for a
+missing repository secret. That end-to-end case was exercised separately as Test 5.2 in the #54
+checklist: [run 33524613970](https://github.com/ivanvyd/LakeSpeak.NET-live-smoke-negative-20260901/actions/runs/33524613970)
+failed at the credential guard while restore and tests were skipped.

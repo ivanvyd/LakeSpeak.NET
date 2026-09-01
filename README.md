@@ -26,7 +26,7 @@ including what a Genie Agent is and how to tell whether you have one.
 
 ## Status
 
-**Next: v0.3.1 (not yet published).** The latest published release is v0.3.0. See
+**Current source version: v0.3.1.** The NuGet badges above show the latest published packages. See
 [Verification status](#verification-status) for what has actually been tested and what has not.
 Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public API may both
 change, and before `v1.0` a minor version is allowed to break them.
