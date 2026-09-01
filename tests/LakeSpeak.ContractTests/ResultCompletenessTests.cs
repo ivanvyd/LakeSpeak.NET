@@ -120,6 +120,35 @@ public sealed class ResultCompletenessTests : IDisposable
     }
 
     /// <summary>
+    /// <see cref="Uri"/> normalizes dot-only path segments even after
+    /// <see cref="Uri.EscapeDataString(string)"/>. A malformed statement id must therefore stop
+    /// as an incomplete result instead of addressing a different SQL endpoint.
+    /// </summary>
+    [Theory]
+    [InlineData(".")]
+    [InlineData("..")]
+    public async Task A_dot_segment_statement_id_is_not_used_as_a_chunk_path(string statementId)
+    {
+        // Arrange
+        StubQueryResult(
+            """{ "row_count": 1, "chunk_index": 0, "next_chunk_index": 1, "data_array": [["Germany"]] }""",
+            manifestExtra: """, "total_row_count": 2""",
+            statementId: statementId);
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetQueryResultAsync(Agent, Conversation, Message, Attachment, Ct);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Rows.Count.ShouldBe(1);
+        result.IsTruncated.ShouldBeTrue();
+        var chunkRequests = _server.LogEntries.Count(e =>
+            e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
+        chunkRequests.ShouldBe(0);
+    }
+
+    /// <summary>
     /// The whole point of the change: a result split across chunks comes back whole, in order,
     /// and is not flagged as truncated because nothing is missing.
     /// </summary>

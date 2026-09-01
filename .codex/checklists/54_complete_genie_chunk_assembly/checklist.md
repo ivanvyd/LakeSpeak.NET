@@ -1,7 +1,8 @@
 # Testing Checklist: Complete Genie Chunk Assembly and Scheduled M2M
 
 **Ticket:** #54
-**Source:** `.claude/specs/close-validation-gaps.md`
+**Source:** [PR #89](https://github.com/ivanvyd/LakeSpeak.NET/pull/89) and
+[issue #54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54)
 
 ---
 
@@ -11,10 +12,10 @@
 
 | Resource | Required state | Used by |
 |---|---|---|
-| Local checkout | The pull-request branch, with the SDK from `global.json` installed | Tests 1–5 |
-| Databricks workspace | An existing Genie Agent and SQL warehouse; do not create shared fixtures for this checklist | Tests 6–7 |
-| Service principal | Existing principal with `CAN_RUN` on the Agent and `CAN_USE` on its warehouse | Tests 6–7 |
-| GitHub repository | `LAKESPEAK_LIVE_HOST` and `LAKESPEAK_LIVE_AGENT` variables plus M2M client-id and client-secret secrets | Test 7 |
+| Local checkout | The pull-request branch, with the SDK from `global.json` installed | Sections 1–3 |
+| Databricks workspace | An existing Genie Agent and SQL warehouse; do not create shared fixtures for this checklist | Section 4 |
+| Service principal | Existing principal with `CAN_RUN` on the Agent and `CAN_USE` on its warehouse | Sections 4–5 |
+| GitHub repository | `LAKESPEAK_LIVE_HOST` and `LAKESPEAK_LIVE_AGENT` variables plus M2M client-id and client-secret secrets | Section 5 |
 
 ### Prerequisites
 
@@ -23,7 +24,7 @@
   interface or `gh secret set` over standard input.
 - Leave `DATABRICKS_TOKEN` unset for M2M tests.
 - Use an existing Agent that can answer from a table large or wide enough to produce more than one
-  result chunk. If the workspace cannot produce one, record Test 6 as blocked rather than creating
+  result chunk. If the workspace cannot produce one, record Section 4 as blocked rather than creating
   a shared table.
 
 ---

@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-01
+**Amended:** 2026-09-01 — native OAuth M2M is now the unattended path
 
 ## Context
 
@@ -28,8 +29,9 @@ The CLI is invoked with an argument vector and `UseShellExecute = false`. Profil
 from a configuration file or a Question Pack, so they are attacker-influenced and must never reach a
 shell interpreter.
 
-For unattended use where no browser exists, read `DATABRICKS_TOKEN` from the environment, and say
-plainly in the docs that this is the weaker path.
+For unattended use where no browser exists, read `DATABRICKS_CLIENT_ID` and
+`DATABRICKS_CLIENT_SECRET` and acquire short-lived tokens through Databricks' OAuth M2M endpoint.
+Keep `DATABRICKS_TOKEN` as an explicit local-debugging and legacy path.
 
 ## Consequences
 
@@ -44,6 +46,7 @@ a process, which is why the token is cached in memory behind a semaphore rather 
 request.
 
 `databricks auth token` supports U2M profiles only; **OAuth M2M client-credential profiles are
-explicitly unsupported**. Native M2M is therefore v0.2 work, and until then unattended use means a
-personal access token with the caveat above. This is recorded in `docs/limitations.md` rather than
-left for someone to discover in a pipeline.
+explicitly unsupported**. LakeSpeak therefore owns the narrow M2M exchange for unattended
+workloads: an in-memory token cache, a refresh window and the workspace token endpoint. It still
+does not implement browser-based U2M or persist credentials. The supported paths and their
+precedence are recorded in `docs/authentication.md`.

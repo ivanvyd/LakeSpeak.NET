@@ -24,8 +24,9 @@ databricks auth login --profile company
 If the CLI is installed but not on `PATH` for the process running LakeSpeak — common on Windows
 after a `winget` install in an already-open shell — restart the shell.
 
-For CI, where there is usually no CLI at all, set `DATABRICKS_TOKEN` instead. See
-[authentication](authentication.md).
+For CI, where there is usually no CLI at all, set `DATABRICKS_CLIENT_ID` and
+`DATABRICKS_CLIENT_SECRET` for a Databricks service principal. LakeSpeak will acquire and refresh
+the OAuth token. See [authentication](authentication.md).
 
 ## "No Databricks host configured"
 
@@ -44,6 +45,9 @@ databricks auth login --profile company
 
 If you are supplying `DATABRICKS_TOKEN` yourself, it is probably stale — an Entra token lasts about
 an hour.
+
+For native M2M, verify that both `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET` are present,
+that the secret is active, and that the service principal exists in this workspace.
 
 ## "The authenticated identity is not permitted to do this (HTTP 403)"
 

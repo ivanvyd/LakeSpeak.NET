@@ -106,11 +106,15 @@ trusting the exit code alone. See [limitations](limitations.md).
 - name: Daily brief
   env:
     DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-    DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+    DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
   run: |
     dotnet tool install --global LakeSpeak.Cli
     lakespeak pack run packs/daily-brief.yaml --force
 ```
+
+LakeSpeak acquires and refreshes the short-lived OAuth access token in memory. Store the service
+principal client id and secret, not an access token that will expire before a later scheduled run.
 
 Remember that job logs are usually readable by everyone with repository access, and a report
 contains governed data. Treat the artifact accordingly.

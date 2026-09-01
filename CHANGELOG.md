@@ -6,11 +6,9 @@ here rather than left to be discovered.
 
 ## Unreleased
 
-## 0.3.1 — 2026-09-01
-
-This patch release fixes complete-result assembly for a Genie response shape observed in the live
-AWS workspace and moves the scheduled live smoke test from a stored bearer token to LakeSpeak's
-native OAuth M2M provider. The public API is unchanged.
+The next patch release fixes complete-result assembly for a Genie response shape observed in the
+live AWS workspace and moves the scheduled live smoke test from a stored bearer token to
+LakeSpeak's native OAuth M2M provider. The public API is unchanged.
 
 ### Fixed
 
@@ -20,6 +18,9 @@ native OAuth M2M provider. The public API is unchanged.
   workspace-relative chunk endpoint from the statement id, keeps the existing host validation,
   and continues until the result is complete. A live four-chunk result returned all 1,000 rows
   with `Truncated = false`. This closes [#54](https://github.com/ivanvyd/LakeSpeak.NET/issues/54).
+- Dot-only statement ids are rejected before URL construction. `System.Uri` normalizes `.` and
+  `..` path segments even after escaping; treating those malformed ids as incomplete prevents a
+  request to the wrong SQL endpoint.
 
 ### Changed
 
@@ -30,8 +31,8 @@ native OAuth M2M provider. The public API is unchanged.
 
 ### Verified
 
-- The M2M-backed GitHub Actions run completed all 9 live tests against the AWS workspace:
-  [run 33510178485](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33510178485).
+- The M2M-backed GitHub Actions run completed all 9 live tests against the AWS workspace from the
+  merged `main` revision: [run 33512379180](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33512379180).
 - The retry regression was replayed red/green: without the request-method context fallback the
   non-idempotent test made four attempts and failed; with the fallback restored it passed on both
   `net8.0` and `net10.0`.

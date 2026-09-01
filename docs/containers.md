@@ -11,7 +11,7 @@ Kubernetes CronJob, or an Airflow task, on a host where installing the .NET SDK 
 
 On GitHub Actions you do not need a container at all — installing the tool is one step. See
 [`examples/github-actions/daily-brief.yml`](../examples/github-actions/daily-brief.yml) for a
-scheduled pack run, including how the service principal token is minted and masked.
+scheduled pack run using native OAuth M2M.
 
 For everything else you probably do not want a container. Interactive use wants
 `dotnet tool install --global LakeSpeak.Cli`, and a machine with no .NET at all can use the
@@ -22,21 +22,26 @@ self-contained binary from the [releases page](https://github.com/ivanvyd/LakeSp
 
 ```bash
 docker build -t lakespeak .
-docker run --rm -e DATABRICKS_HOST -e DATABRICKS_TOKEN lakespeak agents list
+docker run --rm \
+  -e DATABRICKS_HOST \
+  -e DATABRICKS_CLIENT_ID \
+  -e DATABRICKS_CLIENT_SECRET \
+  lakespeak agents list
 ```
 
-Passing `-e VAR` without a value forwards it from your shell, so the token never appears in your
-command history or in `docker inspect`.
+Passing `-e VAR` without a value forwards it from your shell, so the service-principal credential
+never appears in your command history or in `docker inspect`.
 
 ## Authentication
 
-The image has **no Databricks CLI in it**, so the OAuth broker LakeSpeak normally uses is
-unavailable. That is intentional rather than an omission: a container is an unattended context,
-and the credential that belongs there is a token supplied at run time.
+The image has **no Databricks CLI in it**, so interactive profile brokering is unavailable. A
+container is an unattended context: set `DATABRICKS_HOST`, `DATABRICKS_CLIENT_ID` and
+`DATABRICKS_CLIENT_SECRET`, and LakeSpeak's native M2M provider will acquire and refresh short-lived
+access tokens in memory.
 
-Supply `DATABRICKS_TOKEN` — from a service principal, a workload identity, or your platform's
-secret store. See [authentication](authentication.md) for how to obtain one, and prefer a
-short-lived token over a personal access token.
+`DATABRICKS_TOKEN` remains available for older deployments and local debugging, but storing an
+access token for a scheduled container is unsafe because it expires. See
+[authentication](authentication.md) for the supported credential paths.
 
 **Never bake a credential into an image.** An image layer is a copy that outlives the container
 and travels wherever the image does.
@@ -45,7 +50,9 @@ and travels wherever the image does.
 
 ```bash
 docker run --rm \
-  -e DATABRICKS_HOST -e DATABRICKS_TOKEN \
+  -e DATABRICKS_HOST \
+  -e DATABRICKS_CLIENT_ID \
+  -e DATABRICKS_CLIENT_SECRET \
   -v "$PWD/packs:/work/packs" \
   -v "$PWD/reports:/work/reports" \
   lakespeak pack run packs/daily-brief.yaml

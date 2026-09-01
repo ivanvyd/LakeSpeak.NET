@@ -464,8 +464,9 @@ public sealed partial class GenieClient : IGenieClient
             {
                 // Observed on the Genie query-result endpoint: it retains the statement id and
                 // next index but omits the link that the SQL Statement endpoint returns. That
-                // endpoint's path is documented, and escaping the id keeps it one path segment.
-                if (statementId is not { Length: > 0 })
+                // endpoint's path is documented. Uri normalizes dot-only segments even after
+                // escaping, so those malformed ids cannot safely address a statement endpoint.
+                if (statementId is not { Length: > 0 } || statementId is "." or "..")
                 {
                     LogChunkLinkMissing(_logger);
                     return true;

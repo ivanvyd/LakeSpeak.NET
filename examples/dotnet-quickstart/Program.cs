@@ -1,7 +1,9 @@
 // A minimal, runnable consumer of LakeSpeak.Genie.
 //
 //   export DATABRICKS_HOST=https://your-workspace.azuredatabricks.net
-//   export DATABRICKS_TOKEN=...              # or omit, to use a Databricks CLI profile
+//   export DATABRICKS_CLIENT_ID=...           # for unattended OAuth M2M
+//   export DATABRICKS_CLIENT_SECRET=...
+//   # Or omit both to use a Databricks CLI profile; DATABRICKS_TOKEN is the local-debug path.
 //   dotnet run --project examples/dotnet-quickstart -- <agent-id> "How many rows are there?"
 //
 // This project is part of the solution so CI builds it: an example that no longer compiles
@@ -20,8 +22,8 @@ var (agentId, question) = (args[0], args[1]);
 
 var services = new ServiceCollection();
 
-// Profile is optional. With none, the host and credentials come from DATABRICKS_HOST /
-// DATABRICKS_TOKEN, then .databrickscfg.
+// Profile is optional. With none, the host and credentials come from environment configuration,
+// then .databrickscfg. See docs/authentication.md for the credential precedence.
 services.AddLakeSpeak();
 
 using var provider = services.BuildServiceProvider();
