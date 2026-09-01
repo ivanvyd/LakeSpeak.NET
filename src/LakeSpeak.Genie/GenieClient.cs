@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -395,7 +396,8 @@ public sealed partial class GenieClient : IGenieClient
         RejectExternalLinks(statement.Result);
 
         var rows = new List<IReadOnlyList<string?>>(statement.Result?.DataArray ?? []);
-        var incomplete = await AppendRemainingChunksAsync(rows, statement.Result, cancellationToken)
+        var incomplete = await AppendRemainingChunksAsync(
+                rows, statement.Result, statement.StatementId, cancellationToken)
             .ConfigureAwait(false);
 
         // `manifest.truncated` alone does NOT mean the caller has every row: it reports
@@ -429,6 +431,7 @@ public sealed partial class GenieClient : IGenieClient
     private async Task<bool> AppendRemainingChunksAsync(
         List<IReadOnlyList<string?>> rows,
         ResultDataWire? firstChunk,
+        string? statementId,
         CancellationToken cancellationToken)
     {
         var chunk = firstChunk;
@@ -456,12 +459,20 @@ public sealed partial class GenieClient : IGenieClient
                 return true;
             }
 
-            if (chunk.NextChunkInternalLink is not { Length: > 0 } link)
+            var link = chunk.NextChunkInternalLink;
+            if (link is not { Length: > 0 })
             {
-                // The contract pairs the index with a link. An index without one is a shape this
-                // client has not seen; the honest response is the shortfall, not a guessed URL.
-                LogChunkLinkMissing(_logger);
-                return true;
+                // Observed on the Genie query-result endpoint: it retains the statement id and
+                // next index but omits the link that the SQL Statement endpoint returns. That
+                // endpoint's path is documented, and escaping the id keeps it one path segment.
+                if (statementId is not { Length: > 0 })
+                {
+                    LogChunkLinkMissing(_logger);
+                    return true;
+                }
+
+                link = $"/api/2.0/sql/statements/{Uri.EscapeDataString(statementId)}/result/chunks/" +
+                    chunk.NextChunkIndex.Value.ToString(CultureInfo.InvariantCulture);
             }
 
             // A chunk that points at itself would otherwise spin here until the process is
