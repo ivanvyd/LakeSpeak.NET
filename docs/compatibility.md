@@ -238,7 +238,8 @@ The v0.3.1 release candidate was checked as a package, not only as source:
 | `LakeSpeak.Genie.0.3.1.nupkg` | Contains both `lib/net8.0/` and `lib/net10.0/` assemblies and XML documentation |
 | `LakeSpeak.Cli.0.3.1.nupkg` | Installed to an isolated tool path; `lakespeak --version` returned `0.3.1` with commit metadata |
 | Missing M2M secret | [Disposable-repository run 33524613970](https://github.com/ivanvyd/LakeSpeak.NET-live-smoke-negative-20260901/actions/runs/33524613970) failed at the credential guard; restore and tests were skipped |
-| Independent post-ship review | Correctness, security, performance and structure found no production-code defect. Requirements review found stale roadmap claims; correctness review found two checklist reproducibility defects. Both are corrected in the release-prep change |
+| Pre-release independent review | Correctness, security, performance and structure found no production-code defect. Requirements review found stale roadmap claims; correctness review found two checklist reproducibility defects. The release-prep change corrected them |
+| Post-release independent review | A second correctness, structure, security and requirements panel found no production-code defect. It found the stale 258-test count, an unpinned CycloneDX install, invalid public-NuGet attestation guidance and an ambiguous version-specific checklist. [PR #94](https://github.com/ivanvyd/LakeSpeak.NET/pull/94) corrected all four; [rehearsal 33537144267](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537144267) and final `main` [CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586581) and [Security](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586600) passed |
 
 The current runtime and `live-smoke.yml` are identical to revision `6b27140`, whose native-M2M
 AWS run passed all nine live tests. GCP remains untested and issue #52 remains open by decision.
