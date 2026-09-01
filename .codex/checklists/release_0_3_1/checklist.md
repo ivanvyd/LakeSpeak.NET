@@ -11,6 +11,22 @@ the procedure for a future release; `RELEASING.md` remains canonical.
 [`LakeSpeak.Genie`](https://www.nuget.org/packages/LakeSpeak.Genie/0.3.1) and
 [`LakeSpeak.Cli`](https://www.nuget.org/packages/LakeSpeak.Cli/0.3.1) packages.
 
+**Post-release audit:** The second independent correctness, structure, security, and requirements
+review found no production-code defect. It did find four release-evidence and process defects:
+
+- The recorded `net10.0` count was 258 instead of the reproduced 264.
+- The privileged release job installed CycloneDX without an exact version.
+- `SECURITY.md` told consumers to verify the public NuGet package against the pre-signing build
+  attestation, although NuGet.org adds a repository signature and changes the archive hash.
+- This version-specific checklist did not identify itself as a completed historical record.
+
+[PR #94](https://github.com/ivanvyd/LakeSpeak.NET/pull/94) corrected all four. The
+[post-release rehearsal](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537144267) installed
+CycloneDX 6.2.0, generated the SBOM, passed the release build and tests, and skipped publication.
+Final `main` [CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586581) and
+[Security](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586600) runs passed at
+`833f6188e137dc4a9177f9c93a601ec60910552c`.
+
 ---
 
 ## Setup & Test Data

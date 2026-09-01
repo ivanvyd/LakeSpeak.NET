@@ -6,6 +6,19 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+### Security
+
+- Pin the CycloneDX SBOM generator to version 6.2.0 in the release workflow. The v0.3.1 workflow
+  resolved that version, and the pin makes later releases deterministic.
+
+### Documentation
+
+- Explain that NuGet.org repository-signs packages after upload, so consumers verify public
+  `.nupkg` files with `dotnet nuget verify --all`; GitHub provenance verification applies to the
+  downloadable release archives.
+- Correct the recorded v0.3.1 `net10.0` test count from 258 to 264 and preserve the separate
+  417-test tag-workflow result.
+
 ## 0.3.1 — 2026-09-01
 
 This patch release fixes complete-result assembly for a Genie response shape observed in the
