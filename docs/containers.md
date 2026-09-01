@@ -30,7 +30,10 @@ docker run --rm \
 ```
 
 Passing `-e VAR` without a value forwards it from your shell, so the service-principal credential
-never appears in your command history or in `docker inspect`.
+does not appear in your command history. Docker still records the resolved value in the container
+configuration, where users with Docker-daemon access can read it through `docker inspect`. Restrict
+daemon access on a single-user host; on a shared platform, use its secret-injection mechanism
+instead of ordinary container environment variables.
 
 ## Authentication
 
