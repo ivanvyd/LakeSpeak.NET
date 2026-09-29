@@ -4,9 +4,9 @@
     "net10.0": {
       "coverlet.collector": {
         "type": "Direct",
-        "requested": "[10.0.1, )",
-        "resolved": "10.0.1",
-        "contentHash": "27jXSV/0DbVqF5jDrAxuQFZ9oaz6gmG03p8ttxAFk+X0M4woFYj7MoWDLCna5EGLb0CE6OE7X6ZH3Wt5smTtaA=="
+        "requested": "[10.1.0, )",
+        "resolved": "10.1.0",
+        "contentHash": "SlYCIHnBYxINSUpR75SiM5JEmnx11pqT+Ac/C/fUqTTA0dLPl9eYzmFXKKuxmQhL3ZdTQl4PBD3YdAxAauaKLQ=="
       },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
@@ -454,8 +454,8 @@
       "lakespeak.application": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Configuration": "[0.3.2, )",
-          "LakeSpeak.Genie": "[0.3.2, )",
+          "LakeSpeak.Configuration": "[0.3.3, )",
+          "LakeSpeak.Genie": "[0.3.3, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.12, )"
         }
@@ -463,11 +463,11 @@
       "lakespeak.cli": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Application": "[0.3.2, )",
-          "LakeSpeak.Configuration": "[0.3.2, )",
-          "LakeSpeak.Genie": "[0.3.2, )",
-          "LakeSpeak.QuestionPacks": "[0.3.2, )",
-          "LakeSpeak.Rendering": "[0.3.2, )",
+          "LakeSpeak.Application": "[0.3.3, )",
+          "LakeSpeak.Configuration": "[0.3.3, )",
+          "LakeSpeak.Genie": "[0.3.3, )",
+          "LakeSpeak.QuestionPacks": "[0.3.3, )",
+          "LakeSpeak.Rendering": "[0.3.3, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
           "Spectre.Console": "[0.57.2, )",
           "System.CommandLine": "[2.0.12, )"
@@ -476,7 +476,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.2, )",
+          "LakeSpeak.Genie": "[0.3.3, )",
           "Microsoft.Extensions.Configuration": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.Binder": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.12, )",
@@ -497,15 +497,15 @@
       "lakespeak.questionpacks": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.2, )",
-          "LakeSpeak.Rendering": "[0.3.2, )",
+          "LakeSpeak.Genie": "[0.3.3, )",
+          "LakeSpeak.Rendering": "[0.3.3, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.2, )",
+          "LakeSpeak.Genie": "[0.3.3, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
