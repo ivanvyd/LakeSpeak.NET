@@ -6,6 +6,24 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.3.3 — 2026-09-29
+
+This maintenance release updates test dependencies and the pinned CodeQL Action. It does not change
+the public API or runtime behavior of the Genie library and CLI.
+
+### Changed
+
+- Update `Microsoft.NET.Test.Sdk` to 18.10.1, `WireMock.Net` to 2.18.0, and the two xUnit v3
+  packages to 4.0.1. Regenerate lock files for both `net8.0` and `net10.0` test targets.
+- Update all four CodeQL Action pins together to v4.38.1.
+- Keep `Verify.XunitV3` at 32.0.1 and defer its 33.x major update until a valid sponsorship,
+  license, or qualifying exemption can be recorded.
+
+## 0.3.2 — 2026-09-12
+
+This patch hardens workspace selection, Question Pack validation and output paths, result fidelity,
+streaming text output, Genie timeouts, and release publication. See [PR #101](https://github.com/ivanvyd/LakeSpeak.NET/pull/101).
+
 ### Security
 
 - Pin the CycloneDX SBOM generator to version 6.2.0 in the release workflow. The v0.3.1 workflow

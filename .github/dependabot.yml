@@ -11,6 +11,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Verify 33.x requires an entitlement declaration. Revisit this when the
+    # maintainer has a verified sponsorship, license, or qualifying exemption.
+    ignore:
+      - dependency-name: Verify.XunitV3
+        update-types: ['version-update:semver-major']
     groups:
       # One PR per ecosystem-wide bump rather than a dozen. The Microsoft.Extensions
       # packages move in lockstep and reviewing them separately finds nothing.
