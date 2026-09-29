@@ -6,6 +6,23 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.3.4 — 2026-09-30
+
+This maintenance release updates development and CI dependencies and removes unsafe branch-name
+interpolation from CI failure messages. The Genie library and CLI source code and public API are
+unchanged; the container base images are updated.
+
+### Security
+
+- Remove untrusted pull request branch-name interpolation from the locked-restore failure messages.
+- Pin the .NET SDK and runtime-dependencies container base images to multi-platform manifest digests
+  and add weekly Docker Dependabot updates.
+
+### Changed
+
+- Update all four CodeQL Action pins to v4.38.2.
+- Update `coverlet.collector` to 10.1.0 and regenerate the `net8.0` and `net10.0` lock files.
+
 ## 0.3.3 — 2026-09-29
 
 This maintenance release updates test dependencies and the pinned CodeQL Action. It does not change

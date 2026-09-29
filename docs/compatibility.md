@@ -227,6 +227,20 @@ What remains untested on AWS:
   Azure-only table names and the run failed with `FileNotFoundException` on AWS, which is a question-pack
   authoring issue, not a wire-shape one.
 
+## v0.3.4 release candidate — 2026-09-30
+
+The v0.3.4 candidate changes release metadata and the internal project versions in lock files on
+top of the dependency and workflow maintenance in [PR #108](https://github.com/ivanvyd/LakeSpeak.NET/pull/108).
+It has not been published or tested against a live Databricks workspace.
+
+| Check | Result |
+|---|---|
+| Locked restore and Release build | Passed locally with 0 warnings and 0 errors |
+| Full offline suite | 607 passed, 0 failed, 0 skipped across the available `net8.0` and `net10.0` test targets |
+| Package creation | `LakeSpeak.Genie.0.3.4.nupkg` and `LakeSpeak.Cli.0.3.4.nupkg` were created locally |
+| Hosted maintenance checks | [PR #108 CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/36639326242) passed its six OS/TFM test cells, pack, and tool smoke; [Security](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/36639326293) passed CodeQL, dependency review, and secrets scanning |
+| Live clouds | Not re-tested for this candidate. Prior Azure and AWS results are recorded above; GCP remains untested in [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
+
 ## Local verification — 2026-09-01 (v0.3.1)
 
 The v0.3.1 release candidate was checked as a package, not only as source:
