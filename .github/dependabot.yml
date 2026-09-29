@@ -44,3 +44,10 @@ updates:
         update-types:
           - minor
           - patch
+
+  # Dockerfiles use immutable manifest digests, so Dependabot keeps the pinned base images current.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
