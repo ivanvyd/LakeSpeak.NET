@@ -10,7 +10,7 @@
 # image, so the OAuth broker is unavailable by design — a container is an unattended context, and
 # DATABRICKS_TOKEN is the credential that belongs there. See docs/authentication.md.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29 AS build
 WORKDIR /src
 
 # Restore against the lock files first so this layer caches until a dependency actually changes.
@@ -26,7 +26,7 @@ RUN dotnet publish src/LakeSpeak.Cli/LakeSpeak.Cli.csproj \
 
 # runtime-deps rather than runtime: the binary is self-contained, so it needs the native
 # dependencies but not the .NET runtime on top of them.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0@sha256:099f6f87ed745377dd27bd722f0d1a352bca71b4fddaabfd75e7c064bcaa82da AS final
 
 # Genie returns prose and cell values drawn from your tables, which are not ASCII. Without this
 # the container renders them as question marks.

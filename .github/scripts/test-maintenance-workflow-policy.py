@@ -23,6 +23,16 @@ def forbid(text: str, fragment: str, message: str) -> None:
 
 def main() -> None:
     require(CI, "  workflow_dispatch:\n", "CI must accept the post-refresh dispatch")
+    refresh_guidance = (
+        "Run the 'Refresh lock files' workflow using the Dependabot branch, then re-run these checks."
+    )
+    if CI.count(refresh_guidance) != 2:
+        raise AssertionError("both locked restore paths must guide Dependabot updates safely")
+    forbid(
+        CI,
+        "${{ github.head_ref || github.ref_name }}",
+        "CI failure guidance must not interpolate an untrusted branch name into Bash",
+    )
 
     validate = require(
         REFRESH,
