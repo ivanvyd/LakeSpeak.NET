@@ -454,8 +454,8 @@
       "lakespeak.application": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Configuration": "[0.3.3, )",
-          "LakeSpeak.Genie": "[0.3.3, )",
+          "LakeSpeak.Configuration": "[0.3.4, )",
+          "LakeSpeak.Genie": "[0.3.4, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.12, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.12, )"
         }
@@ -463,11 +463,11 @@
       "lakespeak.cli": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Application": "[0.3.3, )",
-          "LakeSpeak.Configuration": "[0.3.3, )",
-          "LakeSpeak.Genie": "[0.3.3, )",
-          "LakeSpeak.QuestionPacks": "[0.3.3, )",
-          "LakeSpeak.Rendering": "[0.3.3, )",
+          "LakeSpeak.Application": "[0.3.4, )",
+          "LakeSpeak.Configuration": "[0.3.4, )",
+          "LakeSpeak.Genie": "[0.3.4, )",
+          "LakeSpeak.QuestionPacks": "[0.3.4, )",
+          "LakeSpeak.Rendering": "[0.3.4, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
           "Spectre.Console": "[0.57.2, )",
           "System.CommandLine": "[2.0.12, )"
@@ -476,7 +476,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.3, )",
+          "LakeSpeak.Genie": "[0.3.4, )",
           "Microsoft.Extensions.Configuration": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.Binder": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.12, )",
@@ -497,15 +497,15 @@
       "lakespeak.questionpacks": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.3, )",
-          "LakeSpeak.Rendering": "[0.3.3, )",
+          "LakeSpeak.Genie": "[0.3.4, )",
+          "LakeSpeak.Rendering": "[0.3.4, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.3, )",
+          "LakeSpeak.Genie": "[0.3.4, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
