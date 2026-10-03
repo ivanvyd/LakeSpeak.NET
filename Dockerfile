@@ -26,7 +26,7 @@ RUN dotnet publish src/LakeSpeak.Cli/LakeSpeak.Cli.csproj \
 
 # runtime-deps rather than runtime: the binary is self-contained, so it needs the native
 # dependencies but not the .NET runtime on top of them.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0@sha256:099f6f87ed745377dd27bd722f0d1a352bca71b4fddaabfd75e7c064bcaa82da AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0@sha256:12dd273c196e92aa91542749b8df0996f497f812811abba9e6613b484f681dd0 AS final
 
 # Genie returns prose and cell values drawn from your tables, which are not ASCII. Without this
 # the container renders them as question marks.
