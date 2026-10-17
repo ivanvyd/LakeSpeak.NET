@@ -55,7 +55,7 @@ jobs:
       - run: dotnet restore --locked-mode
       # Pin to net10.0 — the net8.0 cell is the CI matrix's job.
       - run: dotnet test --no-restore -c Release -f net10.0 --filter-trait 'Category=Live' --results-directory TestResults --ignore-exit-code 8
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: live-test-results
