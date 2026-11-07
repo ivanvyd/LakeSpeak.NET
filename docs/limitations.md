@@ -25,7 +25,7 @@ either direction is worse than reporting faithfully.
 
 The consequence for automation is worth planning around. An unattended Question Pack can produce a
 report whose answer is a request for clarification, and by default it will exit `0` because nothing
-failed. The **Unreleased** [`behavior.requireQueryResult`](question-packs.md#fields-worth-understanding)
+failed. The **0.4.0** [`behavior.requireQueryResult`](question-packs.md#fields-worth-understanding)
 option fails any question without a complete query result, including clarifications without one.
 It checks the result structure, not the wording or correctness of an answer. Phrase pack questions
 to be unambiguous, and read reports rather than trusting the exit code alone.

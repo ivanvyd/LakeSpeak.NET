@@ -6,6 +6,8 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.4.0 — 2026-11-07
+
 ### Added
 
 - SDK package validation for `LakeSpeak.Genie` against published 0.3.5, including its .NET 8 and

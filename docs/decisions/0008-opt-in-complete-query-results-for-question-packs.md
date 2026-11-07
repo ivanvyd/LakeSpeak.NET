@@ -30,5 +30,5 @@ claiming that SQL or the answer is correct. No natural-language detection, addit
 dependency, or change to `LakeSpeak.Genie` is needed. Both collected and streaming runs use the
 same check, preserving the CLI's warning, partial-report exit code and atomic publication path.
 
-The option is Unreleased. It is not accepted by the published 0.3.5 CLI; the separate package
+The option is introduced in 0.4.0. It is not accepted by the published 0.3.5 CLI; the separate package
 quickstart deliberately uses only the public 0.3.5 Genie API.

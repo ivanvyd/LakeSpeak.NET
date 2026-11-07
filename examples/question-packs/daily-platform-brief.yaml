@@ -30,7 +30,7 @@ spec:
 
   behavior:
     continueOnQuestionFailure: true
-    # Unreleased: opt in after upgrading to a version that supports this field.
+    # 0.4.0+: opt in after upgrading the CLI.
     # requireQueryResult: true
     includeGeneratedSql: false
     includeTimings: true

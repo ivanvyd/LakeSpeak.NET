@@ -38,7 +38,7 @@ spec:
 
   behavior:
     continueOnQuestionFailure: true
-    # Unreleased: uncomment after upgrading to a version that supports this field.
+    # 0.4.0+: uncomment after upgrading the CLI.
     # requireQueryResult: true
     includeGeneratedSql: false
     includeTimings: true
@@ -61,7 +61,7 @@ alias profile and `defaults.profile`.
 place, exiting `8`. Set it to `false` to stop at the first failure. For a scheduled report, partial
 results usually beat none.
 
-**`behavior.requireQueryResult`** (default `false`, **Unreleased**) requires a complete tabular
+**`behavior.requireQueryResult`** (default `false`, **since 0.4.0**) requires a complete tabular
 result for every question. A completed message with no result, including a clarification, fails
 with `behavior.requireQueryResult requires a query result; Genie returned none.` An incomplete
 or truncated result fails with `behavior.requireQueryResult requires a complete query result;
@@ -72,7 +72,7 @@ With `continueOnQuestionFailure: true`, these failures appear in the report and 
 With `false`, the first failure stops the run with exit `6`; no report is published and an existing
 destination stays unchanged. Cancellation remains exit `7`. Omit `requireQueryResult` for the
 existing behavior, which accepts completed messages with no result or a truncated result.
-The example above keeps the Unreleased option commented so it works with published 0.3.5,
+The example above keeps the 0.4.0 option commented so it also works with published 0.3.5,
 which rejects the field when uncommented.
 
 **`behavior.includeIdentifiers`** (default `false`) adds conversation and message ids so an answer
@@ -130,7 +130,7 @@ anything consequential. That line is not configurable.
 
 Genie sometimes replies with a **clarifying question** instead of an answer. By default, the
 message completes successfully and the clarification becomes the answer text, so the pack can
-exit `0` with a report whose answer is a question. The Unreleased `requireQueryResult: true`
+exit `0` with a report whose answer is a question. The 0.4.0 `requireQueryResult: true`
 option rejects any response without a query result, without trying to classify natural language.
 Phrase pack questions unambiguously, and check the SQL and reports before relying on them.
 See [limitations](limitations.md).
