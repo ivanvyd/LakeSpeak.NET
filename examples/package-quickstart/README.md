@@ -39,8 +39,10 @@ there is no network fallback. This verifies local integration with a package, no
 or the correctness of generated SQL.
 
 The checked-in lock file records dependency versions and content hashes for this application.
-CI checks this baseline, then repeats the fixture with fresh dependency resolution and a separate
-temporary lock file. The two checks cover reproducibility and a normal consumer restore.
+CI checks this baseline, then resolves fresh dependencies into a separate temporary lock file.
+It forces a locked restore of that generated lock before building and running the fixture,
+so cached restore assets cannot skip its hash checks.
+The two checks cover reproducibility and a normal consumer restore.
 
 ## Use .NET 10
 

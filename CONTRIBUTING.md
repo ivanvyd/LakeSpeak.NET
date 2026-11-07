@@ -57,6 +57,23 @@ dotnet restore --force-evaluate
 CI restores in `--locked-mode`, so a stale lock file fails the build rather than silently
 resolving to different versions on the runner than on your machine.
 
+### Parser properties
+
+`ParserPropertyTests` uses FsCheck to generate and shrink Unicode questions, malformed YAML,
+and output paths. Each property runs 1,000 cases for each of two fixed seeds on .NET 8 and .NET 10
+in the existing test matrix. FsCheck is a test-only BSD-3-Clause dependency; its transitive
+FSharp.Core dependency is MIT-licensed. Neither reaches the shipped packages.
+
+Run the properties alone with:
+
+```bash
+dotnet test --project tests/LakeSpeak.QuestionPacks.Tests/LakeSpeak.QuestionPacks.Tests.csproj -f net8.0 -c Release --filter-class '*ParserPropertyTests'
+```
+
+Failures include the seed and minimized input. Keep the minimized case as a regression test,
+then repeat the same seed after fixing it. This is property-based fuzzing, not coverage-guided
+fuzzing or a claim that all parser inputs have been tested.
+
 ## What a good change looks like
 
 **A test that would fail without the fix.** For anything that could regress, prove it: revert your
