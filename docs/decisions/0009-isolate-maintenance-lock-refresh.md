@@ -21,6 +21,9 @@ The read-only refresh runner checks out the resolved candidate SHA, regenerates 
 verifies locked restore and builds. Its only transfer is a bounded JSON artifact containing
 lock bytes. Neither candidate execution nor candidate outputs supply the writer's trusted SHA.
 
+Set workflow-level `cache-mode: none` without job overrides to deny cache restores and saves.
+Runtime cache tokens are independent of repository permissions; GitHub enforces their scope.
+
 The writer checks out only the trusted workflow source. It validates the artifact envelope,
 branch, source SHA, paths, regular-file modes and NuGet lock structures before writing.
 The payload must contain exactly the existing tracked lock files; unrelated files, symlinks,
@@ -43,6 +46,6 @@ new SHA. Dispatching `ci.yml` alone cannot establish all required checks for tha
 
 Validation checks the supported lock formats and data shapes; it does not solve NuGet ranges,
 judge dependency suitability or attest that candidate code honestly performed a build.
-The protocol trusts default-branch workflow code, pinned Actions, hosted runner isolation,
-job-token scoping and run-scoped artifact delivery. Payload size checks occur after artifact
-download, so hosted artifact transfer and extraction remain platform trust assumptions.
+The protocol trusts default-branch code, pinned Actions, hosted runner isolation, job-token scoping and run-scoped artifacts.
+Runtime cache denial relies on GitHub's [scoped cache tokens](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#cache-mode); hosted enforcement remains unverified.
+Payload size checks occur after download; artifact transfer and extraction remain platform assumptions.
