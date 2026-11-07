@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="FsCheck" PrivateAssets="all" />
     <PackageReference Include="NSubstitute" />
     <ProjectReference Include="..\..\src\LakeSpeak.QuestionPacks\LakeSpeak.QuestionPacks.csproj" />
     <ProjectReference Include="..\..\src\LakeSpeak.Configuration\LakeSpeak.Configuration.csproj" />

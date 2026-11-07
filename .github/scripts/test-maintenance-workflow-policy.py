@@ -69,6 +69,39 @@ def check_branch_input(bash: str) -> None:
         forbid(result.stdout, "aINJECTION_MARKER", "maintenance branch executed as shell code")
 
 
+def check_fresh_consumer_lock(bash: str) -> None:
+    block = CI.split("      - name: Published-package quickstart (fresh resolution, offline)\n", 1)[1].split("\n      - ", 1)[0]
+    script = textwrap.dedent(block.split("        run: |\n", 1)[1])
+    lock_option = '--lock-file-path "$RUNNER_TEMP/quickstart-fresh.lock.json"'
+    require(script, "restore --force-evaluate " + lock_option, "fresh coverage must use a separate generated lock")
+    require(script, "restore --locked-mode --force " + lock_option, "build must revalidate the generated lock instead of reusing cached assets")
+    stub = """set -e
+dotnet() {
+  printf '%s\\n' "$*"
+  if [ "$1" = restore ]; then
+    local mode="$2"
+    shift 2
+    if [ "$mode" = --locked-mode ]; then
+      [ "$1" = --force ] || return 96
+      shift
+    fi
+    [ "$1" = --lock-file-path ] && [ "$2" = "$RUNNER_TEMP/quickstart-fresh.lock.json" ] || return 97
+    if [ "$mode" = --locked-mode ]; then
+      return "$LOCK_EXIT"
+    fi
+  fi
+}
+"""
+    for code in ("0", "1"):
+        result = run(bash, stub + script, LOCK_EXIT=code, RUNNER_TEMP="/tmp/fresh lock")
+        if result.returncode != int(code):
+            raise AssertionError(result.stderr or result.stdout)
+        commands = result.stdout.splitlines()
+        if len(commands) != (4 if code == "0" else 2):
+            raise AssertionError("failed generated-lock validation must stop before build/run")
+        require(commands[0], "--lock-file-path /tmp/fresh lock/quickstart-fresh.lock.json", "fresh lock path must remain one quoted argument")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bash", default="bash")
@@ -91,7 +124,8 @@ def main() -> None:
     forbid(REFRESH, "secrets.PAT", "the workflow must not introduce a long-lived PAT")
     check_restore_diagnostics(args.bash)
     check_branch_input(args.bash)
-    print("maintenance workflow policy passed: CI identity, both restore diagnostics, branch shell data")
+    check_fresh_consumer_lock(args.bash)
+    print("maintenance workflow policy passed: CI identity, restore diagnostics, branch shell data, fresh lock replay")
 
 
 if __name__ == "__main__":
