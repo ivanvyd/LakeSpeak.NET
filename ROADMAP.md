@@ -15,8 +15,13 @@ on 2026-11-07. The CLI requires .NET 10. See the
 
 The [weekly live suite](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/41454940210)
 passed nine tests on 2026-11-02 at revision `44994c8`. That run predates 0.4.0 and used source,
-rather than an installed-package consumer. Current-release live acceptance remains unverified;
-GCP remains untested. The [compatibility record](docs/compatibility.md) separates these results.
+rather than an installed-package consumer.
+
+On 2026-11-07, the installed 0.4.0 net8 client passed one synthetic live query through CLI user
+OAuth. The [current-main M2M suite](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/42409476224)
+also passed all nine live tests on net10 at revision `e01aa61`, with the existing CI Agent and
+credentials unchanged. GCP remains untested. The [compatibility record](docs/compatibility.md)
+separates the installed-package result, source-suite coverage and remaining limits.
 
 ## v0.1 — a good terminal and a focused client
 
