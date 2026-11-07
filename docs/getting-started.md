@@ -6,14 +6,14 @@ Agent. An offline fixture lets you check the integration before supplying worksp
 ## Using it from .NET
 
 The [standalone .NET 8 quickstart](../examples/package-quickstart/README.md) pins published
-`LakeSpeak.Genie` 0.3.5. Copy that directory and follow its restore, build and `--fixture`
+`LakeSpeak.Genie` 0.4.0. Copy that directory and follow its restore, build and `--fixture`
 commands. The fixture uses HTTP responses in memory and needs no Databricks account or CLI.
 Its output is explicitly marked **OFFLINE**; it does not verify a live warehouse.
 
 For an existing application targeting .NET 8 or .NET 10:
 
 ```bash
-dotnet add package LakeSpeak.Genie --version 0.3.5
+dotnet add package LakeSpeak.Genie --version 0.4.0
 ```
 
 After the workspace prerequisites below and `databricks auth login --profile my-workspace`,

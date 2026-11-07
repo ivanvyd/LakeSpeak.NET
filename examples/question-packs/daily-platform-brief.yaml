@@ -30,7 +30,6 @@ spec:
 
   behavior:
     continueOnQuestionFailure: true
-    # 0.4.0+: opt in after upgrading the CLI.
-    # requireQueryResult: true
+    requireQueryResult: false
     includeGeneratedSql: false
     includeTimings: true

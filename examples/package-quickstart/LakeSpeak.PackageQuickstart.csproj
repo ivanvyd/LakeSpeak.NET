@@ -8,6 +8,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LakeSpeak.Genie" Version="[0.3.5]" />
+    <PackageReference Include="LakeSpeak.Genie" Version="[0.4.0]" />
   </ItemGroup>
 </Project>

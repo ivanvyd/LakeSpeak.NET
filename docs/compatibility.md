@@ -14,6 +14,9 @@ evidence that a cloud works.
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
 | 0.1.x — 0.2.x | 10.0 | 1.10.0 | `/api/2.0/genie`, preview when released | Library family and CLI are 10.0-only |
 
+Published 0.4.0 packages passed isolated .NET 8 and .NET 10 consumers on 2026-11-07.
+See the [release evidence](release-evidence/v0.4.0.md) for package, tool and archive checks.
+
 The Genie Conversation API became [generally available on
 2026-04-02](https://docs.databricks.com/aws/en/ai-bi/release-notes/2026#april-2-2026). Visualization
 retrieval became [generally available on

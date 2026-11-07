@@ -38,8 +38,7 @@ spec:
 
   behavior:
     continueOnQuestionFailure: true
-    # 0.4.0+: uncomment after upgrading the CLI.
-    # requireQueryResult: true
+    requireQueryResult: false
     includeGeneratedSql: false
     includeTimings: true
     includeIdentifiers: false
@@ -72,8 +71,8 @@ With `continueOnQuestionFailure: true`, these failures appear in the report and 
 With `false`, the first failure stops the run with exit `6`; no report is published and an existing
 destination stays unchanged. Cancellation remains exit `7`. Omit `requireQueryResult` for the
 existing behavior, which accepts completed messages with no result or a truncated result.
-The example above keeps the 0.4.0 option commented so it also works with published 0.3.5,
-which rejects the field when uncommented.
+The example above targets CLI 0.4.0 or later. Omit `requireQueryResult` when using an older CLI,
+which rejects the field.
 
 **`behavior.includeIdentifiers`** (default `false`) adds conversation and message ids so an answer
 can be traced back in Databricks. It is off by default because those ids identify a conversation
