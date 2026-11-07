@@ -4,8 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Refresh-lock-files dispatches this explicitly after its GITHUB_TOKEN push. GitHub suppresses
-  # the ordinary push event for that token, so the maintenance workflow needs this entry point.
+  # Keep manual runs available for diagnostics at an explicitly selected ref.
   workflow_dispatch:
 
 # Least privilege by default. Jobs needing more declare it themselves.
@@ -53,7 +52,7 @@ jobs:
           # `-f net8.0` filter still walks every project in the slnx.
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           if ! dotnet restore "$slnx" --locked-mode; then
-            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow using the Dependabot branch, then re-run these checks."
+            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow from the default branch, with the Dependabot branch as its input, then re-run these checks."
             exit 1
           fi
       - name: Build
@@ -70,11 +69,19 @@ jobs:
           slnx="$([ "${{ matrix.tfm }}" = 'net8.0' ] && echo 'tests/libraries-only.slnx' || echo 'LakeSpeak.slnx')"
           dotnet format "$slnx" --verify-no-changes --no-restore
 
-      - name: Published-package quickstart (offline)
+      - name: Published-package quickstart (locked, offline)
         if: matrix.tfm == 'net8.0'
         working-directory: examples/package-quickstart
         run: |
-          dotnet restore --source https://api.nuget.org/v3/index.json
+          dotnet restore --locked-mode --source https://api.nuget.org/v3/index.json
+          dotnet build --no-restore
+          dotnet run --no-build -- --fixture
+
+      - name: Published-package quickstart (fresh resolution, offline)
+        if: matrix.tfm == 'net8.0'
+        working-directory: examples/package-quickstart
+        run: |
+          dotnet restore --force-evaluate --lock-file-path "$RUNNER_TEMP/quickstart-fresh.lock.json" --source https://api.nuget.org/v3/index.json
           dotnet build --no-restore
           dotnet run --no-build -- --fixture
 
@@ -83,6 +90,7 @@ jobs:
         run: |
           bash .github/scripts/test-release-workflow-policy.sh
           python .github/scripts/test-maintenance-workflow-policy.py
+          python .github/scripts/test-refresh-lock-files.py
 
       - name: Fail on vulnerable packages
         shell: bash
@@ -120,7 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           if ! dotnet restore LakeSpeak.slnx --locked-mode; then
-            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow using the Dependabot branch, then re-run these checks."
+            echo "::error title=Lock files are out of step::dotnet restore --locked-mode failed. If this is a dependency bump, Dependabot cannot rewrite packages.lock.json under central package management. Run the 'Refresh lock files' workflow from the default branch, with the Dependabot branch as its input, then re-run these checks."
             exit 1
           fi
       - name: Build and pack
