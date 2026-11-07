@@ -6,6 +6,24 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.3.5 — 2026-11-07
+
+### Fixed
+
+- Bound query re-execution from the initial request through result polling and chunk retrieval.
+  The local deadline returns no result on expiry and preserves caller cancellation. It does not
+  cancel remote warehouse computation.
+- Reject numeric and combined output-format values before command execution.
+- Sanitize control characters in human-readable Agent identifiers and Markdown metadata.
+- Reject incomplete NuGet advisory reports, including warning/error logs and missing scan parameters.
+- Keep the selected workspace profile in the README and getting-started command sequences.
+
+### Changed
+
+- Update System.CommandLine, test dependencies, CI actions, and pinned container images.
+  Regenerate lock files while retaining the .NET 8 dependency floors and Verify32 pin.
+- Shorten comments while preserving output-fidelity, security, and compatibility rules.
+
 ## 0.3.4 — 2026-09-30
 
 This maintenance release updates development and CI dependencies and removes unsafe branch-name
