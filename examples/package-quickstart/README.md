@@ -17,7 +17,7 @@ Prerequisite: the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 Restore needs access to NuGet. Running the fixture needs no Databricks account, CLI or credentials.
 
 ```bash
-dotnet restore --source https://api.nuget.org/v3/index.json
+dotnet restore --locked-mode --source https://api.nuget.org/v3/index.json
 dotnet build --no-restore
 dotnet run --no-build -- --fixture
 ```
@@ -38,13 +38,18 @@ result retrieval. The published client parses them. Unknown requests fail inside
 there is no network fallback. This verifies local integration with a package, not a live workspace
 or the correctness of generated SQL.
 
+The checked-in lock file records dependency versions and content hashes for this application.
+CI checks this baseline, then repeats the fixture with fresh dependency resolution and a separate
+temporary lock file. The two checks cover reproducibility and a normal consumer restore.
+
 ## Use .NET 10
 
 The sample retains a .NET 8 consumer floor. To run the same published package on .NET 10,
 copy this directory and change `<TargetFramework>` to `net10.0` in the project file. In the
 copy's `global.json`, change `sdk.version` to `10.0.100` and keep `rollForward: latestFeature`
 and `allowPrerelease: false`. This selects an installed stable .NET 10 SDK; it does not install one.
-Keep the package reference at `[0.4.0]`, then repeat the restore, build and `--fixture` commands
+Keep the package reference at `[0.4.0]`, run `dotnet restore --force-evaluate` once to regenerate the
+lock for the changed framework, then repeat the locked restore, build and `--fixture` commands
 from the copied directory. Both target routes use the same client API and offline fixture.
 
 ## Ask a real Genie Agent
