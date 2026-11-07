@@ -37,7 +37,7 @@ does not use that path and has not exercised it live.
 |---|---|
 | Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
 | AWS Databricks | **Verified against a live workspace on 2026-09-01** — see [Live verification, AWS](#live-verification-aws--through-2026-09-01) below. The PAT path, native OAuth M2M, scheduled live suite and multi-chunk composition were exercised. Closes [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
-| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52). Same shape as AWS. **The contribution that closes #52 is a PR that runs the live suite on a GCP workspace and records the result here.** |
+| GCP Databricks | Not tested. Validation is deferred in [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52). A future GCP verification needs a live suite run on a GCP workspace and a dated record of its results here. |
 
 ## Live verification, 2026-08-01
 
@@ -261,7 +261,8 @@ The v0.3.1 release candidate was checked as a package, not only as source:
 | Post-release independent review | A second correctness, structure, security and requirements panel found no production-code defect. It found the stale 258-test count, an unpinned CycloneDX install, invalid public-NuGet attestation guidance and an ambiguous version-specific checklist. [PR #94](https://github.com/ivanvyd/LakeSpeak.NET/pull/94) corrected all four; [rehearsal 33537144267](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537144267) and final `main` [CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586581) and [Security](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586600) passed |
 
 The current runtime and `live-smoke.yml` are identical to revision `6b27140`, whose native-M2M
-AWS run passed all nine live tests. GCP remains untested and issue #52 remains open by decision.
+AWS run passed all nine live tests. GCP remains untested; issue #52 was subsequently closed as
+not planned. That closure does not establish GCP compatibility.
 
 ## Local verification — 2026-08-31
 

@@ -231,7 +231,7 @@ promise; it is a record of evidence.
 | Unattended service-principal authentication (OAuth M2M) | Verified against the live AWS workspace on 2026-09-01. A GitHub Actions run completed all 9 live tests using native token acquisition and refresh |
 | Live smoke, re-runnable from `Actions` | Behind `secrets.DATABRICKS_CLIENT_ID`, `secrets.DATABRICKS_CLIENT_SECRET`, `vars.LAKESPEAK_LIVE_HOST` and `vars.LAKESPEAK_LIVE_AGENT`; weekly and on demand. Forks without the variables see a notice and exit 0 |
 | AWS Databricks | Verified live on 2026-09-01, including native OAuth M2M and multi-chunk result assembly — see [docs/compatibility.md](docs/compatibility.md) |
-| GCP Databricks | Not tested — [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
+| GCP Databricks | Not tested; validation deferred in [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52) |
 | Windows / Linux / macOS | Covered by the CI matrix |
 
 Paths that have not been exercised against a real workspace are labelled as such in
