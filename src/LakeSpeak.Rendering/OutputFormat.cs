@@ -36,6 +36,9 @@ public static class OutputFormatExtensions
     public static bool TryParse(string? value, out OutputFormat format)
     {
         format = OutputFormat.Text;
-        return value is not null && Enum.TryParse(value, ignoreCase: true, out format);
+        return value is not null
+            && Enum.TryParse(value, ignoreCase: true, out format)
+            && Enum.IsDefined(format)
+            && string.Equals(value.Trim(), format.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 }

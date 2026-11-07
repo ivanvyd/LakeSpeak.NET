@@ -120,17 +120,17 @@ its own OAuth tokens; see [Authentication → OAuth M2M](docs/authentication.md#
 Ask a one-shot question:
 
 ```bash
-lakespeak ask --agent sales "Who were our five fastest-growing customers?"
+lakespeak ask --profile company --agent sales "Who were our five fastest-growing customers?"
 ```
 
 Get machine-readable output for scripts and coding agents:
 
 ```bash
-lakespeak ask --agent finance --format json "What was recognized revenue yesterday?"
+lakespeak ask --profile company --agent finance --format json "What was recognized revenue yesterday?"
 ```
 
 ```powershell
-$r = lakespeak ask --agent finance --format json "Revenue yesterday?" | ConvertFrom-Json
+$r = lakespeak ask --profile company --agent finance --format json "Revenue yesterday?" | ConvertFrom-Json
 $r.result.rows
 ```
 
@@ -178,7 +178,7 @@ spec:
 ```
 
 ```bash
-lakespeak pack run daily-platform-brief.yaml
+lakespeak pack run daily-platform-brief.yaml --profile company
 ```
 
 See the [Question Pack guide](docs/question-packs.md) for the schema and failure semantics.

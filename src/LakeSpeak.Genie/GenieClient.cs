@@ -273,43 +273,56 @@ public sealed partial class GenieClient : IGenieClient
         string agentId, string conversationId, string messageId, string attachmentId,
         CancellationToken cancellationToken = default)
     {
-        // execute-query only *starts* the re-execution. Observed against a live workspace it
-        // answers HTTP 200 with state PENDING and no manifest, and the rows appear on the
-        // ordinary query-result endpoint a moment later. Returning that first response hands the
-        // caller nothing while the warehouse work they just paid for completes and is discarded —
-        // which surfaced as `export last` telling people to ask the question again.
-        var started = await FetchQueryResultAsync(
-            $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/execute-query",
-            HttpMethod.Post,
-            cancellationToken).ConfigureAwait(false);
-
-        if (started is not null)
-        {
-            return started;
-        }
-
-        var deadline = _time.GetTimestamp();
+        var started = _time.GetTimestamp();
+        var timeout = _options.PollingTimeout;
         var interval = _options.InitialPollInterval;
+        using var deadlineCancellation = new CancellationTokenSource(timeout, _time);
+        using var executionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, deadlineCancellation.Token);
 
-        while (_time.GetElapsedTime(deadline) < _options.PollingTimeout)
+        try
         {
-            await Task.Delay(interval, _time, cancellationToken).ConfigureAwait(false);
+            // execute-query can acknowledge PENDING without rows. Poll query-result until the
+            // result is available, keeping the initial request and chunk fetches inside the wait.
+            var result = await FetchQueryResultAsync(
+                $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/execute-query",
+                HttpMethod.Post,
+                executionCancellation.Token).ConfigureAwait(false);
 
-            var result = await GetQueryResultAsync(
-                agentId, conversationId, messageId, attachmentId, cancellationToken).ConfigureAwait(false);
-
-            if (result is not null)
+            while (true)
             {
-                return result;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                var elapsed = _time.GetElapsedTime(started);
+                if (elapsed >= timeout)
+                {
+                    break;
+                }
+                if (result is not null)
+                {
+                    return result;
+                }
 
-            interval = TimeSpan.FromMilliseconds(
-                Math.Min(interval.TotalMilliseconds * 1.5, _options.MaxPollInterval.TotalMilliseconds));
+                var remaining = timeout - elapsed;
+                var delay = interval <= remaining ? interval : remaining;
+                await Task.Delay(delay, _time, executionCancellation.Token).ConfigureAwait(false);
+                if (_time.GetElapsedTime(started) >= timeout)
+                {
+                    break;
+                }
+
+                result = await GetQueryResultAsync(
+                    agentId, conversationId, messageId, attachmentId, executionCancellation.Token).ConfigureAwait(false);
+                interval = TimeSpan.FromMilliseconds(
+                    Math.Min(interval.TotalMilliseconds * 1.5, _options.MaxPollInterval.TotalMilliseconds));
+            }
+        }
+        catch (OperationCanceledException) when (
+            deadlineCancellation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            // An expired cached result stays unavailable when its re-execution times out.
         }
 
-        // The caller gets null rather than an exception, exactly as before: a re-execution that
-        // never lands is a missing result, not a transport failure.
-        LogReExecuteTimedOut(_logger, _options.PollingTimeout.TotalSeconds);
+        LogReExecuteTimedOut(_logger, timeout.TotalSeconds);
         return null;
     }
 

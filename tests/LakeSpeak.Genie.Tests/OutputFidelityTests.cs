@@ -9,6 +9,40 @@ namespace LakeSpeak.Genie.Tests;
 /// </summary>
 public class OutputFidelityTests
 {
+    [Theory]
+    [InlineData("999")]
+    [InlineData("6")]
+    [InlineData("Json,Csv")]
+    [InlineData("Json,Table")]
+    public void Output_formats_require_one_supported_name(string value)
+    {
+        OutputFormatExtensions.TryParse(value, out _).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("text", OutputFormat.Text)]
+    [InlineData("TABLE", OutputFormat.Table)]
+    [InlineData("Markdown", OutputFormat.Markdown)]
+    [InlineData("json", OutputFormat.Json)]
+    [InlineData("JSONL", OutputFormat.Jsonl)]
+    [InlineData("csv", OutputFormat.Csv)]
+    public void Output_format_names_remain_case_insensitive(string value, OutputFormat expected)
+    {
+        OutputFormatExtensions.TryParse(value, out var actual).ShouldBeTrue();
+        actual.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("agent\u001b[2J")]
+    [InlineData("agent\u009b2J")]
+    public void Markdown_neutralises_control_characters_in_the_agent_title(string title)
+    {
+        var rendered = MarkdownWriter.Write(Response("answer", null), title);
+
+        rendered.ShouldContain(TerminalSafety.Sanitize(title));
+        rendered.ShouldNotContain(title);
+    }
+
     private static GenieQueryResult Result(params (string Name, string? Value)[] cells) =>
         new(
             cells.Select(c => new GenieColumn(c.Name, "STRING", "STRING")).ToList(),

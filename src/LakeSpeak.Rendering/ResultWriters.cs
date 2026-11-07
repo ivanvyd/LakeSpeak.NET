@@ -384,8 +384,7 @@ public static class CsvWriter
     /// Escapes a single CSV field, including the spreadsheet-formula guard.
     /// </summary>
     /// <remarks>
-    /// Public so no other writer reimplements it. A second copy of this rule is how one CSV
-    /// path ends up defused and another does not.
+    /// Shared by CSV writers so every path applies the same quoting and formula guard.
     /// </remarks>
     public static string EscapeField(string? value) => Quote(value);
 
@@ -491,7 +490,7 @@ public static class MarkdownWriter
 
         if (agentTitle is { Length: > 0 })
         {
-            yield return $"_Agent: {agentTitle}_";
+            yield return $"_Agent: {TerminalSafety.SanitizeCell(agentTitle)}_";
         }
     }
 
@@ -499,10 +498,7 @@ public static class MarkdownWriter
     /// Renders a result as a Markdown table plus its truncation notice.
     /// </summary>
     /// <remarks>
-    /// Public so no other report writer reimplements it. A second copy of this had already
-    /// drifted — one renderer stated the row counts on truncation and the other did not, so the
-    /// same data produced two different claims about completeness depending on which command
-    /// wrote it.
+    /// Shared by report writers so every Markdown table includes the same completeness notice.
     /// </remarks>
     public static void WriteTable(StringBuilder builder, GenieQueryResult result)
     {

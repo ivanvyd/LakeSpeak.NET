@@ -114,7 +114,7 @@ public sealed class TerminalRenderer(IAnsiConsole console, int maxRows = 50)
         {
             table.AddRow(
                 Markup.Escape(TerminalSafety.SanitizeCell(agent.Title)),
-                $"[dim]{Markup.Escape(agent.AgentId)}[/]");
+                $"[dim]{Markup.Escape(TerminalSafety.SanitizeCell(agent.AgentId))}[/]");
         }
 
         console.Write(table);

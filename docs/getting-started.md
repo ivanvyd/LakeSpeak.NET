@@ -95,7 +95,7 @@ in Databricks, not here.
 ## 4. Ask something
 
 ```bash
-lakespeak ask --agent "Sales Intelligence" --show-sql "How did revenue change last quarter?"
+lakespeak ask --profile my-workspace --agent "Sales Intelligence" --show-sql "How did revenue change last quarter?"
 ```
 
 <img src="assets/ask.svg" alt="lakespeak ask printing an answer, a result table and the generated SQL" width="790">
@@ -111,7 +111,7 @@ bound values and the message ids precisely so you can check.
 ## 5. Keep talking
 
 ```bash
-lakespeak chat --agent "Sales Intelligence"
+lakespeak chat --profile my-workspace --agent "Sales Intelligence"
 ```
 
 Follow-up questions keep their context, so "and break that down by product" works. Type `/help`
@@ -137,12 +137,12 @@ to save the result, `/exit` to leave.
 Results go to stdout, diagnostics to stderr, so this works cleanly:
 
 ```bash
-lakespeak ask --agent finance --format json "Recognized revenue yesterday?" 2>/dev/null \
+lakespeak ask --profile my-workspace --agent finance --format json "Recognized revenue yesterday?" 2>/dev/null \
   | jq -r '.result.rows[][]'
 ```
 
 ```powershell
-$r = lakespeak ask --agent finance --format json "Revenue yesterday?" | ConvertFrom-Json
+$r = lakespeak ask --profile my-workspace --agent finance --format json "Revenue yesterday?" | ConvertFrom-Json
 $r.result.rows
 ```
 
