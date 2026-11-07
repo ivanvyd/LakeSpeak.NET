@@ -10,7 +10,7 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
-| 0.4.x | 8.0, 10.0 | 1.16.1 for authentication preflight; not used offline | `/api/2.0/genie`, HTTP fixtures | Same library targets; CLI remains 10.0-only. Offline consumers passed; live question acceptance remains unverified |
+| 0.4.x | 8.0, 10.0 | 1.16.1 for the live net8 consumer; not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Installed net8 client passed one live synthetic query; current net10 source passed nine live tests. CLI remains 10.0-only |
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
 | 0.1.x — 0.2.x | 10.0 | 1.10.0 | `/api/2.0/genie`, preview when released | Library family and CLI are 10.0-only |
 
@@ -20,13 +20,29 @@ See the [release evidence](release-evidence/v0.4.0.md) for package, tool and arc
 The [weekly live smoke run on 2026-11-02](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/41454940210)
 passed all nine live tests at source revision `44994c8fc258093003a31c9b704373b308fae37e`.
 The live job ran; the not-configured job was skipped. This is recent evidence for that older
-source revision, not live acceptance of the installed 0.4.0 package. The current-release row
-above remains unverified against a live workspace.
+source revision, not live acceptance of the installed 0.4.0 package. The current-release checks
+below were performed separately.
 
-An installed 0.4.0 consumer authenticated successfully on 2026-11-07 using a selected
-nonproduction CLI profile. The configured Agent returned `AgentNotFound` for that identity,
-so the preflight stopped before sending a question. This may indicate a stale Agent ID or
-missing access; it does not verify a live answer or query result.
+`LAKESPEAK_LIVE_AGENT` accepts an Agent title or ID. An earlier preflight passed its configured
+title directly to an ID-only endpoint; that `AgentNotFound` result did not establish a stale
+Agent or missing access. Both the owner lookup and the M2M-backed live suite resolved the
+configured title without changing credentials, permissions or configuration.
+
+## Live verification, 2026-11-07
+
+Two distinct checks ran against an owner-approved nonproduction AWS Free Edition workspace:
+
+| Check | Result and limit |
+|---|---|
+| Installed `LakeSpeak.Genie` 0.4.0, .NET 8 | A package-only consumer used Databricks CLI 1.16.1 user OAuth and an existing starter Agent. One synthetic question produced `SELECT 1 AS probe_value` and one complete row containing `1`, within a 90-second client deadline |
+| Current-source M2M live suite, .NET 10 | [Run 42409476224](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/42409476224) passed all nine tests at `e01aa612ebdad8236506d24c90515b955382bd48`. The live job ran; the not-configured job was skipped. Existing repository service-principal credentials and the configured Agent title were used unchanged |
+
+The suite covers listing, questions, follow-up, query re-execution, result handling, an unknown
+Agent, feedback validation and client cancellation. Passing client cancellation does not prove
+that remote warehouse work stopped. The installed-package check exercised one constant query;
+it did not validate business-data answers, the installed CLI's Question Pack workflow, or large
+results. The source-suite result does not replace installed-package evidence. Neither check
+created an Agent, warehouse, schema or permission grant. GCP remains untested.
 
 The Genie Conversation API became [generally available on
 2026-04-02](https://docs.databricks.com/aws/en/ai-bi/release-notes/2026#april-2-2026). Visualization
@@ -47,7 +63,7 @@ does not use that path and has not exercised it live.
 | Cloud | Status |
 |---|---|
 | Azure Databricks | **Verified against a live workspace on 2026-08-01** — see below |
-| AWS Databricks | **Verified against a live workspace on 2026-09-01** — see [Live verification, AWS](#live-verification-aws--through-2026-09-01) below. The PAT path, native OAuth M2M, scheduled live suite and multi-chunk composition were exercised. Closes [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
+| AWS Databricks | **Verified for the dated checks through 2026-11-07**; see [current live verification](#live-verification-2026-11-07). Earlier PAT, M2M and multi-chunk evidence retains its [2026-09-01 scope](#live-verification-aws--through-2026-09-01). Closes [#51](https://github.com/ivanvyd/LakeSpeak.NET/issues/51) |
 | GCP Databricks | Not tested. Validation is deferred in [#52](https://github.com/ivanvyd/LakeSpeak.NET/issues/52). A future GCP verification needs a live suite run on a GCP workspace and a dated record of its results here. |
 
 ## Live verification, 2026-08-01
