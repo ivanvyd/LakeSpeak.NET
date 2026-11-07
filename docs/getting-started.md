@@ -1,7 +1,51 @@
 # Getting started
 
-From nothing to a working answer. About ten minutes if your workspace already has a Genie Agent,
-longer if someone else has to create one for you.
+Start with a .NET application using the published package, then connect it to an existing Genie
+Agent. An offline fixture lets you check the integration before supplying workspace credentials.
+
+## Using it from .NET
+
+The [standalone .NET 8 quickstart](../examples/package-quickstart/README.md) pins published
+`LakeSpeak.Genie` 0.3.5. Copy that directory and follow its restore, build and `--fixture`
+commands. The fixture uses HTTP responses in memory and needs no Databricks account or CLI.
+Its output is explicitly marked **OFFLINE**; it does not verify a live warehouse.
+
+For an existing application targeting .NET 8 or .NET 10:
+
+```bash
+dotnet add package LakeSpeak.Genie --version 0.3.5
+```
+
+After the workspace prerequisites below and `databricks auth login --profile my-workspace`,
+register the package's CLI authentication provider and typed client:
+
+```csharp
+using LakeSpeak.Genie;
+using Microsoft.Extensions.DependencyInjection;
+
+var services = new ServiceCollection();
+services.AddDatabricksCliAuthentication("my-workspace");
+services.AddLakeSpeak(options => options.Profile = "my-workspace");
+using var provider = services.BuildServiceProvider();
+var genie = provider.GetRequiredService<IGenieClient>();
+
+var response = await genie.AskAsync(agentId, question, cancellationToken: cancellationToken);
+Console.WriteLine(response.Text);
+Console.WriteLine(response.Query?.Sql);
+```
+
+This is an abbreviated integration fragment. The complete quickstart supplies command arguments,
+cancellation, row display and `GenieException` handling. `GenieException.Kind` distinguishes failures
+such as authorization and polling timeout; [authentication](authentication.md) covers other token
+sources and unattended OAuth M2M. Invalid host configuration is a startup error when the client is
+resolved, rather than a Genie response.
+
+Use `FollowUpAsync(agentId, conversationId, question)` to keep conversation context. Inspect
+`response.Result?.IsTruncated` before relying on rows. A complete message can contain a
+clarification without a query result; completion alone does not establish a usable data answer.
+
+The [source-reference example](../examples/dotnet-quickstart/) is separate and builds in the
+repository solution so CI catches API drift. Use the package quickstart to test a published version.
 
 ## What this actually is
 
@@ -11,10 +55,11 @@ curated for it, runs that SQL on a SQL warehouse, and answers. A **Genie Agent**
 still calls it a *space* — is one such configured question-answering surface: a set of tables, some
 instructions, and a warehouse to run on.
 
-Genie normally lives inside the Databricks web UI. **LakeSpeak puts it in your .NET code, and in
-your terminal.** The .NET half is the part nothing else does — Databricks publishes SDKs for
-Python, Java, Go and R, but not for .NET. For a terminal answer alone, `databricks genie ask` ships
-with the Databricks CLI and is worth trying first.
+LakeSpeak puts Genie conversations in your .NET code, with a companion terminal application.
+The [official CLI](https://docs.databricks.com/aws/en/dev-tools/cli/reference/genie-commands)
+already has `databricks genie ask`, and Databricks provides
+[native benchmark evaluations](https://docs.databricks.com/api/genie/v1/genie-get-eval-run).
+LakeSpeak focuses on a typed in-process Genie client and YAML-to-Markdown Question Pack reports.
 
 ```
    You                LakeSpeak              Databricks Genie
@@ -30,8 +75,8 @@ with the Databricks CLI and is worth trying first.
     │◄────────────────────┤◄────────────────────────┤
 ```
 
-LakeSpeak never sees your data except in transit, never stores a credential, and cannot see
-anything your own Databricks identity cannot.
+LakeSpeak returns data to your application under your Databricks identity. It has no credential
+store; your application and exported reports remain responsible for handling governed data.
 
 ## What you need before you start
 
@@ -148,82 +193,3 @@ $r.result.rows
 
 Exit codes are contractual — `0` success, `2` bad input, `3` auth, `4` permission, `5` not found,
 `7` timeout. The full table is in [commands.md](commands.md).
-
-## Using it from .NET
-
-```bash
-dotnet add package LakeSpeak.Genie
-```
-
-```csharp
-using LakeSpeak.Genie;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-services.AddLakeSpeak(options => options.Profile = "my-workspace");
-
-using var provider = services.BuildServiceProvider();
-
-// Configuration is validated here, when the client is first resolved — not on the first call.
-// With no host reachable from the options, the environment or .databrickscfg, this throws
-// OptionsValidationException: "No Databricks host configured." That is a startup failure,
-// not a GenieException, so it is deliberately outside the catch blocks below.
-var genie = provider.GetRequiredService<IGenieClient>();
-
-try
-{
-    var response = await genie.AskAsync(
-        agentId: "01ef1234567890abcdef1234567890ab",
-        question: "Which customers had the largest revenue decline?",
-        cancellationToken: ct);
-
-    Console.WriteLine(response.Text);
-
-    // The SQL, and the values bound into it, so a human can check the answer.
-    if (response.Query is { Sql: { } sql })
-    {
-        Console.WriteLine(sql);
-    }
-
-    // Cells are strings exactly as Databricks returned them — a DECIMAL is never
-    // round-tripped through a double on its way to you. Convert deliberately.
-    foreach (var row in response.Result?.Rows ?? [])
-    {
-        Console.WriteLine(string.Join(" | ", row));
-    }
-
-    if (response.Result?.IsTruncated == true)
-    {
-        Console.WriteLine("This result is incomplete — narrow the question.");
-    }
-}
-catch (GenieException ex) when (ex.Kind == GenieFailureKind.Authorization)
-{
-    // Your identity cannot use that Agent, or cannot read a table behind it.
-    // Fixed with a Databricks grant, not in code.
-}
-catch (GenieException ex) when (ex.Kind == GenieFailureKind.PollingTimeout)
-{
-    // Usually a cold SQL warehouse. ex.LastKnownResponse tells you how far it got.
-}
-```
-
-Every failure arrives as a `GenieException` with a `Kind` you can branch on — see
-[`GenieFailureKind`](../src/LakeSpeak.Genie/GenieFailures.cs). Ask follow-ups with
-`FollowUpAsync(agentId, conversationId, question)`.
-
-For a host that already has its own OAuth flow, register a token provider before `AddLakeSpeak`:
-
-```csharp
-services.AddGenieTokenProvider(async ct => await myTokenSource.GetAsync(ct));
-```
-
-Full detail in the [authentication guide](authentication.md).
-
-A complete runnable version of this is at
-[`examples/dotnet-quickstart`](../examples/dotnet-quickstart/), built in CI so it cannot drift
-from the library:
-
-```bash
-dotnet run --project examples/dotnet-quickstart -- <agent-id> "How many rows are there?"
-```

@@ -138,6 +138,28 @@ public sealed class PackRunner(IGenieClient client, TimeProvider? timeProvider =
                     },
                     cancellationToken).ConfigureAwait(false);
 
+                cancellationToken.ThrowIfCancellationRequested();
+                if (pack.Behavior.RequireQueryResult)
+                {
+                    if (response.Result is null)
+                    {
+                        throw new GenieException(
+                            GenieFailureKind.MessageFailed,
+                            "behavior.requireQueryResult requires a query result; Genie returned none.",
+                            errorCode: "QUERY_RESULT_REQUIRED",
+                            lastKnownResponse: response);
+                    }
+
+                    if (response.Result.IsTruncated)
+                    {
+                        throw new GenieException(
+                            GenieFailureKind.MessageFailed,
+                            "behavior.requireQueryResult requires a complete query result; the result is incomplete or truncated.",
+                            errorCode: "QUERY_RESULT_INCOMPLETE",
+                            lastKnownResponse: response);
+                    }
+                }
+
                 outcome = new QuestionOutcome(
                     question, response, null, _time.GetElapsedTime(start));
             }
@@ -168,9 +190,8 @@ public sealed class PackRunner(IGenieClient client, TimeProvider? timeProvider =
 /// Writes a pack result as Markdown.
 /// </summary>
 /// <remarks>
-/// The structure is deterministic: the same pack against the same data produces a byte-identical
-/// report except for the timestamp and timings. That is what makes a committed report reviewable
-/// in a diff.
+/// Formatting is repeatable for the same pack settings and identical response payloads, apart
+/// from timestamps and timings. Genie can return different answers or SQL for the same prompt.
 /// </remarks>
 public static class PackReportWriter
 {

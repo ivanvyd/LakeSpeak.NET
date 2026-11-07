@@ -7,15 +7,17 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ivanvyd/LakeSpeak.NET/badge)](https://scorecard.dev/viewer/?uri=github.com/ivanvyd/LakeSpeak.NET)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13969/badge)](https://www.bestpractices.dev/projects/13969)
 
-Talk to governed Databricks data from your terminal and .NET applications.
+Use Databricks Genie conversations, generated SQL and query results in your .NET application.
 
 **[lakespeak.net](https://lakespeak.net)** — what it does, with real terminal output.
 
-LakeSpeak.NET is an independent open-source .NET client, terminal application, and automation
-toolkit for [Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents.
+`LakeSpeak.Genie` is an independent open-source client for
+[Databricks Genie](https://docs.databricks.com/aws/en/genie/) Agents. The companion CLI runs
+terminal conversations and version-controlled Question Packs that produce Markdown reports.
 
-**New here?** [Getting started](docs/getting-started.md) walks from nothing to a working answer,
-including what a Genie Agent is and how to tell whether you have one.
+**Start with the [published-package .NET 8 quickstart](examples/package-quickstart/README.md):**
+run an offline HTTP fixture without credentials, then use a Databricks CLI profile to ask a real
+Genie Agent. [Getting started](docs/getting-started.md) covers prerequisites and the terminal flow.
 
 > **Not a Databricks product.** LakeSpeak.NET is an independent open-source community project. It
 > is not an official Databricks product, is not endorsed by Databricks, and is not supported under
@@ -36,8 +38,39 @@ is `net10.0`-only. See [ADR 0006](docs/decisions/0006-multi-target-net8-and-net1
 reasoning.
 
 ```bash
-dotnet tool install --global LakeSpeak.Cli
+dotnet add package LakeSpeak.Genie --version 0.3.5
 ```
+
+## In .NET
+
+Integration excerpt: after [logging into a CLI profile](docs/authentication.md#interactive-use-the-databricks-cli),
+supply your existing Genie Agent id as `salesAgentId` and your application's `CancellationToken`
+as `cancellationToken`. The [package quickstart](examples/package-quickstart/README.md) is runnable
+without these placeholder variables.
+
+```csharp
+using LakeSpeak.Genie;
+using Microsoft.Extensions.DependencyInjection;
+
+var services = new ServiceCollection();
+services.AddDatabricksCliAuthentication("my-workspace");
+services.AddLakeSpeak(options => options.Profile = "my-workspace");
+
+using var provider = services.BuildServiceProvider();
+var genie = provider.GetRequiredService<IGenieClient>();
+var response = await genie.AskAsync(
+    agentId: salesAgentId,
+    question: "Which customers had the largest revenue decline?",
+    cancellationToken: cancellationToken);
+
+Console.WriteLine(response.Text);
+Console.WriteLine(response.Query?.Sql);
+```
+
+The [complete package consumer](examples/package-quickstart/README.md) pins published 0.3.5,
+displays rows, and handles cancellation, typed failures and incomplete results. It uses no source
+project reference. The [source-reference example](examples/dotnet-quickstart/) remains in the
+solution so API changes are compiled in CI. Neither example judges the correctness of generated SQL.
 
 ## What this is, in one paragraph
 
@@ -52,30 +85,23 @@ create one, and sees only what your own Databricks identity can see.
 
 ## Why this exists
 
-Start with what you may not need this for. The official CLI has a good terminal experience for
-Genie:
+Use LakeSpeak when your .NET application needs a typed Genie client in-process, with dependency
+injection, cancellation and typed failures, or when you want YAML questions to produce a Markdown
+report through the companion CLI.
+
+For a terminal answer, the [official Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/reference/genie-commands)
+already provides `genie ask`:
 
 ```bash
 databricks genie ask -s sales --include-sql "How did revenue change last month?"
 ```
 
-That holds a conversation across calls, shows the SQL, and prints JSON with `-o json`. If a terminal
-answer is all you want, it ships with the Databricks CLI and it is fine.
+Databricks also provides [native Genie benchmark evaluations](https://docs.databricks.com/api/genie/v1/genie-get-eval-run).
+Question Packs provide a YAML-to-Markdown reporting workflow; they do not score answer accuracy or
+replace those evaluations. Databricks publishes a [C# Zerobus ingestion SDK](https://github.com/databricks/zerobus-sdk),
+which serves a different API. LakeSpeak's scope is Genie conversations and their results.
 
-Two things it does not cover.
-
-**There is no Databricks SDK for .NET.** Python, Java, Go and R are covered; .NET is not. A .NET
-service that needs a Genie answer in-process has no first-party option, and shelling out to a CLI
-from a hosted service is not one. `LakeSpeak.Genie` is a typed client with DI registration,
-cancellation, typed failures, and no credential of its own.
-
-**Question Packs have no equivalent.** A set of business questions, version-controlled, reviewed
-like code, run on a schedule, producing a deterministic Markdown report. That is a different
-artifact from a terminal command, and nothing else produces it.
-
-The terminal client exists because the library needed proving and because `--agent` with
-[configured aliases](docs/configuration.md) targets a named Agent, which the official `ask` exposes
-no flag for.
+The companion terminal client supports [configured Agent aliases](docs/configuration.md):
 
 ```bash
 lakespeak ask --agent sales "How did revenue change last month?"
@@ -95,16 +121,16 @@ including its correction.
 ## Install
 
 ```bash
-dotnet tool install --global LakeSpeak.Cli
+dotnet add package LakeSpeak.Genie --version 0.3.5
 ```
 
-Or add the client to a .NET project:
+For the companion .NET 10 CLI:
 
 ```bash
-dotnet add package LakeSpeak.Genie
+dotnet tool install --global LakeSpeak.Cli --version 0.3.5
 ```
 
-## Quick start
+## Terminal quick start
 
 LakeSpeak uses your existing Databricks CLI login rather than asking for a token of its own:
 
@@ -134,29 +160,6 @@ $r = lakespeak ask --profile company --agent finance --format json "Revenue yest
 $r.result.rows
 ```
 
-## In .NET
-
-```csharp
-services.AddLakeSpeak(options => options.Profile = "production");
-
-var response = await genie.AskAsync(
-    agentId: salesAgentId,
-    question: "Which customers had the largest revenue decline?",
-    cancellationToken: cancellationToken);
-
-Console.WriteLine(response.Text);
-
-if (response.Query is not null)
-{
-    Console.WriteLine(response.Query.Sql);
-}
-```
-
-Abbreviated for orientation. The complete version — DI registration, `using` directives, reading
-the rows, and typed error handling on `GenieFailureKind` — is in
-[Getting started → Using it from .NET](docs/getting-started.md#using-it-from-net), and it is
-compiled against the library rather than written by hand.
-
 ## Question Packs
 
 A Question Pack turns a set of business questions into a reviewable, version-controlled report.
@@ -182,6 +185,8 @@ lakespeak pack run daily-platform-brief.yaml --profile company
 ```
 
 See the [Question Pack guide](docs/question-packs.md) for the schema and failure semantics.
+The opt-in `behavior.requireQueryResult` policy is **Unreleased**; it is not accepted by the
+published 0.3.5 CLI. It requires a complete query result while allowing a valid zero-row result.
 
 ## What it does not do
 

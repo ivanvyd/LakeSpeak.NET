@@ -297,6 +297,8 @@ internal static class PackCommand
           behavior:
             # Finish the run and report failures in place, rather than stopping at the first one.
             continueOnQuestionFailure: true
+            # Opt in to fail missing or incomplete query results, including clarifications.
+            requireQueryResult: false
             includeGeneratedSql: false
             includeTimings: true
             # Conversation and message ids identify a conversation containing governed data,

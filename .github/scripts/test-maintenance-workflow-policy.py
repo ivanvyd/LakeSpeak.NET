@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static invariants for the write-capable lock-refresh workflow."""
+"""Static invariants for CI package identity and lock-refresh permissions."""
 
 from pathlib import Path
 
@@ -22,6 +22,21 @@ def forbid(text: str, fragment: str, message: str) -> None:
 
 
 def main() -> None:
+    require(
+        CI,
+        "-p:VersionSuffix=ci.${{ github.run_id }}.${{ github.run_attempt }}",
+        "CI packages must have a run-specific identity distinct from published stable packages",
+    )
+    require(
+        CI,
+        '[[ "$version" == *"-ci.${{ github.run_id }}.${{ github.run_attempt }}" ]]',
+        "tool smoke must require the current run's candidate identity",
+    )
+    require(
+        CI,
+        'test "${actual_version%%+*}" = "$version"',
+        "tool smoke must assert the installed candidate version",
+    )
     require(CI, "  workflow_dispatch:\n", "CI must accept the post-refresh dispatch")
     refresh_guidance = (
         "Run the 'Refresh lock files' workflow using the Dependabot branch, then re-run these checks."

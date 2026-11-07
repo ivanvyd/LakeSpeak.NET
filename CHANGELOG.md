@@ -6,6 +6,26 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+### Added
+
+- SDK package validation for `LakeSpeak.Genie` against published 0.3.5, including its .NET 8 and
+  .NET 10 assets. Package validation complements behavioral regression tests.
+- Opt-in Question Pack `behavior.requireQueryResult` (default `false`). Missing and incomplete
+  query results fail the question through the existing continue/stop handling; complete zero-row
+  results succeed. Existing packs keep their behavior.
+- Standalone .NET 8 consumer of published `LakeSpeak.Genie` 0.3.5, with a credential-free offline
+  HTTP fixture and a Databricks CLI profile route for a real Genie Agent.
+
+### Changed
+
+- Lead onboarding with in-process .NET integration and distinguish Question Pack reports from
+  Databricks CLI questions and native Genie benchmark evaluations.
+- Reject numeric prerelease identifiers with leading zeros in release-tag and rehearsal versions;
+  build metadata such as `+001` remains valid. Document release compatibility and baseline policy.
+- Update setup-dotnet to 6.1.0 and CodeQL actions to 4.39.3, retaining pinned commit identities.
+- Give CI packages a run-specific prerelease identity and check the installed tool version so the
+  smoke test cannot substitute a published stable package.
+
 ## 0.3.5 — 2026-11-07
 
 ### Fixed

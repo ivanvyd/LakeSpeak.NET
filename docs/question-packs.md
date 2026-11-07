@@ -38,6 +38,8 @@ spec:
 
   behavior:
     continueOnQuestionFailure: true
+    # Unreleased: uncomment after upgrading to a version that supports this field.
+    # requireQueryResult: true
     includeGeneratedSql: false
     includeTimings: true
     includeIdentifiers: false
@@ -58,6 +60,20 @@ alias profile and `defaults.profile`.
 **`behavior.continueOnQuestionFailure`** (default `true`) finishes the run and records failures in
 place, exiting `8`. Set it to `false` to stop at the first failure. For a scheduled report, partial
 results usually beat none.
+
+**`behavior.requireQueryResult`** (default `false`, **Unreleased**) requires a complete tabular
+result for every question. A completed message with no result, including a clarification, fails
+with `behavior.requireQueryResult requires a query result; Genie returned none.` An incomplete
+or truncated result fails with `behavior.requireQueryResult requires a complete query result;
+the result is incomplete or truncated.` A complete result with zero rows succeeds. This checks
+result presence and completeness; it does not judge the answer text or SQL correctness.
+
+With `continueOnQuestionFailure: true`, these failures appear in the report and the run exits `8`.
+With `false`, the first failure stops the run with exit `6`; no report is published and an existing
+destination stays unchanged. Cancellation remains exit `7`. Omit `requireQueryResult` for the
+existing behavior, which accepts completed messages with no result or a truncated result.
+The example above keeps the Unreleased option commented so it works with published 0.3.5,
+which rejects the field when uncommented.
 
 **`behavior.includeIdentifiers`** (default `false`) adds conversation and message ids so an answer
 can be traced back in Databricks. It is off by default because those ids identify a conversation
@@ -95,9 +111,9 @@ suspect.
 - **All errors at once.** `validate` reports every problem in one pass.
 - **No prompts.** A pack run never asks a question interactively, so it cannot hang a cron job.
   An ambiguous Agent name fails instead.
-- **Deterministic output.** The same pack against the same data produces a byte-identical report
-  apart from the timestamp and timings, which is what makes a committed report reviewable in a
-  diff.
+- **Deterministic formatting.** For the same pack settings and identical response payloads,
+  report formatting is repeatable apart from timestamps and timings. Genie can return different
+  answers or SQL for the same prompt; see [Databricks' response guidance](https://docs.databricks.com/aws/en/genie-agents/monitor#review-responses).
 - **Capped at 50 questions.** Beyond that it is a scheduled job, not a report.
 
 Each question id becomes an explicit stable report anchor. When generated SQL is included, the
@@ -112,10 +128,12 @@ anything consequential. That line is not configurable.
 
 ## Something to plan around
 
-Genie sometimes replies with a **clarifying question** instead of an answer. The message completes
-successfully and the clarification becomes the answer text, so the pack exits `0` with a report
-whose answer is a question. Phrase pack questions unambiguously, and read reports rather than
-trusting the exit code alone. See [limitations](limitations.md).
+Genie sometimes replies with a **clarifying question** instead of an answer. By default, the
+message completes successfully and the clarification becomes the answer text, so the pack can
+exit `0` with a report whose answer is a question. The Unreleased `requireQueryResult: true`
+option rejects any response without a query result, without trying to classify natural language.
+Phrase pack questions unambiguously, and check the SQL and reports before relying on them.
+See [limitations](limitations.md).
 
 ## In CI
 

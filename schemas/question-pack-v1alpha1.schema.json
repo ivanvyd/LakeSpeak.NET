@@ -98,6 +98,11 @@
               "description": "When true the run completes and failed questions are reported in place, exiting 8 for partial failure. When false the first failure stops the run."
             },
             "includeGeneratedSql": { "type": "boolean", "default": false },
+            "requireQueryResult": {
+              "type": "boolean",
+              "default": false,
+              "description": "Require a complete query result for every question. Missing results, including clarifications without a result, and incomplete or truncated results fail the question. Complete zero-row results succeed."
+            },
             "includeTimings": { "type": "boolean", "default": true },
             "includeIdentifiers": {
               "type": "boolean",

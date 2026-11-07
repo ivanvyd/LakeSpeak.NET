@@ -87,6 +87,25 @@ public class QuestionPackLoaderTests
         pack.Behavior.IncludeIdentifiers.ShouldBeFalse();
         pack.Behavior.IncludeGeneratedSql.ShouldBeFalse();
         pack.Behavior.ContinueOnQuestionFailure.ShouldBeTrue();
+        pack.Behavior.RequireQueryResult.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    public void Query_result_requirement_is_opt_in(string yamlValue, bool expected)
+    {
+        var yaml = Valid.Replace("behavior:", $"behavior:\n    requireQueryResult: {yamlValue}", StringComparison.Ordinal);
+
+        QuestionPackLoader.Parse(yaml, "/packs").Behavior.RequireQueryResult.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Query_result_requirement_rejects_non_boolean_values()
+    {
+        var yaml = Valid.Replace("behavior:", "behavior:\n    requireQueryResult: sometimes", StringComparison.Ordinal);
+
+        Should.Throw<PackValidationException>(() => QuestionPackLoader.Parse(yaml, "/packs"));
     }
 
     [Theory]
