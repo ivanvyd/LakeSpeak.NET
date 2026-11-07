@@ -45,9 +45,24 @@ def _required_list(value: dict[str, Any], key: str) -> list[Any]:
     return items
 
 
+def _validate_logs(value: dict[str, Any]) -> None:
+    logs = value.get("logs", [])
+    if not isinstance(logs, list):
+        raise AuditError("NuGet audit logs must be an array")
+    for entry in logs:
+        if not isinstance(entry, dict) or entry.get("level") not in (
+            "Information", "Info", "Debug", "Verbose"
+        ):
+            raise AuditError("NuGet reported a warning or error; advisory coverage is not established")
+
+
 def find_blocking_vulnerabilities(report: dict[str, Any]) -> list[Finding]:
-    if report.get("version") != 1:
+    if type(report.get("version")) is not int or report["version"] != 1:
         raise AuditError("NuGet report version is missing or unsupported")
+    parameters = report.get("parameters")
+    if not isinstance(parameters, str) or not {"--vulnerable", "--include-transitive"}.issubset(parameters.split()):
+        raise AuditError("NuGet report must include direct and transitive vulnerabilities")
+    _validate_logs(report)
 
     sources = _required_list(report, "sources")
     if not sources or not all(isinstance(source, str) and source for source in sources):
@@ -61,12 +76,14 @@ def find_blocking_vulnerabilities(report: dict[str, Any]) -> list[Finding]:
     for project in projects:
         if not isinstance(project, dict) or not isinstance(project.get("path"), str):
             raise AuditError("NuGet report contains an invalid project")
+        _validate_logs(project)
         frameworks = project.get("frameworks", [])
         if not isinstance(frameworks, list):
             raise AuditError("NuGet project frameworks must be an array")
         for framework in frameworks:
             if not isinstance(framework, dict) or not isinstance(framework.get("framework"), str):
                 raise AuditError("NuGet report contains an invalid framework")
+            _validate_logs(framework)
             for package_group in ("topLevelPackages", "transitivePackages"):
                 packages = framework.get(package_group, [])
                 if not isinstance(packages, list):
@@ -81,6 +98,7 @@ def _read_package(
 ) -> list[Finding]:
     if not isinstance(package, dict) or not isinstance(package.get("id"), str):
         raise AuditError("NuGet report contains an invalid package")
+    _validate_logs(package)
     vulnerabilities = package.get("vulnerabilities")
     if not isinstance(vulnerabilities, list) or not vulnerabilities:
         raise AuditError(f"NuGet listed vulnerable package '{package['id']}' without advisories")
@@ -89,6 +107,7 @@ def _read_package(
     for vulnerability in vulnerabilities:
         if not isinstance(vulnerability, dict):
             raise AuditError(f"NuGet package '{package['id']}' has an invalid advisory")
+        _validate_logs(vulnerability)
         severity = vulnerability.get("severity")
         advisory_url = vulnerability.get("advisoryurl")
         if severity not in SEVERITY:
@@ -123,8 +142,9 @@ def run_audit(solution: str, dotnet: str) -> dict[str, Any]:
     ]
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic output"
-        raise AuditError(f"NuGet audit command exited {result.returncode}: {detail}")
+        raise AuditError(f"NuGet audit command exited {result.returncode}; no clean verdict is available")
+    if result.stderr.strip():
+        raise AuditError("NuGet emitted stderr; advisory coverage is not established")
     return parse_report(result.stdout)
 
 

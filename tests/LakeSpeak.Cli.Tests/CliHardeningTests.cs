@@ -16,6 +16,33 @@ namespace LakeSpeak.Cli.Tests;
 
 public sealed class CliHardeningTests
 {
+    [Theory]
+    [InlineData("999")]
+    [InlineData("6")]
+    [InlineData("Json,Csv")]
+    [InlineData("Json,Table")]
+    public void Invalid_format_values_are_rejected_before_a_host_is_created(string format)
+    {
+        var parseResult = Program.CreateRootCommand().Parse(
+            ["ask", "--agent", "sales", "--format", format, "question"]);
+
+        Should.Throw<CliUsageException>(() => CliHost.Create(
+            parseResult, AskCommand.ProfileRequest(parseResult), Config(), recent: null, ResolveHost));
+    }
+
+    [Theory]
+    [InlineData("agent\u001b[2J")]
+    [InlineData("agent\u009b2J")]
+    public void An_agent_listing_neutralises_control_characters_in_ids(string id)
+    {
+        var console = new TestConsole();
+
+        new TerminalRenderer(console).WriteAgents([new GenieAgent(id, "Finance")]);
+
+        console.Output.ShouldContain(TerminalSafety.SanitizeCell(id));
+        console.Output.ShouldNotContain(id);
+    }
+
     [Fact]
     public void An_explicit_text_format_wins_over_the_configured_default()
     {
