@@ -67,7 +67,7 @@ Console.WriteLine(response.Text);
 Console.WriteLine(response.Query?.Sql);
 ```
 
-The [complete package consumer](examples/package-quickstart/README.md) pins published 0.3.5,
+The [complete package consumer](examples/package-quickstart/README.md) pins published 0.4.0,
 displays rows, and handles cancellation, typed failures and incomplete results. It uses no source
 project reference. The [source-reference example](examples/dotnet-quickstart/) remains in the
 solution so API changes are compiled in CI. Neither example judges the correctness of generated SQL.
@@ -185,8 +185,8 @@ lakespeak pack run daily-platform-brief.yaml --profile company
 ```
 
 See the [Question Pack guide](docs/question-packs.md) for the schema and failure semantics.
-The opt-in `behavior.requireQueryResult` policy is available from **0.4.0**; it is not accepted by the
-published 0.3.5 CLI. It requires a complete query result while allowing a valid zero-row result.
+The opt-in `behavior.requireQueryResult` policy is available from **0.4.0**. It requires a complete
+query result while allowing a valid zero-row result. Older CLI versions reject the field.
 
 ## What it does not do
 

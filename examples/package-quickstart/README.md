@@ -1,6 +1,6 @@
 # Use Genie from a .NET 8 application
 
-This standalone console application restores **published `LakeSpeak.Genie` 0.3.5** from NuGet.
+This standalone console application restores **published `LakeSpeak.Genie` 0.4.0** from NuGet.
 It asks a question through `IGenieClient`, displays generated SQL and rows, and handles typed
 failures and cancellation. It has no project reference. The local `Directory.*.props` files stop
 repository build and package settings from entering the consumer; `.editorconfig` stops repository
@@ -30,7 +30,7 @@ There were 42 orders yesterday.
 SQL: SELECT count(*) AS order_count FROM orders WHERE order_date = current_date() - 1
 order_count
 42
-OFFLINE fixture PASS (published LakeSpeak.Genie 0.3.5).
+OFFLINE fixture PASS (published LakeSpeak.Genie 0.4.0).
 ```
 
 `FixtureHandler` supplies HTTP responses in memory for conversation creation, message polling and
@@ -44,7 +44,7 @@ The sample retains a .NET 8 consumer floor. To run the same published package on
 copy this directory and change `<TargetFramework>` to `net10.0` in the project file. In the
 copy's `global.json`, change `sdk.version` to `10.0.100` and keep `rollForward: latestFeature`
 and `allowPrerelease: false`. This selects an installed stable .NET 10 SDK; it does not install one.
-Keep the package reference at `[0.3.5]`, then repeat the restore, build and `--fixture` commands
+Keep the package reference at `[0.4.0]`, then repeat the restore, build and `--fixture` commands
 from the copied directory. Both target routes use the same client API and offline fixture.
 
 ## Ask a real Genie Agent
@@ -67,5 +67,5 @@ for other supported credential sources and unattended OAuth M2M.
 
 Inspect the SQL before relying on an answer. A completed Genie message can contain a clarification
 instead of a query result; this application prints that response faithfully. An incomplete result
-prints a warning and exits with code 1. The separate Question Pack `requireQueryResult` option is
-introduced in **0.4.0** and is not part of the 0.3.5 package demonstrated here.
+prints a warning and exits with code 1. The separate Question Pack `requireQueryResult` option,
+introduced in **0.4.0**, belongs to the Question Pack CLI; this application uses the Genie SDK.

@@ -46,7 +46,7 @@ continues to use its verified tag version.
 
 ### Library compatibility gate
 
-`LakeSpeak.Genie` enables SDK package validation against published **0.3.5**. `dotnet restore`
+`LakeSpeak.Genie` enables SDK package validation against published **0.4.0**. `dotnet restore`
 downloads that exact baseline and `dotnet pack` compares its API and framework assets with the
 new package, including the retained `net8.0` and `net10.0` targets. This applies to the SDK library;
 the CLI tool keeps its existing command tests. API validation does not detect behavioral breaks,

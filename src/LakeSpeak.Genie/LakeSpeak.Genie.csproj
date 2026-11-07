@@ -4,7 +4,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>LakeSpeak.Genie</PackageId>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>0.3.5</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.4.0</PackageValidationBaselineVersion>
     <Description>A focused .NET client for the Databricks Genie Conversation API: stateful conversations, generated SQL, query results, and typed failures. Independent open-source project, not affiliated with Databricks.</Description>
     <!-- HttpResilienceContextExtensions.GetRequestMessage is [Experimental] in the resilience
          package. The .NET 8 line of Microsoft.Extensions.Http.Resilience (8.10.0) has no
