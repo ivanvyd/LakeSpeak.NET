@@ -6,8 +6,17 @@ date would be a guess dressed as a plan.
 Anything not listed here and not in [GOVERNANCE.md](GOVERNANCE.md) as out of scope is simply
 undecided; open an issue and make the case.
 
-Current source milestone: v0.3.1. The NuGet badges in the README identify the latest published
-packages.
+Current source and published version: [v0.4.0](https://github.com/ivanvyd/LakeSpeak.NET/releases/tag/v0.4.0).
+The sections below retain the earlier milestones and their dated verification results.
+
+Published 0.4.0 packages passed isolated .NET 8 and .NET 10 consumers and installed-tool checks
+on 2026-11-07. The CLI requires .NET 10. See the
+[release evidence](docs/release-evidence/v0.4.0.md) for the exact scope.
+
+The [weekly live suite](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/41454940210)
+passed nine tests on 2026-11-02 at revision `44994c8`. That run predates 0.4.0 and used source,
+rather than an installed-package consumer. Current-release live acceptance remains unverified;
+GCP remains untested. The [compatibility record](docs/compatibility.md) separates these results.
 
 ## v0.1 — a good terminal and a focused client
 

@@ -10,12 +10,23 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
-| 0.4.x | 8.0, 10.0 | Not used by the offline checks | `/api/2.0/genie`, HTTP fixtures | Same library targets; CLI remains 10.0-only. No new live-workspace verification for 0.4.x |
+| 0.4.x | 8.0, 10.0 | 1.16.1 for authentication preflight; not used offline | `/api/2.0/genie`, HTTP fixtures | Same library targets; CLI remains 10.0-only. Offline consumers passed; live question acceptance remains unverified |
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
 | 0.1.x — 0.2.x | 10.0 | 1.10.0 | `/api/2.0/genie`, preview when released | Library family and CLI are 10.0-only |
 
 Published 0.4.0 packages passed isolated .NET 8 and .NET 10 consumers on 2026-11-07.
 See the [release evidence](release-evidence/v0.4.0.md) for package, tool and archive checks.
+
+The [weekly live smoke run on 2026-11-02](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/41454940210)
+passed all nine live tests at source revision `44994c8fc258093003a31c9b704373b308fae37e`.
+The live job ran; the not-configured job was skipped. This is recent evidence for that older
+source revision, not live acceptance of the installed 0.4.0 package. The current-release row
+above remains unverified against a live workspace.
+
+An installed 0.4.0 consumer authenticated successfully on 2026-11-07 using a selected
+nonproduction CLI profile. The configured Agent returned `AgentNotFound` for that identity,
+so the preflight stopped before sending a question. This may indicate a stale Agent ID or
+missing access; it does not verify a live answer or query result.
 
 The Genie Conversation API became [generally available on
 2026-04-02](https://docs.databricks.com/aws/en/ai-bi/release-notes/2026#april-2-2026). Visualization
@@ -260,9 +271,10 @@ The v0.3.1 release candidate was checked as a package, not only as source:
 | Pre-release independent review | Correctness, security, performance and structure found no production-code defect. Requirements review found stale roadmap claims; correctness review found two checklist reproducibility defects. The release-prep change corrected them |
 | Post-release independent review | A second correctness, structure, security and requirements panel found no production-code defect. It found the stale 258-test count, an unpinned CycloneDX install, invalid public-NuGet attestation guidance and an ambiguous version-specific checklist. [PR #94](https://github.com/ivanvyd/LakeSpeak.NET/pull/94) corrected all four; [rehearsal 33537144267](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537144267) and final `main` [CI](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586581) and [Security](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/33537586600) passed |
 
-The current runtime and `live-smoke.yml` are identical to revision `6b27140`, whose native-M2M
-AWS run passed all nine live tests. GCP remains untested; issue #52 was subsequently closed as
-not planned. That closure does not establish GCP compatibility.
+The native-M2M AWS run at revision `6b27140` passed all nine live tests on 2026-09-01.
+That result establishes coverage for the tested revision; later runtime changes need their own
+live verification. GCP remains untested; issue #52 was subsequently closed as not planned.
+That closure does not establish GCP compatibility.
 
 ## Local verification — 2026-08-31
 
