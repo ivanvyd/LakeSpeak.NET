@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Static invariants for CI package identity and lock-refresh permissions."""
 
+import argparse
+import os
 from pathlib import Path
+import subprocess
+import tempfile
+import textwrap
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,7 +26,46 @@ def forbid(text: str, fragment: str, message: str) -> None:
         raise AssertionError(message)
 
 
+def check_lock_only_commit(refresh: str, bash: str) -> None:
+    block = refresh.split("      - name: Commit the refreshed lock files\n", 1)[1]
+    script = textwrap.dedent(block.split("        run: |\n", 1)[1].split("\n      - name:", 1)[0])
+    script = script[:script.index("gh auth setup-git")]
+    with tempfile.TemporaryDirectory() as directory:
+        fixture = Path(directory)
+
+        def git(*arguments: str) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(["git", *arguments], cwd=fixture, capture_output=True,
+                                  text=True, check=True)
+
+        git("init", "-q")
+        git("config", "user.name", "Fixture")
+        git("config", "user.email", "fixture@example.invalid")
+        git("config", "commit.gpgsign", "false")
+        lock = fixture / "packages.lock.json"
+        other = fixture / "unrelated.txt"
+        lock.write_text("{}\n", encoding="utf-8")
+        other.write_text("before\n", encoding="utf-8")
+        git("add", "packages.lock.json", "unrelated.txt")
+        git("commit", "-qm", "fixture")
+        lock.write_text('{"version": 1}\n', encoding="utf-8")
+        other.write_text("staged elsewhere\n", encoding="utf-8")
+        git("add", "unrelated.txt")
+        result = subprocess.run([bash, "-c", script], cwd=fixture,
+                                env=dict(os.environ, BRANCH="dependabot/nuget/example"),
+                                capture_output=True, text=True, check=False, timeout=15)
+        if result.returncode:
+            raise AssertionError(result.stderr)
+        committed = git("diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").stdout.strip()
+        if committed != "packages.lock.json":
+            raise AssertionError(f"Unrelated staged content entered the commit: {committed}")
+        if git("diff", "--cached", "--name-only").stdout.strip() != "unrelated.txt":
+            raise AssertionError("The refresh consumed or discarded unrelated staged content")
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--bash", default="bash")
+    args = parser.parse_args()
     require(
         CI,
         "-p:VersionSuffix=ci.${{ github.run_id }}.${{ github.run_attempt }}",
@@ -112,6 +156,10 @@ def main() -> None:
     forbid(REFRESH, "persist-credentials: true", "checkout credentials must stay disabled")
     forbid(REFRESH, "\n          git add -A", "the workflow must not stage unrelated files")
     forbid(REFRESH, "secrets.PAT", "the workflow must not introduce a long-lived PAT")
+
+    require(REFRESH, "ref: refs/heads/${{ inputs.branch }}", "checkout must select a branch, never a same-named tag")
+    require(REFRESH, "git commit --only", "the commit must exclude unrelated staged files")
+    check_lock_only_commit(REFRESH, args.bash)
 
     print("maintenance workflow policy test passed")
 

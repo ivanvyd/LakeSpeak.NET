@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: refs/heads/${{ inputs.branch }}
           # Do not leave the write-capable token where restore/build or a package target can read
           # it. The final, bounded push step receives it only after all checks pass.
           persist-credentials: false
@@ -92,11 +92,11 @@ jobs:
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- '*packages.lock.json'
-          git commit -m 'Refresh the lock files for this bump
+          git commit --only -m 'Refresh the lock files for this bump
 
           Regenerated with `dotnet restore --force-evaluate`, then verified with
           `--locked-mode` and a Release build. Dependabot cannot write these under
-          central package management; see .github/workflows/refresh-lock-files.yml.'
+          central package management; see .github/workflows/refresh-lock-files.yml.' -- '*packages.lock.json'
           gh auth setup-git
           git push origin "HEAD:refs/heads/$BRANCH"
           echo 'changed=true' >> "$GITHUB_OUTPUT"
