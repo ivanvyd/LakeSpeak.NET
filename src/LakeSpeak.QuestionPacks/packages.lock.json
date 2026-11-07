@@ -229,7 +229,7 @@
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.5, )",
+          "LakeSpeak.Genie": "[0.4.0, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
@@ -558,7 +558,7 @@
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.3.5, )",
+          "LakeSpeak.Genie": "[0.4.0, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },

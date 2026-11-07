@@ -28,7 +28,7 @@ Genie Agent. [Getting started](docs/getting-started.md) covers prerequisites and
 
 ## Status
 
-**Current source version: v0.3.5.** The NuGet badges above show the latest published packages. See
+**Current source version: v0.4.0.** The NuGet badges above show the latest published packages. See
 [Verification status](#verification-status) for what has actually been tested and what has not.
 Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public API may both
 change, and before `v1.0` a minor version is allowed to break them.
@@ -38,7 +38,7 @@ is `net10.0`-only. See [ADR 0006](docs/decisions/0006-multi-target-net8-and-net1
 reasoning.
 
 ```bash
-dotnet add package LakeSpeak.Genie --version 0.3.5
+dotnet add package LakeSpeak.Genie
 ```
 
 ## In .NET
@@ -121,13 +121,13 @@ including its correction.
 ## Install
 
 ```bash
-dotnet add package LakeSpeak.Genie --version 0.3.5
+dotnet add package LakeSpeak.Genie
 ```
 
 For the companion .NET 10 CLI:
 
 ```bash
-dotnet tool install --global LakeSpeak.Cli --version 0.3.5
+dotnet tool install --global LakeSpeak.Cli
 ```
 
 ## Terminal quick start
@@ -185,7 +185,7 @@ lakespeak pack run daily-platform-brief.yaml --profile company
 ```
 
 See the [Question Pack guide](docs/question-packs.md) for the schema and failure semantics.
-The opt-in `behavior.requireQueryResult` policy is **Unreleased**; it is not accepted by the
+The opt-in `behavior.requireQueryResult` policy is available from **0.4.0**; it is not accepted by the
 published 0.3.5 CLI. It requires a complete query result while allowing a valid zero-row result.
 
 ## What it does not do

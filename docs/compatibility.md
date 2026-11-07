@@ -10,6 +10,7 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
+| 0.4.x | 8.0, 10.0 | Not used by the offline checks | `/api/2.0/genie`, HTTP fixtures | Same library targets; CLI remains 10.0-only. No new live-workspace verification for 0.4.x |
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
 | 0.1.x — 0.2.x | 10.0 | 1.10.0 | `/api/2.0/genie`, preview when released | Library family and CLI are 10.0-only |
 

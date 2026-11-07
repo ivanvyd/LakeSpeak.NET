@@ -68,4 +68,4 @@ for other supported credential sources and unattended OAuth M2M.
 Inspect the SQL before relying on an answer. A completed Genie message can contain a clarification
 instead of a query result; this application prints that response faithfully. An incomplete result
 prints a warning and exits with code 1. The separate Question Pack `requireQueryResult` option is
-**Unreleased** and is not part of the 0.3.5 package demonstrated here.
+introduced in **0.4.0** and is not part of the 0.3.5 package demonstrated here.
