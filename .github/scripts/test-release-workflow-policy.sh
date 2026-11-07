@@ -55,6 +55,8 @@ git config user.name 'Release Fixture'
 git config user.email 'release@example.com'
 git config gpg.format ssh
 git config user.signingkey "$trusted_key"
+# Unsigned-tag cases must not inherit global tag signing.
+git config tag.gpgSign false
 mkdir -p .github
 printf 'release@example.com %s\n' "$(cat "$trusted_key.pub")" > .github/allowed_signers
 printf 'fixture\n' > payload.txt
@@ -106,6 +108,19 @@ expect_failure "branch push publication" \
   invoke push refs/heads/main branch main 1.2.3
 expect_failure "tag/version mismatch" \
   invoke workflow_dispatch refs/tags/v1.2.3 tag v1.2.3 1.2.4
+
+for version in '1.2.3-0' '1.2.3-rc.1' '1.2.3-01alpha' '1.2.3+001' '1.2.3-rc.1+001'; do
+  invoke workflow_dispatch refs/heads/main branch main "$version" >/dev/null
+  grep -Fxq "version=$version" "$fixture_root/output" \
+    || fail "a valid SemVer rehearsal did not retain $version"
+  grep -Fxq 'publish_authorized=false' "$fixture_root/output" \
+    || fail "a SemVer branch rehearsal was authorized to publish"
+done
+
+for version in '1.2.3-01' '1.2.3-rc.01' '1.2.3-00.rc' '1.2.3-rc.1.01+001'; do
+  expect_failure "numeric prerelease identifier with a leading zero ($version)" \
+    invoke workflow_dispatch refs/heads/main branch main "$version"
+done
 
 git checkout -q --detach "$release_commit"
 printf 'later\n' >> payload.txt

@@ -28,7 +28,10 @@ public sealed record PackBehavior(
     bool IncludeGeneratedSql,
     bool IncludeTimings,
     bool IncludeIdentifiers,
-    TimeSpan Timeout);
+    TimeSpan Timeout)
+{
+    public bool RequireQueryResult { get; init; }
+}
 
 public sealed class PackValidationException(IReadOnlyList<string> errors)
     : Exception("The Question Pack is not valid:" + Environment.NewLine +
@@ -241,7 +244,10 @@ public static partial class QuestionPackLoader
                 behavior?.IncludeGeneratedSql ?? false,
                 behavior?.IncludeTimings ?? true,
                 behavior?.IncludeIdentifiers ?? false,
-                behaviorTimeout))
+                behaviorTimeout)
+            {
+                RequireQueryResult = behavior?.RequireQueryResult ?? false,
+            })
         {
             BaseDirectory = baseDirectory,
         };
@@ -437,6 +443,7 @@ public static partial class QuestionPackLoader
     private sealed class RawBehavior
     {
         public bool? ContinueOnQuestionFailure { get; set; }
+        public bool? RequireQueryResult { get; set; }
         public bool? IncludeGeneratedSql { get; set; }
         public bool? IncludeTimings { get; set; }
         public bool? IncludeIdentifiers { get; set; }

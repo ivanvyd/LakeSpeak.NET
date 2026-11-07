@@ -18,8 +18,15 @@ head is a release process that stops when they do.
 
 ## Versioning
 
-Semantic versioning. **Before `v1.0`, a minor version may break the API** — that is what `0.x`
-means, and the README says so rather than leaving people to discover it.
+Use [NuGet SemVer 2.0](https://learn.microsoft.com/nuget/concepts/package-versioning).
+**Before `v1.0`, a minor version may break compatibility** when its migration is documented.
+Patch releases remain compatible. From `v1.0`, breaking API, behavior, dependency or supported
+framework changes require a major version; compatible features use minor and compatible fixes use
+patch. Removing a framework is a compatibility decision, not routine dependency maintenance.
+
+Use prerelease suffixes for candidates. Numeric prerelease identifiers cannot have leading zeros:
+`1.2.3-rc.1` is valid and `1.2.3-rc.01` is not. Build metadata may contain them: `1.2.3+001` is
+valid. Never reuse a published package identity.
 
 The version comes from one place per situation:
 
@@ -31,6 +38,29 @@ Manual runs never publish. A manual rehearsal run at a release tag derives its v
 tag and rejects a conflicting `version` input.
 
 `VersionPrefix` in `Directory.Build.props` is the local-development default only. CI overrides it.
+The library and CLI share that repository version; do not introduce a second version source.
+PR CI adds a temporary `ci.<run id>.<attempt>` suffix to its packages. The tool smoke check requires
+that identity and verifies the installed version, so it cannot substitute the published stable
+tool from another feed or cache. These CI packages are not published. The signed release workflow
+continues to use its verified tag version.
+
+### Library compatibility gate
+
+`LakeSpeak.Genie` enables SDK package validation against published **0.3.5**. `dotnet restore`
+downloads that exact baseline and `dotnet pack` compares its API and framework assets with the
+new package, including the retained `net8.0` and `net10.0` targets. This applies to the SDK library;
+the CLI tool keeps its existing command tests. API validation does not detect behavioral breaks,
+so keep the affected regression tests and installed-package consumer checks.
+
+For a compatible release, retain the last stable baseline until a newer stable package is actually
+published and verified, then update `PackageValidationBaselineVersion` in the Genie project and
+regenerate its lock file. Never point it at an unpublished candidate or advance it just to make
+an incompatibility disappear.
+
+A deliberate break needs the release classification above, a migration note and review of the
+specific compatibility diagnostics. Keep validation enabled. Document any narrowly scoped,
+reviewed suppression for that break and its removal after a verified new stable baseline exists;
+do not disable the baseline check or suppress all compatibility diagnostics for a release.
 
 ## Rehearse first
 
