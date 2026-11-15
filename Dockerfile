@@ -10,7 +10,7 @@
 # image, so the OAuth broker is unavailable by design — a container is an unattended context, and
 # DATABRICKS_TOKEN is the credential that belongs there. See docs/authentication.md.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS build
 WORKDIR /src
 
 # Restore against the lock files first so this layer caches until a dependency actually changes.
