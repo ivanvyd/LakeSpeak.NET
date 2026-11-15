@@ -10,7 +10,7 @@
 # image, so the OAuth broker is unavailable by design — a container is an unattended context, and
 # DATABRICKS_TOKEN is the credential that belongs there. See docs/authentication.md.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 WORKDIR /src
 
 # Restore against the lock files first so this layer caches until a dependency actually changes.
@@ -20,13 +20,13 @@ RUN dotnet restore src/LakeSpeak.Cli/LakeSpeak.Cli.csproj --locked-mode
 
 ARG VERSION=0.0.0-docker
 RUN dotnet publish src/LakeSpeak.Cli/LakeSpeak.Cli.csproj \
-      -c Release -r linux-x64 --self-contained true --no-restore \
+      -c Release -f net10.0 -r linux-x64 --self-contained true \
       -p:Version=${VERSION} -p:PublishSingleFile=true \
       -o /app
 
 # runtime-deps rather than runtime: the binary is self-contained, so it needs the native
 # dependencies but not the .NET runtime on top of them.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0@sha256:12dd273c196e92aa91542749b8df0996f497f812811abba9e6613b484f681dd0 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0@sha256:9cab4d7d886226d47b5489ef9abf0544e2f109fde11a8acc190217610af26c00 AS final
 
 # Genie returns prose and cell values drawn from your tables, which are not ASCII. Without this
 # the container renders them as question marks.
@@ -37,7 +37,7 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0 \
 # reason to hold root in someone's cluster.
 RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin lakespeak
 WORKDIR /work
-COPY --from=build --chown=root:root /app/lakespeak /usr/local/bin/lakespeak
+COPY --from=build --chown=root:root /app/LakeSpeak.Cli /usr/local/bin/lakespeak
 USER 10001
 
 ENTRYPOINT ["/usr/local/bin/lakespeak"]
