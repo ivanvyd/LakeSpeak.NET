@@ -36,6 +36,7 @@ public sealed class GenieClientOptions
     public TimeSpan MaxPollInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>Per-request HTTP timeout. Separate from <see cref="PollingTimeout"/>, which bounds the whole wait.</summary>
+    /// <remarks>Strict mode also applies this timeout separately to each streamed response body read.</remarks>
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(100);
 
     /// <summary>Page size for agent listing.</summary>
@@ -57,8 +58,12 @@ public sealed class GenieClientOptions
     /// </remarks>
     public int MaxResultRows { get; set; } = 100_000;
 
+    /// <summary>Opt-in bounded, complete inline results. Null preserves legacy behavior.</summary>
+    public GenieResultLimits? StrictResults { get; set; }
+
     internal void Validate()
     {
+        StrictResults?.Validate();
         if (Host is null)
         {
             throw new InvalidOperationException(

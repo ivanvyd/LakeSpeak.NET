@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace LakeSpeak.Genie.Wire;
@@ -37,6 +38,9 @@ internal sealed record SpaceWire
 
 internal sealed record StartConversationWire
 {
+    [JsonPropertyName("space_id")]
+    public JsonElement? SpaceId { get; init; }
+
     [JsonPropertyName("conversation_id")]
     public string? ConversationId { get; init; }
 
@@ -212,6 +216,9 @@ internal sealed record QueryResultWire
 
 internal sealed record StatementResponseWire
 {
+    [JsonPropertyName("status")]
+    public JsonElement? Status { get; init; }
+
     [JsonPropertyName("statement_id")]
     public string? StatementId { get; init; }
 

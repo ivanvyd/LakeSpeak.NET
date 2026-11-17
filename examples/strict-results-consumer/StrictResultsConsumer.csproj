@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LakeSpeak.Genie" Version="[$(LakeSpeakCandidateVersion)]" />
+  </ItemGroup>
+  <Target Name="RequireCandidateVersion" BeforeTargets="CollectPackageReferences">
+    <Error Condition="'$(LakeSpeakCandidateVersion)' == ''" Text="Pass -p:LakeSpeakCandidateVersion with the exact locally packed candidate version." />
+  </Target>
+</Project>

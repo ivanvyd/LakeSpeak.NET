@@ -141,6 +141,12 @@ jobs:
         run: |
           dotnet pack LakeSpeak.slnx -c Release -o artifacts --no-restore -p:PackParallel=true \
             -p:VersionSuffix=ci.${{ github.run_id }}.${{ github.run_attempt }}
+      - name: Exercise the strict-results candidate on both supported runtimes
+        run: |
+          candidate=$(dotnet msbuild src/LakeSpeak.Genie/LakeSpeak.Genie.csproj -nologo -getProperty:Version -p:VersionSuffix=ci.${{ github.run_id }}.${{ github.run_attempt }})
+          dotnet restore examples/strict-results-consumer/StrictResultsConsumer.csproj -p:LakeSpeakCandidateVersion="$candidate" -p:RestoreAdditionalProjectSources="$GITHUB_WORKSPACE/artifacts"
+          dotnet run --project examples/strict-results-consumer/StrictResultsConsumer.csproj -c Release -f net8.0 --no-restore -p:LakeSpeakCandidateVersion="$candidate"
+          dotnet run --project examples/strict-results-consumer/StrictResultsConsumer.csproj -c Release -f net10.0 --no-restore -p:LakeSpeakCandidateVersion="$candidate"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages

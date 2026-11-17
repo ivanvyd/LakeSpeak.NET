@@ -92,6 +92,9 @@ public static class ServiceCollectionExtensions
                 http.BaseAddress = options.Host;
                 http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent.Value);
             })
+            // Factory logs can expose signed continuation URLs and bearer headers at Trace.
+            // LakeSpeak's own diagnostics remain available without request/response logging.
+            .RemoveAllLoggers()
             .AddHttpMessageHandler<GenieAuthenticationHandler>();
 
         var resilienceBuilder = httpClientBuilder.AddStandardResilienceHandler();

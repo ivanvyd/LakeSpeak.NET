@@ -130,11 +130,29 @@ services.AddLakeSpeak(options => options.Host = new Uri("https://..."));
 
 Register the provider **before** `AddLakeSpeak`; it uses `TryAdd`, so a provider you register wins.
 
+An external token source can mint OAuth tokens with a fixed `custom_claim` and supply them through
+this existing provider. Databricks documents custom claims for governed SQL through the Genie
+Agents API; its [custom identity claim guide](https://docs.databricks.com/aws/en/dev-tools/auth/oauth-custom-identity-claims)
+recommends ABAC row filters for Genie. Derive the claim on your server from an authenticated
+session and make missing claims match no rows. LakeSpeak's built-in M2M flow does not add this
+parameter. Keep each provider/client registration bound to its intended identity; do not mutate
+the singleton provider to multiplex request-specific claims. SQL filtering does not authorize
+access to conversation history: your application must check ownership before accepting a
+conversation or message ID. This documentation has not been live-tested with custom claims.
+
 ## What LakeSpeak guarantees
 
 - No token is written to disk, put in a URL, or passed as a process argument.
-- Authorization headers and both Databricks signature fields are redacted from all diagnostic
-  output, including `--verbose`, and from exception messages.
-- Presigned result URLs are fetched **without** the `Authorization` header, so a Databricks
-  credential is never handed to blob storage.
+- LakeSpeak-owned diagnostic output, including `--verbose` and exception messages, redacts
+  credential-shaped values. `AddLakeSpeak` removes all previously registered HTTP factory
+  loggers for its named client, including defaults and earlier custom loggers. Defaults can
+  expose bearer headers or signed continuation URLs on .NET 8.
+- Presigned result URLs are not fetched; external-link results are unsupported. Continuation
+  requests are restricted to the configured workspace origin.
 - `auth check` and `config show` print no part of any credential.
+
+These guarantees do not control logging in an externally supplied `HttpClient`, custom handlers,
+host telemetry, or HTTP loggers re-enabled after `AddLakeSpeak`. Configure those components to
+omit authorization headers, request/response payloads and signed URL query strings.
+Applications that need custom HTTP factory logging for this named client must configure it
+after `AddLakeSpeak`; earlier custom logger registrations are intentionally removed.
