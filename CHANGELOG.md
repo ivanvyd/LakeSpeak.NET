@@ -6,6 +6,20 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+### Added
+
+- Opt-in `GenieClientOptions.StrictResults` with aggregate hard row and decoded JSON body byte
+  budgets, returned-identity validation, and rejection of incomplete inline query results.
+- `GenieResponse.QueryAttachments` exposes every query attachment. Strict Ask/FollowUp fetch all
+  results; legacy calls retain first-query fetching. Metadata-only calls do not prove completeness.
+- Offline candidate-package consumer fixture for the strict results API on .NET 8 and .NET 10.
+
+### Fixed
+
+- Disable the named client's HTTP factory logging in `AddLakeSpeak`, preventing .NET 8 Trace
+  logs and scopes from exposing bearer headers and signed continuation URLs. LakeSpeak state
+  diagnostics remain available; custom external HTTP logging remains the host's responsibility.
+
 ## 0.4.0 — 2026-11-07
 
 ### Added

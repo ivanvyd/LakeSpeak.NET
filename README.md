@@ -85,6 +85,35 @@ create one, and sees only what your own Databricks identity can see.
 
 ## Why this exists
 
+For bounded exports, opt into strict inline results when configuring the client:
+
+```csharp
+services.AddLakeSpeak(options =>
+{
+    options.Host = new Uri("https://your-workspace.cloud.databricks.com");
+    options.StrictResults = new GenieResultLimits(MaxRows: 10_000, MaxBytes: 8_000_000);
+});
+var response = await genie.AskAsync(agentId, "Orders by country", cancellationToken: cancellationToken);
+foreach (var attachment in response.QueryAttachments)
+{
+    Console.WriteLine($"{attachment.Query.Title}: {attachment.Result?.RowCount} rows");
+}
+```
+
+Strict Ask/FollowUp aggregate row and JSON-body byte budgets across every query attachment and
+chunk. Incomplete results and exhausted budgets throw `GenieException` (`UnsupportedResult`,
+`STRICT_RESULT_INCOMPLETE` or `STRICT_RESULT_LIMIT`); malformed or conflicting identities throw
+`MalformedResponse`. No partial table is returned on these failures. Message/error envelopes
+are bounded separately. Bytes mean decoded JSON body bytes, not CLR heap or compressed wire size.
+Omitted wire IDs are accepted; explicit conflicts and duplicate JSON properties are rejected.
+The existing `Query`/`Result` properties still refer to the first query. With strict mode off,
+only that first result is fetched and `MaxResultRows` remains a soft limit.
+
+GetMessage, WaitForResponse and `IncludeQueryResult=false` expose query metadata without fetching
+tables. Metadata `IsTruncated=false` does not establish completeness. See
+[the strict contract](docs/decisions/0010-opt-in-strict-inline-results.md) and the
+[offline candidate-package fixture](examples/strict-results-consumer/README.md) for exact limits.
+
 Use LakeSpeak when your .NET application needs a typed Genie client in-process, with dependency
 injection, cancellation and typed failures, or when you want YAML questions to produce a Markdown
 report through the companion CLI.

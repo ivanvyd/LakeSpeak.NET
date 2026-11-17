@@ -34,6 +34,20 @@ public sealed record GenieResponse(
 {
     /// <summary>True when a visualization attachment was present. v0.1 reports it and does not render it.</summary>
     public bool HasVisualization { get; init; }
+
+    /// <summary>Every query attachment in server order, without continuation URLs.</summary>
+    /// <remarks>
+    /// Legacy Ask/FollowUp fetch only the first result; strict mode fetches all. GetMessage,
+    /// WaitForResponse and IncludeQueryResult=false return metadata only (Result is null).
+    /// Metadata alone makes no promise of result completeness.
+    /// </remarks>
+    public IReadOnlyList<GenieQueryAttachment> QueryAttachments { get; init; } = [];
+}
+
+public sealed record GenieQueryAttachment(string? AttachmentId, GenieQuery Query, GenieQueryResult? Result)
+{
+    /// <summary>Whether the message's query metadata already advertises truncation.</summary>
+    public bool IsTruncated { get; init; }
 }
 
 /// <summary>

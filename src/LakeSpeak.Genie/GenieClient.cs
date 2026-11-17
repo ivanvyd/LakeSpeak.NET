@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
@@ -36,6 +35,7 @@ public sealed partial class GenieClient : IGenieClient
     private readonly GenieClientOptions _options;
     private readonly TimeProvider _time;
     private readonly ILogger<GenieClient> _logger;
+    private readonly GenieResultLimits? _strictLimits;
 
     public GenieClient(
         HttpClient http,
@@ -46,6 +46,7 @@ public sealed partial class GenieClient : IGenieClient
         _http = http;
         _options = options.Value;
         _options.Validate();
+        _strictLimits = _options.StrictResults;
         // Injected so polling tests advance a fake clock instead of sleeping. A polling loop
         // tested with real delays is either slow or flaky, usually both.
         _time = timeProvider ?? TimeProvider.System;
@@ -107,6 +108,10 @@ public sealed partial class GenieClient : IGenieClient
             throw new GenieException(GenieFailureKind.MalformedResponse, "Agent response contained no space_id.");
         }
 
+        if (_strictLimits is not null)
+        {
+            ValidateIdentity(wire.SpaceId, agentId);
+        }
         return new GenieAgent(wire.SpaceId, wire.Title ?? wire.SpaceId, wire.Description, wire.WarehouseId);
     }
 
@@ -127,6 +132,16 @@ public sealed partial class GenieClient : IGenieClient
                 "Start-conversation response was missing conversation_id or message_id.");
         }
 
+        if (_strictLimits is not null)
+        {
+            ValidateIdentity(wire.SpaceId?.GetString(), agentId);
+            ValidateIdentity(wire.Conversation?.SpaceId, agentId);
+            ValidateIdentity(wire.Conversation?.ConversationId, wire.ConversationId);
+            if (wire.Message is { } message)
+            {
+                ValidateMessageIdentity(message, agentId, wire.ConversationId, wire.MessageId);
+            }
+        }
         return (new GenieConversationRef(agentId, wire.ConversationId, wire.Conversation?.Title), wire.MessageId);
     }
 
@@ -141,8 +156,13 @@ public sealed partial class GenieClient : IGenieClient
             new StartConversationRequestWire { Content = question },
             cancellationToken).ConfigureAwait(false);
 
-        return wire.MessageId ?? wire.Id
+        var messageId = wire.MessageId ?? wire.Id
             ?? throw new GenieException(GenieFailureKind.MalformedResponse, "Message response contained no message_id.");
+        if (_strictLimits is not null)
+        {
+            ValidateMessageIdentity(wire, agentId, conversationId, messageId);
+        }
+        return messageId;
     }
 
     public async Task<GenieResponse> GetMessageAsync(
@@ -219,10 +239,10 @@ public sealed partial class GenieClient : IGenieClient
                     {
                         GenieMessageState.Failed => throw new GenieException(
                             GenieFailureKind.MessageFailed,
-                            wire.Error?.Error is { Length: > 0 } e
+                            _strictLimits is null && wire.Error?.Error is { Length: > 0 } e
                                 ? $"Genie could not answer: {e}"
                                 : "Genie could not answer the question.",
-                            errorCode: wire.Error?.Type,
+                            errorCode: _strictLimits is null ? wire.Error?.Type : null,
                             lastKnownResponse: last),
 
                         GenieMessageState.Cancelled => throw new GenieException(
@@ -276,6 +296,7 @@ public sealed partial class GenieClient : IGenieClient
         var started = _time.GetTimestamp();
         var timeout = _options.PollingTimeout;
         var interval = _options.InitialPollInterval;
+        var budget = _strictLimits is null ? null : new ResultBudget(_strictLimits);
         using var deadlineCancellation = new CancellationTokenSource(timeout, _time);
         using var executionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, deadlineCancellation.Token);
@@ -287,7 +308,7 @@ public sealed partial class GenieClient : IGenieClient
             var result = await FetchQueryResultAsync(
                 $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/execute-query",
                 HttpMethod.Post,
-                executionCancellation.Token).ConfigureAwait(false);
+                executionCancellation.Token, budget).ConfigureAwait(false);
 
             while (true)
             {
@@ -310,8 +331,9 @@ public sealed partial class GenieClient : IGenieClient
                     break;
                 }
 
-                result = await GetQueryResultAsync(
-                    agentId, conversationId, messageId, attachmentId, executionCancellation.Token).ConfigureAwait(false);
+                result = await FetchQueryResultAsync(
+                    $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/query-result",
+                    HttpMethod.Get, executionCancellation.Token, budget).ConfigureAwait(false);
                 interval = TimeSpan.FromMilliseconds(
                     Math.Min(interval.TotalMilliseconds * 1.5, _options.MaxPollInterval.TotalMilliseconds));
             }
@@ -323,6 +345,10 @@ public sealed partial class GenieClient : IGenieClient
         }
 
         LogReExecuteTimedOut(_logger, timeout.TotalSeconds);
+        if (_strictLimits is not null)
+        {
+            throw StrictIncomplete();
+        }
         return null;
     }
 
@@ -404,6 +430,32 @@ public sealed partial class GenieClient : IGenieClient
         var response = await WaitForResponseAsync(agentId, conversationId, messageId, options, cancellationToken)
             .ConfigureAwait(false);
 
+        if (_strictLimits is not null && options.IncludeQueryResult && response.QueryAttachments.Count > 0)
+        {
+            if (response.State != GenieMessageState.Completed)
+            {
+                throw StrictIncomplete();
+            }
+            var budget = new ResultBudget(_strictLimits);
+            var queries = new List<GenieQueryAttachment>();
+            foreach (var attachment in response.QueryAttachments)
+            {
+                if (attachment.IsTruncated)
+                {
+                    throw StrictIncomplete();
+                }
+                if (string.IsNullOrEmpty(attachment.AttachmentId))
+                {
+                    throw StrictMalformed();
+                }
+                var table = await FetchStrictQueryResultAsync(
+                    $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachment.AttachmentId)}/query-result",
+                    HttpMethod.Get, budget, cancellationToken, attachment.Query.StatementId).ConfigureAwait(false);
+                queries.Add(attachment with { Result = table ?? throw StrictIncomplete() });
+            }
+            return response with { QueryAttachments = queries, Result = queries[0].Result };
+        }
+
         if (!options.IncludeQueryResult || response.Query is null || response.Metadata.AttachmentId is null)
         {
             return response;
@@ -421,7 +473,11 @@ public sealed partial class GenieClient : IGenieClient
             agentId, conversationId, messageId, response.Metadata.AttachmentId, cancellationToken)
             .ConfigureAwait(false);
 
-        return response with { Result = result };
+        return response with
+        {
+            Result = result,
+            QueryAttachments = response.QueryAttachments.Select((a, i) => i == 0 ? a with { Result = result } : a).ToList(),
+        };
     }
 
     private static void ValidateAskOptions(GenieAskOptions? options)
@@ -430,169 +486,6 @@ public sealed partial class GenieClient : IGenieClient
         {
             GenieClientOptions.ValidateWaitTimeout(timeout, nameof(options.Timeout));
         }
-    }
-
-    private async Task<GenieQueryResult?> FetchQueryResultAsync(
-        string url, HttpMethod method, CancellationToken cancellationToken)
-    {
-        using var response = await SendAsync(method, url, content: null, cancellationToken).ConfigureAwait(false);
-
-        var wire = await ReadAsync<QueryResultWire>(response, cancellationToken).ConfigureAwait(false);
-        var statement = wire.StatementResponse;
-        if (statement?.Manifest?.Schema?.Columns is not { } columns)
-        {
-            return null;
-        }
-
-        var cols = columns
-            .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName))
-            .ToList();
-
-        RejectExternalLinks(statement.Result);
-
-        var rows = new List<IReadOnlyList<string?>>(statement.Result?.DataArray ?? []);
-        var incomplete = await AppendRemainingChunksAsync(
-                rows, statement.Result, statement.StatementId, cancellationToken)
-            .ConfigureAwait(false);
-
-        // `manifest.truncated` alone does NOT mean the caller has every row: it reports
-        // statement-level truncation by Databricks, and is false for a result that was merely
-        // split into chunks.
-        //
-        // shortOfTotal is not a second guard on the loop stopping early — every such exit already
-        // returns true above. It catches the case the loop cannot see: a walk that ran to a clean
-        // finish, with no further chunk advertised, yet still ended up with fewer rows than the
-        // manifest promised. That is Databricks disagreeing with itself, and the caller should
-        // hear about it rather than receive a short result labelled whole.
-        var shortOfTotal = statement.Manifest.TotalRowCount is { } total && rows.Count < total;
-
-        return new GenieQueryResult(
-            cols,
-            rows,
-            (statement.Manifest.Truncated ?? false) || incomplete || shortOfTotal,
-            statement.Manifest.TotalRowCount);
-    }
-
-    /// <summary>
-    /// Follows <c>next_chunk_internal_link</c> until the result is complete, appending each
-    /// chunk's rows. Returns <see langword="true"/> if rows are known to be missing.
-    /// </summary>
-    /// <remarks>
-    /// Stopping early is never silent: every exit that leaves rows behind returns
-    /// <see langword="true"/>, which the caller turns into <c>IsTruncated</c>. A chunk that
-    /// cannot be fetched degrades to the rows already in hand rather than discarding a good
-    /// partial answer, because the text of the answer is the primary payload.
-    /// </remarks>
-    private async Task<bool> AppendRemainingChunksAsync(
-        List<IReadOnlyList<string?>> rows,
-        ResultDataWire? firstChunk,
-        string? statementId,
-        CancellationToken cancellationToken)
-    {
-        var chunk = firstChunk;
-        var seenLinks = new HashSet<string>(StringComparer.Ordinal);
-        var fetches = 0;
-
-        // Driven by next_chunk_index, not by the link: the index is what says rows are missing.
-        // Every way of failing to follow it below still returns true, so a result is never
-        // reported complete because the means of completing it was unavailable.
-        while (chunk?.NextChunkIndex is not null)
-        {
-            if (rows.Count >= _options.MaxResultRows)
-            {
-                LogChunkCapReached(_logger, rows.Count, _options.MaxResultRows);
-                return true;
-            }
-
-            // Neither the row cap nor the repeated-link guard stops a response that hands back a
-            // fresh link every time while carrying no rows: nothing grows toward MaxResultRows,
-            // and no link repeats. That is an unbounded request flood at a real workspace, so the
-            // number of fetches is bounded outright.
-            if (++fetches > MaxChunkFetches)
-            {
-                LogChunkFetchLimitReached(_logger, MaxChunkFetches);
-                return true;
-            }
-
-            var link = chunk.NextChunkInternalLink;
-            if (link is not { Length: > 0 })
-            {
-                // Observed on the Genie query-result endpoint: it retains the statement id and
-                // next index but omits the link that the SQL Statement endpoint returns. That
-                // endpoint's path is documented. Uri normalizes dot-only segments even after
-                // escaping, so those malformed ids cannot safely address a statement endpoint.
-                if (statementId is not { Length: > 0 } || statementId is "." or "..")
-                {
-                    LogChunkLinkMissing(_logger);
-                    return true;
-                }
-
-                link = $"/api/2.0/sql/statements/{Uri.EscapeDataString(statementId)}/result/chunks/" +
-                    chunk.NextChunkIndex.Value.ToString(CultureInfo.InvariantCulture);
-            }
-
-            // A chunk that points at itself would otherwise spin here until the process is
-            // killed — and a chunk carrying no rows would not even grow toward MaxResultRows.
-            // Same failure the agent-listing loop guards against with its repeated page token.
-            if (!seenLinks.Add(link))
-            {
-                LogChunkLinkRepeated(_logger);
-                return true;
-            }
-
-            if (!ResolvesToWorkspace(link, out var chunkUri))
-            {
-                // The link is server-supplied and the bearer token rides on every workspace
-                // request, so a link naming another host would disclose the token to it. The
-                // link is not logged: its contents are attacker-chosen in exactly this case.
-                LogChunkLinkRejected(_logger);
-                return true;
-            }
-
-            try
-            {
-                chunk = await GetAsync<ResultDataWire>(chunkUri.AbsoluteUri, cancellationToken)
-                    .ConfigureAwait(false);
-
-                // Inside the try on purpose. Refusing external links is right for the *first*
-                // chunk, where there is nothing to hand back — but here rows and an answer are
-                // already in hand, and throwing would discard both. Short and flagged beats
-                // losing the answer text, which is the primary payload.
-                RejectExternalLinks(chunk);
-            }
-            catch (GenieException ex)
-            {
-                // Genie executes the statement; whether the caller may read its remaining chunks
-                // is a workspace permission question this client cannot settle in advance.
-                LogChunkFetchFailed(_logger, ex.Kind);
-                return true;
-            }
-
-            rows.AddRange(chunk.DataArray ?? []);
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// EXTERNAL_LINKS disposition puts rows behind presigned URLs and omits <c>data_array</c>.
-    /// Returning an empty row set as a successful complete result would be the worst outcome
-    /// available — a silently empty export that reads as a real answer.
-    /// </summary>
-    private static void RejectExternalLinks(ResultDataWire? result)
-    {
-        if (result?.ExternalLinks is not { Count: > 0 } links || result.DataArray is not null)
-        {
-            return;
-        }
-
-        var rowsBehindLinks = links.Sum(l => l.RowCount ?? 0);
-        throw new GenieException(
-            GenieFailureKind.UnsupportedResult,
-            $"Databricks returned this result as {links.Count} external link(s) covering " +
-            $"{rowsBehindLinks} row(s) rather than inline rows. This version cannot read that " +
-            "form, and will not report an empty result as a complete one. Narrow the question " +
-            "so the result comes back inline.");
     }
 
     /// <summary>
@@ -626,10 +519,14 @@ public sealed partial class GenieClient : IGenieClient
         return true;
     }
 
-    private static GenieResponse Normalize(
+    private GenieResponse Normalize(
         MessageWire wire, string agentId, string conversationId, string messageId,
         TimeSpan duration, int pollCount)
     {
+        if (_strictLimits is not null)
+        {
+            ValidateMessageIdentity(wire, agentId, conversationId, messageId);
+        }
         var attachments = wire.Attachments ?? [];
 
         // Genie can emit several text attachments; intermediate "thinking" phases are working
@@ -644,14 +541,7 @@ public sealed partial class GenieClient : IGenieClient
 
         var queryAttachment = attachments.FirstOrDefault(a => a.Query is not null);
 
-        var query = queryAttachment?.Query is { } q
-            ? new GenieQuery(
-                q.Query,
-                q.Title,
-                q.Description,
-                q.StatementId,
-                q.Parameters?.Select(p => new GenieQueryParameter(p.Keyword, p.SqlType, p.Value)).ToList())
-            : null;
+        var query = queryAttachment?.Query is { } q ? NormalizeQuery(q) : null;
 
         var suggested = attachments
             .SelectMany(a => a.SuggestedQuestions?.Questions ?? [])
@@ -674,6 +564,11 @@ public sealed partial class GenieClient : IGenieClient
                 queryAttachment?.AttachmentId))
         {
             HasVisualization = attachments.Any(a => a.Viz is not null),
+            QueryAttachments = attachments.Where(a => a.Query is not null)
+                .Select(a => new GenieQueryAttachment(a.AttachmentId, NormalizeQuery(a.Query!), null)
+                {
+                    IsTruncated = a.Query!.ResultMetadata?.IsTruncated ?? false,
+                }).ToList(),
         };
     }
 
@@ -724,24 +619,30 @@ public sealed partial class GenieClient : IGenieClient
         HttpResponseMessage response;
         try
         {
-            response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            response = await _http.SendAsync(request,
+                _strictLimits is null ? HttpCompletionOption.ResponseContentRead : HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (TimeoutRejectedException ex)
         {
             throw new GenieException(
                 GenieFailureKind.Network,
                 "The request to Databricks exceeded the configured resilience timeout.",
-                innerException: ex);
+                innerException: _strictLimits is null ? ex : null);
         }
         catch (BrokenCircuitException ex)
         {
             throw new GenieException(
                 GenieFailureKind.Network,
                 "Requests to Databricks are temporarily paused after repeated transient failures.",
-                innerException: ex);
+                innerException: _strictLimits is null ? ex : null);
         }
         catch (HttpRequestException ex)
         {
+            if (_strictLimits is not null)
+            {
+                throw new GenieException(GenieFailureKind.Network, "Could not reach the Databricks workspace.");
+            }
             throw new GenieException(
                 GenieFailureKind.Network, $"Could not reach the Databricks workspace: {ex.Message}",
                 innerException: ex);
@@ -749,7 +650,7 @@ public sealed partial class GenieClient : IGenieClient
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
             throw new GenieException(
-                GenieFailureKind.Network, "The request to Databricks timed out.", innerException: ex);
+                GenieFailureKind.Network, "The request to Databricks timed out.", innerException: _strictLimits is null ? ex : null);
         }
 
         if (response.IsSuccessStatusCode)
@@ -763,7 +664,7 @@ public sealed partial class GenieClient : IGenieClient
         }
     }
 
-    private static async Task<GenieException> ToFailureAsync(
+    private async Task<GenieException> ToFailureAsync(
         HttpResponseMessage response, CancellationToken cancellationToken)
     {
         // The Genie error body shape is not documented, so parsing is best-effort and the
@@ -771,10 +672,17 @@ public sealed partial class GenieClient : IGenieClient
         ApiErrorWire? error = null;
         try
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(body))
+            if (_strictLimits is not null)
             {
-                error = JsonSerializer.Deserialize<ApiErrorWire>(body, Json);
+                await ReadBoundedBodyAsync(response, new ResultBudget(_strictLimits), cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    error = JsonSerializer.Deserialize<ApiErrorWire>(body, Json);
+                }
             }
         }
         catch (JsonException)
@@ -873,8 +781,12 @@ public sealed partial class GenieClient : IGenieClient
                   "The rows already retrieved are returned and reported as truncated.")]
     private static partial void LogChunkFetchFailed(ILogger logger, GenieFailureKind kind);
 
-    private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
+        if (_strictLimits is not null)
+        {
+            return await ReadStrictAsync<T>(response, new ResultBudget(_strictLimits), cancellationToken).ConfigureAwait(false);
+        }
         try
         {
             var value = await response.Content

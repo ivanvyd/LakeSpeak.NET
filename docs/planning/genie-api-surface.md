@@ -221,6 +221,13 @@ like a transport fault.
 
 ## Not established
 
+Strict mode (ADR 0010) optionally validates returned identities rather than silently replacing
+them. This is a consumer policy: the relationship between `id` and `message_id` remains unverified
+against a live workspace. Statement `status.state` (`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`,
+`CANCELED`) and its relationship with result availability were checked against the official
+[Statement Execution reference](https://docs.databricks.com/api/statement-execution/v1/get-statement-result)
+on 2026-11-17; no live requests were used.
+
 | Item | Status |
 |---|---|
 | Rate-limit response shape and retry-after semantics | UNVERIFIED. Client treats HTTP 429 as retryable and honours `Retry-After` when present. |
