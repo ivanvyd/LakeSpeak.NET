@@ -6,6 +6,8 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.5.0 — 2026-11-18
+
 ### Added
 
 - Opt-in `GenieClientOptions.StrictResults` with aggregate hard row and decoded JSON body byte
@@ -19,6 +21,13 @@ here rather than left to be discovered.
 - Disable the named client's HTTP factory logging in `AddLakeSpeak`, preventing .NET 8 Trace
   logs and scopes from exposing bearer headers and signed continuation URLs. LakeSpeak state
   diagnostics remain available; custom external HTTP logging remains the host's responsibility.
+
+### Changed
+
+- Configure custom named-client HTTP loggers after `AddLakeSpeak`. Registration removes earlier
+  loggers for that client as part of the logging fix.
+- Update System.CommandLine and Microsoft.Extensions dependency injection packages. Locked restore
+  and candidate package checks cover both library targets.
 
 ## 0.4.0 — 2026-11-07
 
