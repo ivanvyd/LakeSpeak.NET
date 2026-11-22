@@ -6,11 +6,10 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <LakeSpeakCandidateVersion Condition="'$(LakeSpeakCandidateVersion)' == ''">0.5.0</LakeSpeakCandidateVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="LakeSpeak.Genie" Version="[$(LakeSpeakCandidateVersion)]" />
   </ItemGroup>
-  <Target Name="RequireCandidateVersion" BeforeTargets="CollectPackageReferences">
-    <Error Condition="'$(LakeSpeakCandidateVersion)' == ''" Text="Pass -p:LakeSpeakCandidateVersion with the exact locally packed candidate version." />
-  </Target>
 </Project>

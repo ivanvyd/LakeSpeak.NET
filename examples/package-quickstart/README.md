@@ -1,6 +1,6 @@
 # Use Genie from a .NET 8 application
 
-This standalone console application restores **published `LakeSpeak.Genie` 0.4.0** from NuGet.
+This standalone console application restores **published `LakeSpeak.Genie` 0.5.0** from NuGet.
 It asks a question through `IGenieClient`, displays generated SQL and rows, and handles typed
 failures and cancellation. It has no project reference. The local `Directory.*.props` files stop
 repository build and package settings from entering the consumer; `.editorconfig` stops repository
@@ -30,7 +30,7 @@ There were 42 orders yesterday.
 SQL: SELECT count(*) AS order_count FROM orders WHERE order_date = current_date() - 1
 order_count
 42
-OFFLINE fixture PASS (published LakeSpeak.Genie 0.4.0).
+OFFLINE fixture PASS (published LakeSpeak.Genie 0.5.0).
 ```
 
 `FixtureHandler` supplies HTTP responses in memory for conversation creation, message polling and
@@ -50,7 +50,7 @@ The sample retains a .NET 8 consumer floor. To run the same published package on
 copy this directory and change `<TargetFramework>` to `net10.0` in the project file. In the
 copy's `global.json`, change `sdk.version` to `10.0.100` and keep `rollForward: latestFeature`
 and `allowPrerelease: false`. This selects an installed stable .NET 10 SDK; it does not install one.
-Keep the package reference at `[0.4.0]`, run `dotnet restore --force-evaluate` once to regenerate the
+Keep the package reference at `[0.5.0]`, run `dotnet restore --force-evaluate` once to regenerate the
 lock for the changed framework, then repeat the locked restore, build and `--fixture` commands
 from the copied directory. Both target routes use the same client API and offline fixture.
 
