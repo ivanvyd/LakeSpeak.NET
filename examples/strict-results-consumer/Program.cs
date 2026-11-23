@@ -13,11 +13,11 @@ var response = await client.AskAsync("agent", "fixture question").ConfigureAwait
 if (response.QueryAttachments.Count != 2 || response.QueryAttachments.Any(a => a.Result?.RowCount != 1)
     || !ReferenceEquals(response.Result, response.QueryAttachments[0].Result) || handler.Requests != 4)
 {
-    throw new InvalidOperationException("Strict candidate fixture failed.");
+    throw new InvalidOperationException("Strict results fixture failed.");
 }
-Console.WriteLine($"Strict candidate fixture PASS ({System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}): 2 attachments, 2 rows, 4 HTTP requests; no live services.");
+Console.WriteLine($"Strict results fixture PASS ({System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}): 2 attachments, 2 rows, 4 HTTP requests; no live services.");
 
-sealed class FixtureHandler : HttpMessageHandler
+internal sealed class FixtureHandler : HttpMessageHandler
 {
     internal int Requests { get; private set; }
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

@@ -6,7 +6,7 @@ date would be a guess dressed as a plan.
 Anything not listed here and not in [GOVERNANCE.md](GOVERNANCE.md) as out of scope is simply
 undecided; open an issue and make the case.
 
-Current source and published version: [v0.4.0](https://github.com/ivanvyd/LakeSpeak.NET/releases/tag/v0.4.0).
+Current source and published version: [v0.5.0](https://github.com/ivanvyd/LakeSpeak.NET/releases/tag/v0.5.0).
 The sections below retain the earlier milestones and their dated verification results.
 
 Published 0.4.0 packages passed isolated .NET 8 and .NET 10 consumers and installed-tool checks

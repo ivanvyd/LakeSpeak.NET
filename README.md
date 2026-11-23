@@ -28,7 +28,7 @@ Genie Agent. [Getting started](docs/getting-started.md) covers prerequisites and
 
 ## Status
 
-**Current source version: v0.4.0.** The NuGet badges above show the latest published packages. See
+**Current source version: v0.5.0.** The NuGet badges above show the latest published packages. See
 [Verification status](#verification-status) for what has actually been tested and what has not.
 Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public API may both
 change, and before `v1.0` a minor version is allowed to break them.
@@ -67,7 +67,7 @@ Console.WriteLine(response.Text);
 Console.WriteLine(response.Query?.Sql);
 ```
 
-The [complete package consumer](examples/package-quickstart/README.md) pins published 0.4.0,
+The [complete package consumer](examples/package-quickstart/README.md) pins published 0.5.0,
 displays rows, and handles cancellation, typed failures and incomplete results. It uses no source
 project reference. The [source-reference example](examples/dotnet-quickstart/) remains in the
 solution so API changes are compiled in CI. Neither example judges the correctness of generated SQL.
@@ -112,7 +112,7 @@ only that first result is fetched and `MaxResultRows` remains a soft limit.
 GetMessage, WaitForResponse and `IncludeQueryResult=false` expose query metadata without fetching
 tables. Metadata `IsTruncated=false` does not establish completeness. See
 [the strict contract](docs/decisions/0010-opt-in-strict-inline-results.md) and the
-[offline candidate-package fixture](examples/strict-results-consumer/README.md) for exact limits.
+[offline published-package fixture](examples/strict-results-consumer/README.md) for exact limits.
 
 Use LakeSpeak when your .NET application needs a typed Genie client in-process, with dependency
 injection, cancellation and typed failures, or when you want YAML questions to produce a Markdown
