@@ -39,7 +39,7 @@ jobs:
       # Pinned for the same reason as the actions above: this job holds workspace credentials and
       # write access, so an upgrade should be a reviewed change to this file.
       - name: Install LakeSpeak
-        run: dotnet tool install --global LakeSpeak.Cli --version 0.5.0
+        run: dotnet tool install --global LakeSpeak.Cli --version 0.6.0
 
       - name: Write the report
         env:
