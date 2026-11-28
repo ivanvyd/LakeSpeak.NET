@@ -97,7 +97,16 @@ This exists because the provenance attestation answers a different question than
 proves **what** built an artifact — this workflow, this repository, this commit. It cannot prove
 **who** authorised the release: anyone able to push a tag starts the workflow, and the attestation
 on the result would be perfectly valid. The signing key is the one credential GitHub does not hold,
-so requiring a signed tag is what makes a stolen GitHub account insufficient by itself.
+so requiring a signed tag stops a tag pushed by mistake, or by someone with write access but no
+trusted key, from publishing.
+
+It does not stop a fully compromised maintainer account. GitHub loads `release.yml` and
+`verify-release-identity.sh` from the tagged commit, so an account that can push an unmerged
+commit and tag it can also replace the check, and the same account is the `nuget` environment's
+required reviewer. The trusted-publishing policy matches the workflow file name, not the ref.
+Two-factor authentication on the GitHub and nuget.org accounts is the control
+for that case; the signed tag is a guard against mistakes and lesser access, not against the owner
+account itself.
 
 Signing uses SSH, not GPG — the same key already used for commits, so there is no second key to
 manage:

@@ -45,7 +45,7 @@ public sealed class ConsoleOutput
         bool noColor)
     {
         _format = format;
-        _stdout = stdout;
+        _stdout = outputRedirected ? stdout : new TerminalSafeWriter(stdout);
         Quiet = quiet;
 
         var capabilities = DetermineCapabilities(
@@ -62,6 +62,8 @@ public sealed class ConsoleOutput
 
         Out = AnsiConsole.Create(new AnsiConsoleSettings
         {
+            // Spectre's own styling must reach the terminal, so it writes to the unwrapped stream;
+            // the renderers sanitize what they hand it.
             Out = new AnsiConsoleOutput(stdout),
             Ansi = UsesDecoration ? AnsiSupport.Detect : AnsiSupport.No,
             ColorSystem = UsesDecoration ? ColorSystemSupport.Detect : ColorSystemSupport.NoColors,
@@ -94,7 +96,10 @@ public sealed class ConsoleOutput
     /// <summary>Diagnostics, progress and errors.</summary>
     public IAnsiConsole Error { get; }
 
-    /// <summary>The undecorated stdout writer used by incremental renderers.</summary>
+    /// <summary>
+    /// The undecorated stdout writer used by incremental renderers. On a terminal it replaces
+    /// control characters; redirected output is written byte for byte.
+    /// </summary>
     internal TextWriter ResultWriter => _stdout;
 
     /// <summary>Writes raw text to stdout with no markup interpretation.</summary>

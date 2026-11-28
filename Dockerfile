@@ -13,7 +13,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 WORKDIR /src
 
-# Restore against the lock files first so this layer caches until a dependency actually changes.
+# Restore against the lock files first so this layer caches until a dependency actually changes,
+# and so a dependency graph that drifts from the committed locks fails the build. The publish step
+# restores again for linux-x64 to add the runtime packs; that restore cannot be locked because the
+# lock files record no runtime identifier. Direct versions stay centrally pinned; transitive
+# versions are not re-checked by that second restore.
 COPY Directory.Build.props Directory.Packages.props nuget.config* LakeSpeak.slnx ./
 COPY src/ src/
 RUN dotnet restore src/LakeSpeak.Cli/LakeSpeak.Cli.csproj --locked-mode

@@ -42,6 +42,20 @@ public sealed record GenieResponse(
     /// Metadata alone makes no promise of result completeness.
     /// </remarks>
     public IReadOnlyList<GenieQueryAttachment> QueryAttachments { get; init; } = [];
+
+    // Query, Result and Metadata.AttachmentId describe the first query attachment; deriving
+    // them here is what keeps them from drifting out of step with QueryAttachments.
+    internal GenieResponse WithQueryAttachments(IReadOnlyList<GenieQueryAttachment> queries)
+    {
+        var first = queries.Count > 0 ? queries[0] : null;
+        return this with
+        {
+            Query = first?.Query,
+            Result = first?.Result,
+            Metadata = Metadata with { AttachmentId = first?.AttachmentId },
+            QueryAttachments = queries,
+        };
+    }
 }
 
 public sealed record GenieQueryAttachment(string? AttachmentId, GenieQuery Query, GenieQueryResult? Result)

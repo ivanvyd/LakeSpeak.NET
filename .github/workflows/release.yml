@@ -36,7 +36,9 @@ jobs:
       # The provenance attestation proves WHAT built an artifact. It cannot prove WHO authorised
       # the release: anyone able to push a tag can start this workflow, and the attestation would
       # be perfectly valid. The signing key is the one credential GitHub never holds, so requiring
-      # a signed tag is what makes a stolen GitHub account insufficient on its own. The verifier
+      # a signed tag stops a mistaken or under-privileged tag push from publishing. It does not stop
+      # a compromised maintainer account, which can change this file on the tagged commit; see
+      # RELEASING.md "Signed tags". The verifier
       # checks the trusted SSH signature and proves the peeled tag commit is the commit selected
       # by actions/checkout before it emits the only value that can enable the publish job.
       - name: Verify release identity

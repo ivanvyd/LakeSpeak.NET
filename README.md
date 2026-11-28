@@ -101,11 +101,13 @@ foreach (var attachment in response.QueryAttachments)
 ```
 
 Strict Ask/FollowUp aggregate row and JSON-body byte budgets across every query attachment and
-chunk. Incomplete results and exhausted budgets throw `GenieException` (`UnsupportedResult`,
-`STRICT_RESULT_INCOMPLETE` or `STRICT_RESULT_LIMIT`); malformed or conflicting identities throw
-`MalformedResponse`. No partial table is returned on these failures. Message/error envelopes
-are bounded separately. Bytes mean decoded JSON body bytes, not CLR heap or compressed wire size.
-Omitted wire IDs are accepted; explicit conflicts and duplicate JSON properties are rejected.
+chunk. Incomplete results and exhausted budgets throw `GenieException` with `UnsupportedResult`
+and an `ErrorCode` of `GenieErrorCodes.StrictResultIncomplete` or `GenieErrorCodes.StrictResultLimit`;
+malformed or conflicting identities throw `MalformedResponse`. No partial table is returned on
+these failures. Message envelopes are bounded separately; HTTP error bodies are not read, so the
+status code alone classifies the failure. Bytes mean decoded JSON body bytes, not CLR heap or
+compressed wire size. Omitted wire IDs are accepted (a query without an attachment ID is reported
+as incomplete); explicit identity conflicts and duplicate JSON properties are rejected.
 The existing `Query`/`Result` properties still refer to the first query. With strict mode off,
 only that first result is fetched and `MaxResultRows` remains a soft limit.
 

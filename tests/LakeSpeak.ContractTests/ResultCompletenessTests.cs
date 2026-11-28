@@ -392,7 +392,7 @@ public sealed class ResultCompletenessTests : IDisposable
 
         var chunkRequests = _server.LogEntries.Count(e =>
             e.RequestMessage?.Path?.Contains("chunks", StringComparison.Ordinal) == true);
-        chunkRequests.ShouldBeLessThanOrEqualTo(GenieClient.MaxChunkFetches);
+        chunkRequests.ShouldBeLessThanOrEqualTo(GenieTransport.MaxChunkFetches);
     }
 
     /// <summary>

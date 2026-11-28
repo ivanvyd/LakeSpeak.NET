@@ -27,8 +27,10 @@ truncation flag proves that a complete table exists. Prose-only responses remain
 Strict Ask/FollowUp share one row and JSON-body byte budget across all query-result responses
 and their continuation chunks. Each GetQueryResult call has its own budget. ReExecute shares
 one budget across the initial POST, polling GETs and chunks; its POST is still sent once.
-Submission, message polling, agent listing and HTTP-error envelopes each have a separate
-MaxBytes body limit. Polling duration retains its existing deadline; body cancellation uses
+Submission, message polling and agent listing envelopes each have a separate MaxBytes body
+limit. Strict mode does not read HTTP error bodies at all: the status code alone classifies the
+failure, so an oversized or unreadable error body cannot turn a 401, 403, 404 or 429 into a
+budget or network failure. Polling duration retains its existing deadline; body cancellation uses
 the caller/polling token. Each streamed body additionally has its own RequestTimeout deadline;
 header and body phases are timed separately. This is not an aggregate budget for all polling traffic.
 
@@ -39,26 +41,40 @@ body buffer. The bound concerns decoded JSON bodies supplied by HttpContent, aft
 decompression configured on the handler. It does not bound compressed wire bytes, transport
 buffers, CLR heap allocation, parser overhead, or the lifetime of results retained by consumers.
 
-Strict results reject budget overflow (`UnsupportedResult`, `STRICT_RESULT_LIMIT`) and known
-incompleteness (`UnsupportedResult`, `STRICT_RESULT_INCOMPLETE`). No partial result escapes from
+Strict results reject budget overflow (`UnsupportedResult`, `GenieErrorCodes.StrictResultLimit`)
+and known incompleteness (`UnsupportedResult`, `GenieErrorCodes.StrictResultIncomplete`). The
+constants are public so callers can branch on `GenieException.ErrorCode` without copying string
+literals. A budget is exhausted only by rows that arrive: an advertised next chunk is still
+fetched when the row budget is used up, and only a non-empty chunk then fails. No partial result escapes from
 the legacy chunk catch. Incompleteness includes server truncation, manifest row discrepancies,
 missing inline data, external links, failed statement status, missing/unsafe/repeated continuation,
-and exhausted re-execution. Pending result reads may return null; that is unavailable, never
-complete. Ordinary HTTP failures and cancellation propagate. A successful fetched table is
+and exhausted re-execution. Missing inline data is tolerated only where it is provably empty: a
+chunk without `data_array` whose `row_count` is explicitly 0, or a statement without `result`
+whose manifest `total_row_count` is explicitly 0. Pending result reads may return null; that is
+unavailable, never complete. Ordinary HTTP failures and cancellation propagate. A successful fetched table is
 complete according to the available server metadata, not proof of SQL correctness or data freshness.
 
 Strict normalization compares explicit space/conversation/message IDs, including message `id`,
 against the requested or accepted identity. Start also checks its nested conversation/message.
-Omitted IDs remain compatible. Explicit null/empty/non-string IDs, duplicate JSON property names
-(case-insensitively), repeated attachment IDs, incompatible row widths and conflicting chunk
-indices fail as `MalformedResponse`. Strict mode can therefore reject upstream responses that
+Omitted IDs remain compatible; a query attachment without an attachment ID leaves its table
+unreachable, so strict Ask/FollowUp report it as `StrictResultIncomplete`. Explicit
+null/empty/non-string values of the identity fields this client compares (`space_id`,
+`conversation_id`, `message_id`, `id`, `attachment_id`, `statement_id`), duplicate JSON property
+names (case-insensitively), repeated attachment IDs, incompatible row widths, a chunk index other
+than the expected one, and a `next_chunk_index` that is not exactly one more than the current
+chunk fail as `MalformedResponse`. Other `*_id` fields, such as the numeric `user_id` on messages,
+are not identities this client checks and are not constrained. Strict mode can therefore reject upstream responses that
 legacy mode accepts. Query attachment statement IDs are compared when supplied on both sides.
 
-Continuation links remain internal and same-workspace validated. Strict errors do not include
+Continuation links remain internal and same-workspace validated. One resolver serves both modes:
+it supplies the documented statement chunk fallback, rejects links outside the workspace or
+carrying user info, and detects repeats by resolved URI. Legacy mode logs and truncates where
+strict mode rejects. Strict errors do not include
 payloads, returned IDs, continuation URLs, server error text, or transport exception details.
 All strict operations share the existing limit of 1,000 continuation fetches per result operation,
 including empty chunks and all attachments in a high-level response. There are no new dependencies,
-retry policies, public interface members, state stores, or execution modes.
+retry policies, public interface members, state stores, or execution modes. The public
+`GenieErrorCodes` class only names the two existing error-code values.
 
 An offline fixture using real AddLakeSpeak/HttpClientFactory registration at Trace reproduced
 bearer-header and signed-continuation-query leakage through .NET 8's built-in HTTP logging,
