@@ -10,6 +10,7 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
+| 0.6.0 candidate | 8.0, 10.0 | Not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Source passed ten live tests on net10 against AWS, including strict Ask, FollowUp and re-execution. Offline suite passed on Linux, Windows and macOS. Not yet published; installed-package consumers and GCP are untested. |
 | 0.5.0 candidate | 8.0, 10.0 | Not used in the offline fixture | `/api/2.0/genie` HTTP fixtures | Candidate package consumers passed on both runtimes. CI passed on Linux, Windows and macOS. The strict results changes have no live workspace evidence. |
 | 0.4.x | 8.0, 10.0 | 1.16.1 for the live net8 consumer; not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Installed net8 client passed one live synthetic query; current net10 source passed nine live tests. CLI remains 10.0-only |
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |
@@ -17,6 +18,12 @@ evidence that a cloud works.
 
 Published 0.4.0 packages passed isolated .NET 8 and .NET 10 consumers on 2026-11-07.
 See the [release evidence](release-evidence/v0.4.0.md) for package, tool and archive checks.
+
+The [0.6.0 candidate live smoke run](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/46122744471)
+passed all ten live tests on 2026-11-28 at `197adfb67e86fbb933d00384125908065e0cb6bc`, against the
+existing AWS CI Agent with M2M credentials. The new strict test fetched every query result of a
+live Ask, completed a follow-up in the same conversation and re-executed the query, which is the
+first live evidence for strict results.
 
 The [0.5.0 source CI run](https://github.com/ivanvyd/LakeSpeak.NET/actions/runs/44184308368)
 passed at `173976da18ca4bf8b1863a104a2bc8daf8044a3f`. Its pack job ran the
