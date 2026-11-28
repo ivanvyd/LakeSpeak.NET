@@ -10,7 +10,7 @@ evidence that a cloud works.
 
 | LakeSpeak | .NET | Databricks CLI | Genie API | Status |
 |---|---|---|---|---|
-| 0.6.0 candidate | 8.0, 10.0 | Not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Source passed ten live tests on net10 against AWS, including strict Ask, FollowUp and re-execution. Offline suite passed on Linux, Windows and macOS. Not yet published; installed-package consumers and GCP are untested. |
+| 0.6.0 | 8.0, 10.0 | Not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Published packages passed fresh .NET 8 and .NET 10 consumers and an installed-tool check. Source passed ten live tests on net10 against AWS, including strict Ask, FollowUp and re-execution. GCP is untested. See the [release evidence](release-evidence/v0.6.0.md). |
 | 0.5.0 candidate | 8.0, 10.0 | Not used in the offline fixture | `/api/2.0/genie` HTTP fixtures | Candidate package consumers passed on both runtimes. CI passed on Linux, Windows and macOS. The strict results changes have no live workspace evidence. |
 | 0.4.x | 8.0, 10.0 | 1.16.1 for the live net8 consumer; not used by M2M CI | `/api/2.0/genie`, live and HTTP fixtures | Installed net8 client passed one live synthetic query; current net10 source passed nine live tests. CLI remains 10.0-only |
 | 0.3.x | 8.0, 10.0 | 1.10.0 | `/api/2.0/genie`, GA | Library family multi-targets 8.0 and 10.0; the `lakespeak` CLI is 10.0-only. See [ADR 0006](decisions/0006-multi-target-net8-and-net10.md) |

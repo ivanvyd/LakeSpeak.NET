@@ -70,7 +70,7 @@ try
 
     if (fixture)
     {
-        Console.WriteLine("OFFLINE fixture PASS (published LakeSpeak.Genie 0.5.0).");
+        Console.WriteLine("OFFLINE fixture PASS (published LakeSpeak.Genie 0.6.0).");
     }
 
     return 0;

@@ -1,6 +1,6 @@
 # Strict results from a published package
 
-This standalone consumer restores published `LakeSpeak.Genie` 0.5.0 from NuGet. It enables strict
+This standalone consumer restores published `LakeSpeak.Genie` 0.6.0 from NuGet. It enables strict
 result limits and checks that both query attachments have complete results. Run from the repository
 root with the .NET 10 SDK and the .NET 8 runtime installed. Restore needs access to NuGet. The
 fixture runs in memory and needs no Databricks workspace or credentials.

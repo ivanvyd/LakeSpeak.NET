@@ -4,9 +4,9 @@
     "net8.0": {
       "LakeSpeak.Genie": {
         "type": "Direct",
-        "requested": "[0.5.0, 0.5.0]",
-        "resolved": "0.5.0",
-        "contentHash": "ENtSgpkIEoEaUA/ZBdO2lpqcvDvK366RQX7+LJYxSI7aSq6lTnb+mk2Dxf2cluUHN5LRipREnv5nk4hN+u+xzg==",
+        "requested": "[0.6.0, 0.6.0]",
+        "resolved": "0.6.0",
+        "contentHash": "ZzVkvIBYcQf3NRg62Xa8HXKWqNyPlwjMzsfC+v4RepqSuY0PzNic7TINUnLWFvZgDjA610ABfF26D0BsJEqG4w==",
         "dependencies": {
           "Microsoft.Extensions.Configuration": "8.0.0",
           "Microsoft.Extensions.Configuration.Binder": "8.0.2",

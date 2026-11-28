@@ -28,7 +28,7 @@ Genie Agent. [Getting started](docs/getting-started.md) covers prerequisites and
 
 ## Status
 
-**Current source version: v0.5.0.** The NuGet badges above show the latest published packages. See
+**Current source version: v0.6.0.** The NuGet badges above show the latest published packages. See
 [Verification status](#verification-status) for what has actually been tested and what has not.
 Nothing here is stable until `v1.0`; the CLI surface and the `LakeSpeak.Genie` public API may both
 change, and before `v1.0` a minor version is allowed to break them.
@@ -67,7 +67,7 @@ Console.WriteLine(response.Text);
 Console.WriteLine(response.Query?.Sql);
 ```
 
-The [complete package consumer](examples/package-quickstart/README.md) pins published 0.5.0,
+The [complete package consumer](examples/package-quickstart/README.md) pins published 0.6.0,
 displays rows, and handles cancellation, typed failures and incomplete results. It uses no source
 project reference. The [source-reference example](examples/dotnet-quickstart/) remains in the
 solution so API changes are compiled in CI. Neither example judges the correctness of generated SQL.

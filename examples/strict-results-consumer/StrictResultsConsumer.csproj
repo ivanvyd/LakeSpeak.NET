@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <LakeSpeakCandidateVersion Condition="'$(LakeSpeakCandidateVersion)' == ''">0.5.0</LakeSpeakCandidateVersion>
+    <LakeSpeakCandidateVersion Condition="'$(LakeSpeakCandidateVersion)' == ''">0.6.0</LakeSpeakCandidateVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="LakeSpeak.Genie" Version="[$(LakeSpeakCandidateVersion)]" />

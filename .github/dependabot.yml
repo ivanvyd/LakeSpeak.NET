@@ -16,6 +16,11 @@ updates:
     ignore:
       - dependency-name: Verify.XunitV3
         update-types: ['version-update:semver-major']
+      # Each Microsoft.Extensions major is a .NET release line, and ADR 0006 keeps net10.0 on
+      # the 10.x servicing line (net8.0 on 8.0.x). Moving to 11.x is a target-framework
+      # decision, not routine maintenance, and the family has to move together.
+      - dependency-name: 'Microsoft.Extensions.*'
+        update-types: ['version-update:semver-major']
     groups:
       # One PR per ecosystem-wide bump rather than a dozen. The Microsoft.Extensions
       # packages move in lockstep and reviewing them separately finds nothing.
