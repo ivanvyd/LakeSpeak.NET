@@ -6,6 +6,16 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+## 0.6.0 — 2026-11-28
+
+### Breaking
+
+- Agent titles are matched case-insensitively in one pass, so titles that differ only by case are
+  now ambiguous instead of the exact-case title winning. Any workspace user can share an Agent and
+  its managers can read the prompts sent to it, so a look-alike title must not be chosen silently.
+  **Migration:** if `--agent` or a pack's `agent` names a title that collides by case, use the
+  Agent id or a configured alias.
+
 ### Added
 
 - `GenieErrorCodes.StrictResultLimit` and `GenieErrorCodes.StrictResultIncomplete`, so strict
@@ -24,6 +34,9 @@ here rather than left to be discovered.
   `data_array`, and reports a query attachment without an id as incomplete rather than malformed.
 - Both result paths share one next-chunk link resolver. Legacy results now also refuse links that
   carry user info and detect repeats on the resolved URL.
+
+### Security
+
 - The Databricks CLI broker resolves `databricks` from absolute `PATH` directories only. On Linux
   and macOS, .NET otherwise checks the current directory first, which let a binary planted in an
   untrusted checkout receive the user's session.
@@ -31,13 +44,16 @@ here rather than left to be discovered.
   output is unchanged.
 - Markdown output escapes `&`, `<` and `|` in table cells and the Agent line, and fences
   generated SQL with a backtick run longer than any it contains.
+- Correct the release documentation: the signed-tag check stops mistaken or under-privileged tag
+  pushes, not a compromised maintainer account.
 
 ### Changed
 
-- Update `actions/dependency-review-action` to 5.0.1, and the test-only `coverlet.collector` to
-  10.1.1 and `WireMock.Net` to 2.32.0.
-- Correct the release documentation: the signed-tag check stops mistaken or under-privileged tag
-  pushes, not a compromised maintainer account.
+- `GenieClient` chooses a legacy or strict transport once at construction instead of checking
+  the mode on every call. No public API change.
+- Update `actions/dependency-review-action` to 5.0.1, `github/codeql-action` to 4.39.5,
+  `ossf/scorecard-action` to 2.6.0, and the test-only `coverlet.collector` to 10.1.1 and
+  `WireMock.Net` to 2.32.0.
 
 ## 0.5.0 — 2026-11-18
 

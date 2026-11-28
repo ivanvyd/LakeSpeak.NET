@@ -46,7 +46,7 @@ lakespeak ask --agent finance --show-sql "Revenue by market and month"
 
 | Option | Meaning |
 |---|---|
-| `--agent`, `-a` | Agent id, exact title, or a configured alias |
+| `--agent`, `-a` | Agent id, title (case-insensitive), or a configured alias |
 | `--show-sql` | Print the generated SQL alongside the answer |
 
 `--agent` accepts an id, a title, or an alias from your config file. If a name matches more than

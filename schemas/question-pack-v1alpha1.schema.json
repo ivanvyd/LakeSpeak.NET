@@ -34,7 +34,7 @@
           "type": "string",
           "minLength": 1,
           "pattern": ".*\\S.*",
-          "description": "Agent id, exact title, or an alias configured locally. Required and never inferred: a report that silently ran against a different Agent is worse than one that failed."
+          "description": "Agent id, title (case-insensitive; titles differing only by case are ambiguous), or an alias configured locally. Required and never inferred: a report that silently ran against a different Agent is worse than one that failed."
         },
         "profile": {
           "type": "string",
