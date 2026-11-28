@@ -118,6 +118,43 @@ public class ConsoleOutputTests
         captured.ToString().Trim().ShouldBe("""{"ok":true}""");
     }
 
+    [Fact]
+    public async Task Csv_on_a_terminal_neutralises_control_characters_in_cells()
+    {
+        // Arrange — CSV writes cells verbatim; on a terminal an ESC in a cell is a command.
+        var captured = new StringWriter();
+        var output = new ConsoleOutput(
+            OutputFormat.Csv, quiet: false, captured, new StringWriter(),
+            outputRedirected: false, inputRedirected: false, noColor: true);
+
+        // Act
+        await CsvWriter.WriteAsync(output.ResultWriter, Result("\u001b[2Jcleared", "\u009b31mred"), TestContext.Current.CancellationToken);
+        output.WriteResultLine("agent,\u001b]0;title\u0007");
+
+        // Assert
+        var text = captured.ToString();
+        text.ShouldNotContain('\u001b');
+        text.ShouldNotContain('\u009b');
+        text.ShouldNotContain('\u0007');
+        text.ShouldContain("�[2Jcleared");
+    }
+
+    [Fact]
+    public async Task Redirected_csv_keeps_cells_byte_for_byte()
+    {
+        // Arrange — a file or a pipe receives exactly what Databricks returned.
+        var captured = new StringWriter();
+        var output = new ConsoleOutput(
+            OutputFormat.Csv, quiet: false, captured, new StringWriter(),
+            outputRedirected: true, inputRedirected: true, noColor: true);
+
+        // Act
+        await CsvWriter.WriteAsync(output.ResultWriter, Result("\u001b[2Jcleared"), TestContext.Current.CancellationToken);
+
+        // Assert
+        captured.ToString().ShouldContain("\u001b[2Jcleared");
+    }
+
     [Theory]
     [InlineData(40)]
     [InlineData(80)]

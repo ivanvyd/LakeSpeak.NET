@@ -112,6 +112,7 @@ public sealed partial class GenieClient : IGenieClient
         {
             ValidateIdentity(wire.SpaceId, agentId);
         }
+
         return new GenieAgent(wire.SpaceId, wire.Title ?? wire.SpaceId, wire.Description, wire.WarehouseId);
     }
 
@@ -142,6 +143,7 @@ public sealed partial class GenieClient : IGenieClient
                 ValidateMessageIdentity(message, agentId, wire.ConversationId, wire.MessageId);
             }
         }
+
         return (new GenieConversationRef(agentId, wire.ConversationId, wire.Conversation?.Title), wire.MessageId);
     }
 
@@ -162,6 +164,7 @@ public sealed partial class GenieClient : IGenieClient
         {
             ValidateMessageIdentity(wire, agentId, conversationId, messageId);
         }
+
         return messageId;
     }
 
@@ -172,8 +175,7 @@ public sealed partial class GenieClient : IGenieClient
         CancellationToken cancellationToken = default)
     {
         var wire = await GetAsync<MessageWire>(
-            $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}",
-            cancellationToken).ConfigureAwait(false);
+            MessageUrl(agentId, conversationId, messageId), cancellationToken).ConfigureAwait(false);
 
         return Normalize(wire, agentId, conversationId, messageId, TimeSpan.Zero, pollCount: 0);
     }
@@ -212,8 +214,7 @@ public sealed partial class GenieClient : IGenieClient
                 }
 
                 var wire = await GetAsync<MessageWire>(
-                    $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}",
-                    pollingCancellation.Token).ConfigureAwait(false);
+                    MessageUrl(agentId, conversationId, messageId), pollingCancellation.Token).ConfigureAwait(false);
 
                 polls++;
                 last = Normalize(wire, agentId, conversationId, messageId, _time.GetElapsedTime(started), polls);
@@ -286,7 +287,7 @@ public sealed partial class GenieClient : IGenieClient
         string agentId, string conversationId, string messageId, string attachmentId,
         CancellationToken cancellationToken = default)
         => FetchQueryResultAsync(
-            $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/query-result",
+            AttachmentUrl(agentId, conversationId, messageId, attachmentId, "query-result"),
             HttpMethod.Get, cancellationToken);
 
     public async Task<GenieQueryResult?> ReExecuteQueryAsync(
@@ -306,7 +307,7 @@ public sealed partial class GenieClient : IGenieClient
             // execute-query can acknowledge PENDING without rows. Poll query-result until the
             // result is available, keeping the initial request and chunk fetches inside the wait.
             var result = await FetchQueryResultAsync(
-                $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/execute-query",
+                AttachmentUrl(agentId, conversationId, messageId, attachmentId, "execute-query"),
                 HttpMethod.Post,
                 executionCancellation.Token, budget).ConfigureAwait(false);
 
@@ -318,6 +319,7 @@ public sealed partial class GenieClient : IGenieClient
                 {
                     break;
                 }
+
                 if (result is not null)
                 {
                     return result;
@@ -332,7 +334,7 @@ public sealed partial class GenieClient : IGenieClient
                 }
 
                 result = await FetchQueryResultAsync(
-                    $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachmentId)}/query-result",
+                    AttachmentUrl(agentId, conversationId, messageId, attachmentId, "query-result"),
                     HttpMethod.Get, executionCancellation.Token, budget).ConfigureAwait(false);
                 interval = TimeSpan.FromMilliseconds(
                     Math.Min(interval.TotalMilliseconds * 1.5, _options.MaxPollInterval.TotalMilliseconds));
@@ -349,9 +351,9 @@ public sealed partial class GenieClient : IGenieClient
         {
             throw StrictIncomplete();
         }
+
         return null;
     }
-
 
     public async Task SendFeedbackAsync(
         string agentId,
@@ -387,7 +389,7 @@ public sealed partial class GenieClient : IGenieClient
 
         using var response = await SendAsync(
             HttpMethod.Post,
-            $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/feedback",
+            $"{MessageUrl(agentId, conversationId, messageId)}/feedback",
             JsonContent.Create(body, options: Json),
             cancellationToken).ConfigureAwait(false);
     }
@@ -436,23 +438,23 @@ public sealed partial class GenieClient : IGenieClient
             {
                 throw StrictIncomplete();
             }
+
             var budget = new ResultBudget(_strictLimits);
             var queries = new List<GenieQueryAttachment>();
             foreach (var attachment in response.QueryAttachments)
             {
-                if (attachment.IsTruncated)
+                // An omitted attachment id is valid message metadata, but leaves no way to fetch the table.
+                if (attachment.IsTruncated || string.IsNullOrEmpty(attachment.AttachmentId))
                 {
                     throw StrictIncomplete();
                 }
-                if (string.IsNullOrEmpty(attachment.AttachmentId))
-                {
-                    throw StrictMalformed();
-                }
+
                 var table = await FetchStrictQueryResultAsync(
-                    $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}/attachments/{Esc(attachment.AttachmentId)}/query-result",
+                    AttachmentUrl(agentId, conversationId, messageId, attachment.AttachmentId, "query-result"),
                     HttpMethod.Get, budget, cancellationToken, attachment.Query.StatementId).ConfigureAwait(false);
                 queries.Add(attachment with { Result = table ?? throw StrictIncomplete() });
             }
+
             return response with { QueryAttachments = queries, Result = queries[0].Result };
         }
 
@@ -527,6 +529,7 @@ public sealed partial class GenieClient : IGenieClient
         {
             ValidateMessageIdentity(wire, agentId, conversationId, messageId);
         }
+
         var attachments = wire.Attachments ?? [];
 
         // Genie can emit several text attachments; intermediate "thinking" phases are working
@@ -539,9 +542,12 @@ public sealed partial class GenieClient : IGenieClient
             .Select(t => t!.Content!)
             .LastOrDefault();
 
-        var queryAttachment = attachments.FirstOrDefault(a => a.Query is not null);
-
-        var query = queryAttachment?.Query is { } q ? NormalizeQuery(q) : null;
+        var queryAttachments = attachments.Where(a => a.Query is not null)
+            .Select(a => new GenieQueryAttachment(a.AttachmentId, NormalizeQuery(a.Query!), null)
+            {
+                IsTruncated = a.Query!.ResultMetadata?.IsTruncated ?? false,
+            }).ToList();
+        var firstQuery = queryAttachments.FirstOrDefault();
 
         var suggested = attachments
             .SelectMany(a => a.SuggestedQuestions?.Questions ?? [])
@@ -553,7 +559,7 @@ public sealed partial class GenieClient : IGenieClient
             messageId,
             GenieMessageStateExtensions.FromWire(wire.Status),
             answer,
-            query,
+            firstQuery?.Query,
             Result: null,
             suggested,
             new GenieResponseMetadata(
@@ -561,14 +567,10 @@ public sealed partial class GenieClient : IGenieClient
                 pollCount,
                 FromUnixTimestamp(wire.CreatedTimestamp),
                 FromUnixTimestamp(wire.LastUpdatedTimestamp),
-                queryAttachment?.AttachmentId))
+                firstQuery?.AttachmentId))
         {
             HasVisualization = attachments.Any(a => a.Viz is not null),
-            QueryAttachments = attachments.Where(a => a.Query is not null)
-                .Select(a => new GenieQueryAttachment(a.AttachmentId, NormalizeQuery(a.Query!), null)
-                {
-                    IsTruncated = a.Query!.ResultMetadata?.IsTruncated ?? false,
-                }).ToList(),
+            QueryAttachments = queryAttachments,
         };
     }
 
@@ -598,6 +600,13 @@ public sealed partial class GenieClient : IGenieClient
 
     private static string Esc(string segment) => Uri.EscapeDataString(segment);
 
+    private static string MessageUrl(string agentId, string conversationId, string messageId) =>
+        $"{Root}/{Esc(agentId)}/conversations/{Esc(conversationId)}/messages/{Esc(messageId)}";
+
+    private static string AttachmentUrl(
+        string agentId, string conversationId, string messageId, string attachmentId, string action) =>
+        $"{MessageUrl(agentId, conversationId, messageId)}/attachments/{Esc(attachmentId)}/{action}";
+
     private async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken)
     {
         using var response = await SendAsync(HttpMethod.Get, url, null, cancellationToken).ConfigureAwait(false);
@@ -625,32 +634,23 @@ public sealed partial class GenieClient : IGenieClient
         }
         catch (TimeoutRejectedException ex)
         {
-            throw new GenieException(
-                GenieFailureKind.Network,
-                "The request to Databricks exceeded the configured resilience timeout.",
-                innerException: _strictLimits is null ? ex : null);
+            throw NetworkFailure("The request to Databricks exceeded the configured resilience timeout.", ex);
         }
         catch (BrokenCircuitException ex)
         {
-            throw new GenieException(
-                GenieFailureKind.Network,
-                "Requests to Databricks are temporarily paused after repeated transient failures.",
-                innerException: _strictLimits is null ? ex : null);
+            throw NetworkFailure("Requests to Databricks are temporarily paused after repeated transient failures.", ex);
         }
         catch (HttpRequestException ex)
         {
-            if (_strictLimits is not null)
-            {
-                throw new GenieException(GenieFailureKind.Network, "Could not reach the Databricks workspace.");
-            }
-            throw new GenieException(
-                GenieFailureKind.Network, $"Could not reach the Databricks workspace: {ex.Message}",
-                innerException: ex);
+            throw NetworkFailure(
+                _strictLimits is null
+                    ? $"Could not reach the Databricks workspace: {ex.Message}"
+                    : "Could not reach the Databricks workspace.",
+                ex);
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new GenieException(
-                GenieFailureKind.Network, "The request to Databricks timed out.", innerException: _strictLimits is null ? ex : null);
+            throw NetworkFailure("The request to Databricks timed out.", ex);
         }
 
         if (response.IsSuccessStatusCode)
@@ -664,19 +664,21 @@ public sealed partial class GenieClient : IGenieClient
         }
     }
 
+    // Strict errors carry no transport exception details.
+    private GenieException NetworkFailure(string message, Exception cause) =>
+        new(GenieFailureKind.Network, message, innerException: _strictLimits is null ? cause : null);
+
     private async Task<GenieException> ToFailureAsync(
         HttpResponseMessage response, CancellationToken cancellationToken)
     {
         // The Genie error body shape is not documented, so parsing is best-effort and the
-        // status code remains the source of truth for how to classify the failure.
+        // status code remains the source of truth for how to classify the failure. Strict mode
+        // reports no server error text, so it never reads the body: an oversized or failing
+        // body cannot then displace the status classification.
         ApiErrorWire? error = null;
-        try
+        if (_strictLimits is null)
         {
-            if (_strictLimits is not null)
-            {
-                await ReadBoundedBodyAsync(response, new ResultBudget(_strictLimits), cancellationToken).ConfigureAwait(false);
-            }
-            else
+            try
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(body))
@@ -684,10 +686,10 @@ public sealed partial class GenieClient : IGenieClient
                     error = JsonSerializer.Deserialize<ApiErrorWire>(body, Json);
                 }
             }
-        }
-        catch (JsonException)
-        {
-            // Not JSON. The status code below still classifies it.
+            catch (JsonException)
+            {
+                // Not JSON. The status code below still classifies it.
+            }
         }
 
         var status = (int)response.StatusCode;
@@ -787,6 +789,7 @@ public sealed partial class GenieClient : IGenieClient
         {
             return await ReadStrictAsync<T>(response, new ResultBudget(_strictLimits), cancellationToken).ConfigureAwait(false);
         }
+
         try
         {
             var value = await response.Content

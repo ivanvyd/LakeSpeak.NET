@@ -30,13 +30,16 @@ exception messages. Scheme-prefixed credentials (`Authorization: Bearer <token>`
 an earlier pattern redacted only the scheme word and left the credential, which is why the
 redaction suite now tries to defeat itself rather than confirming it works on convenient shapes.
 
-**Presigned result URLs are fetched without the `Authorization` header.** Sending a Databricks
-bearer token to blob storage would leak it to a third party. Databricks rejects such requests with
-HTTP 400, so the mistake fails loudly rather than silently — but the client must not rely on that.
+**Presigned result URLs are never fetched.** Sending a Databricks bearer token to blob storage
+would leak it to a third party, so a result that arrives as external links is refused rather than
+followed. Next-chunk links are followed only when they resolve to the
+configured workspace.
 
 **Arguments to the Databricks CLI are passed as an argument vector, never through a shell.** Agent
 names, profile names and questions are attacker-influenced in the sense that they may come from a
-Question Pack or a script; none of them reaches a shell interpreter.
+Question Pack or a script; none of them reaches a shell interpreter. The `databricks` executable is
+looked up on the absolute `PATH` directories only, never in the current directory, so running a
+pack from an untrusted checkout cannot start a binary planted in it.
 
 **Question Packs are data, not code.** They are validated against a published JSON Schema. A pack
 cannot execute a command, read an arbitrary file, or widen the permissions of the identity running
@@ -45,7 +48,12 @@ it.
 **Terminal output is sanitized.** Genie returns model-generated text and query results drawn from
 your data. Both are untrusted for rendering purposes: ANSI escape sequences and control characters
 are stripped before anything reaches your terminal, so a crafted cell value cannot rewrite your
-screen or spoof a prompt.
+screen or spoof a prompt. Machine-readable formats such as CSV are sanitized only when stdout is a
+terminal; redirected to a file or a pipe, they carry values exactly as Databricks returned them.
+Markdown reports escape HTML in table cells and fence generated SQL so it cannot close its own code
+block. Genie's prose answers are Markdown by design and are written as returned, apart from control
+characters, so review a report before publishing it somewhere that renders HTML more permissively
+than GitHub.
 
 **Question Pack output paths are checked before remote work.** Pack-declared paths must stay below
 the pack directory and neither pack paths nor explicit `--output` paths may traverse a symbolic
@@ -84,8 +92,11 @@ Recorded in [docs/security/threat-model.md](docs/security/threat-model.md).
   credentials.
 - Every publishing run must come from a signed `v*` tag whose peeled commit equals the workflow
   checkout and is contained in `origin/main`. Manual workflow runs can rehearse a build but cannot
-  publish. A key allowed by the current `main` branch is therefore required to authorize a new
-  release identity.
+  publish. This stops a tag pushed by mistake, or by a collaborator without a trusted key, from
+  publishing. It does not stop a fully compromised maintainer account: GitHub runs the release
+  workflow and its verifier from the tagged commit, and the same account approves the `nuget`
+  environment. Two-factor authentication on the GitHub and nuget.org accounts is the control for
+  that case. See [RELEASING.md](RELEASING.md#signed-tags).
 
 ## Verifying a release
 

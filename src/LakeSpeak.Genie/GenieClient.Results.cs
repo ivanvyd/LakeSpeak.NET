@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using LakeSpeak.Genie.Wire;
+using Microsoft.Extensions.Logging;
 
 namespace LakeSpeak.Genie;
 
@@ -12,6 +14,7 @@ public sealed partial class GenieClient
         {
             return await FetchStrictQueryResultAsync(url, method, budget ?? new ResultBudget(_strictLimits), cancellationToken).ConfigureAwait(false);
         }
+
         using var response = await SendAsync(method, url, content: null, cancellationToken).ConfigureAwait(false);
 
         var wire = await ReadAsync<QueryResultWire>(response, cancellationToken).ConfigureAwait(false);
@@ -21,9 +24,7 @@ public sealed partial class GenieClient
             return null;
         }
 
-        var cols = columns
-            .Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName))
-            .ToList();
+        var cols = columns.Select(NormalizeColumn).ToList();
 
         RejectExternalLinks(statement.Result);
 
@@ -67,13 +68,13 @@ public sealed partial class GenieClient
         CancellationToken cancellationToken)
     {
         var chunk = firstChunk;
-        var seenLinks = new HashSet<string>(StringComparer.Ordinal);
+        var seenLinks = new HashSet<Uri>();
         var fetches = 0;
 
         // Driven by next_chunk_index, not by the link: the index is what says rows are missing.
         // Every way of failing to follow it below still returns true, so a result is never
         // reported complete because the means of completing it was unavailable.
-        while (chunk?.NextChunkIndex is not null)
+        while (chunk?.NextChunkIndex is { } nextChunkIndex)
         {
             if (rows.Count >= _options.MaxResultRows)
             {
@@ -91,38 +92,9 @@ public sealed partial class GenieClient
                 return true;
             }
 
-            var link = chunk.NextChunkInternalLink;
-            if (link is not { Length: > 0 })
+            if (!TryResolveNextChunk(chunk.NextChunkInternalLink, nextChunkIndex, statementId, seenLinks, out var chunkUri, out var logRefusal))
             {
-                // Observed on the Genie query-result endpoint: it retains the statement id and
-                // next index but omits the link that the SQL Statement endpoint returns. That
-                // endpoint's path is documented. Uri normalizes dot-only segments even after
-                // escaping, so those malformed ids cannot safely address a statement endpoint.
-                if (statementId is not { Length: > 0 } || statementId is "." or "..")
-                {
-                    LogChunkLinkMissing(_logger);
-                    return true;
-                }
-
-                link = $"/api/2.0/sql/statements/{Uri.EscapeDataString(statementId)}/result/chunks/" +
-                    chunk.NextChunkIndex.Value.ToString(CultureInfo.InvariantCulture);
-            }
-
-            // A chunk that points at itself would otherwise spin here until the process is
-            // killed — and a chunk carrying no rows would not even grow toward MaxResultRows.
-            // Same failure the agent-listing loop guards against with its repeated page token.
-            if (!seenLinks.Add(link))
-            {
-                LogChunkLinkRepeated(_logger);
-                return true;
-            }
-
-            if (!ResolvesToWorkspace(link, out var chunkUri))
-            {
-                // The link is server-supplied and the bearer token rides on every workspace
-                // request, so a link naming another host would disclose the token to it. The
-                // link is not logged: its contents are attacker-chosen in exactly this case.
-                LogChunkLinkRejected(_logger);
+                logRefusal(_logger);
                 return true;
             }
 
@@ -152,6 +124,61 @@ public sealed partial class GenieClient
     }
 
     /// <summary>
+    /// Resolves the link to the next result chunk, shared by the legacy and strict walkers so
+    /// the two cannot disagree about which links are safe to follow.
+    /// </summary>
+    /// <remarks>
+    /// On failure, <paramref name="logRefusal"/> is the diagnostic naming why the link was refused.
+    /// </remarks>
+    private bool TryResolveNextChunk(
+        string? link,
+        int nextChunkIndex,
+        string? statementId,
+        HashSet<Uri> seenLinks,
+        [NotNullWhen(true)] out Uri? chunkUri,
+        [NotNullWhen(false)] out Action<ILogger>? logRefusal)
+    {
+        chunkUri = null;
+        if (link is not { Length: > 0 })
+        {
+            // Observed on the Genie query-result endpoint: it retains the statement id and
+            // next index but omits the link that the SQL Statement endpoint returns. That
+            // endpoint's path is documented. Uri normalizes dot-only segments even after
+            // escaping, so those malformed ids cannot safely address a statement endpoint.
+            if (statementId is not { Length: > 0 } || statementId is "." or "..")
+            {
+                logRefusal = LogChunkLinkMissing;
+                return false;
+            }
+
+            link = $"/api/2.0/sql/statements/{Esc(statementId)}/result/chunks/" +
+                nextChunkIndex.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (!ResolvesToWorkspace(link, out var resolved) || resolved.UserInfo.Length != 0)
+        {
+            // The link is server-supplied and the bearer token rides on every workspace
+            // request, so a link naming another host would disclose the token to it. The
+            // link is not logged: its contents are attacker-chosen in exactly this case.
+            logRefusal = LogChunkLinkRejected;
+            return false;
+        }
+
+        // A chunk that points at itself would otherwise spin here until the process is
+        // killed — and a chunk carrying no rows would not even grow toward MaxResultRows.
+        // Same failure the agent-listing loop guards against with its repeated page token.
+        if (!seenLinks.Add(resolved))
+        {
+            logRefusal = LogChunkLinkRepeated;
+            return false;
+        }
+
+        chunkUri = resolved;
+        logRefusal = null;
+        return true;
+    }
+
+    /// <summary>
     /// EXTERNAL_LINKS disposition puts rows behind presigned URLs and omits <c>data_array</c>.
     /// Returning an empty row set as a successful complete result would be the worst outcome
     /// available — a silently empty export that reads as a real answer.
@@ -171,5 +198,4 @@ public sealed partial class GenieClient
             "form, and will not report an empty result as a complete one. Narrow the question " +
             "so the result comes back inline.");
     }
-
 }

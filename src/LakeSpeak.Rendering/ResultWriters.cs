@@ -490,7 +490,7 @@ public static class MarkdownWriter
 
         if (agentTitle is { Length: > 0 })
         {
-            yield return $"_Agent: {TerminalSafety.SanitizeCell(agentTitle)}_";
+            yield return $"_Agent: {Escape(agentTitle)}_";
         }
     }
 
@@ -616,9 +616,14 @@ public static class MarkdownWriter
 
         yield return "<details><summary>Generated SQL</summary>";
         yield return string.Empty;
-        yield return "```sql";
-        yield return TerminalSafety.Sanitize(query.Sql);
-        yield return "```";
+        // Generated SQL is untrusted: a backtick run as long as the fence would close it early and
+        // turn the rest of the query into live Markdown or HTML. CommonMark closes a fence only
+        // on a run at least as long as the opener, so open with one more than the longest run.
+        var sql = TerminalSafety.Sanitize(query.Sql);
+        var fence = new string('`', Math.Max(3, LongestBacktickRun(sql) + 1));
+        yield return fence + "sql";
+        yield return sql;
+        yield return fence;
         yield return string.Empty;
 
         if (query.Parameters is { Count: > 0 } parameters)
@@ -639,8 +644,26 @@ public static class MarkdownWriter
 
     // A null renders as an empty cell rather than the four letters "null", which would be
     // indistinguishable from a string containing them.
+    // HTML is escaped because GitHub renders inline HTML in tables: a cell could otherwise open a
+    // comment that hides the rest of the report. `&` goes first so a literal "&lt;" stays literal.
+    // Markdown links and images in cells still render, as they would in any Markdown file.
     private static string Escape(string? value) =>
         value is null
             ? string.Empty
-            : TerminalSafety.SanitizeCell(value).Replace("|", "\\|", StringComparison.Ordinal);
+            : TerminalSafety.SanitizeCell(value)
+                .Replace("|", "\\|", StringComparison.Ordinal)
+                .Replace("&", "&amp;", StringComparison.Ordinal)
+                .Replace("<", "&lt;", StringComparison.Ordinal);
+
+    private static int LongestBacktickRun(string text)
+    {
+        int longest = 0, current = 0;
+        foreach (var c in text)
+        {
+            current = c == '`' ? current + 1 : 0;
+            longest = Math.Max(longest, current);
+        }
+
+        return longest;
+    }
 }

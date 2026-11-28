@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using LakeSpeak.Genie.Wire;
 
@@ -6,6 +5,13 @@ namespace LakeSpeak.Genie;
 
 public sealed partial class GenieClient
 {
+    // Only the identities strict mode compares. Other *_id fields are not identities this client
+    // checks, and some are not strings: Genie messages carry a numeric user_id.
+    private static readonly HashSet<string> IdentityProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "space_id", "conversation_id", "message_id", "id", "attachment_id", "statement_id",
+    };
+
     private sealed class ResultBudget(GenieResultLimits limits)
     {
         internal int BytesRemaining { get; set; } = limits.MaxBytes;
@@ -14,10 +20,12 @@ public sealed partial class GenieClient
     }
 
     private static GenieException StrictLimit() => new(
-        GenieFailureKind.UnsupportedResult, "The strict result budget was exceeded.", errorCode: "STRICT_RESULT_LIMIT");
+        GenieFailureKind.UnsupportedResult, "The strict result budget was exceeded.",
+        errorCode: GenieErrorCodes.StrictResultLimit);
 
     private static GenieException StrictIncomplete() => new(
-        GenieFailureKind.UnsupportedResult, "A complete inline query result was not available.", errorCode: "STRICT_RESULT_INCOMPLETE");
+        GenieFailureKind.UnsupportedResult, "A complete inline query result was not available.",
+        errorCode: GenieErrorCodes.StrictResultIncomplete);
 
     private static GenieException StrictMalformed() => new(
         GenieFailureKind.MalformedResponse, "The response contained invalid or conflicting identity or result metadata.");
@@ -26,16 +34,20 @@ public sealed partial class GenieClient
         q.Query, q.Title, q.Description, q.StatementId,
         q.Parameters?.Select(p => new GenieQueryParameter(p.Keyword, p.SqlType, p.Value)).ToList());
 
+    private static GenieColumn NormalizeColumn(ColumnWire c) => new(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName);
+
     private static string? StatementState(JsonElement? status)
     {
         if (status is not { } value)
         {
             return null;
         }
+
         if (value.ValueKind != JsonValueKind.Object)
         {
             throw StrictMalformed();
         }
+
         foreach (var property in value.EnumerateObject())
         {
             if (property.Name.Equals("state", StringComparison.OrdinalIgnoreCase))
@@ -43,6 +55,7 @@ public sealed partial class GenieClient
                 return property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() : throw StrictMalformed();
             }
         }
+
         return null;
     }
 
@@ -67,6 +80,7 @@ public sealed partial class GenieClient
             {
                 throw StrictMalformed();
             }
+
             if (attachment.AttachmentId is { } id && !ids.Add(id))
             {
                 throw StrictMalformed();
@@ -87,14 +101,13 @@ public sealed partial class GenieClient
                 {
                     throw StrictMalformed();
                 }
-                if (property.Name.Equals("id", StringComparison.OrdinalIgnoreCase)
-                    || property.Name.EndsWith("_id", StringComparison.OrdinalIgnoreCase))
+
+                if (IdentityProperties.Contains(property.Name)
+                    && (property.Value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(property.Value.GetString())))
                 {
-                    if (property.Value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(property.Value.GetString()))
-                    {
-                        throw StrictMalformed();
-                    }
+                    throw StrictMalformed();
                 }
+
                 ValidateJsonProperties(property.Value);
             }
         }
@@ -120,11 +133,7 @@ public sealed partial class GenieClient
         {
             throw new GenieException(GenieFailureKind.Network, "Reading the Databricks response body timed out.");
         }
-        catch (HttpRequestException)
-        {
-            throw new GenieException(GenieFailureKind.Network, "Could not read the Databricks response body.");
-        }
-        catch (IOException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
             throw new GenieException(GenieFailureKind.Network, "Could not read the Databricks response body.");
         }
@@ -137,23 +146,28 @@ public sealed partial class GenieClient
         {
             throw StrictLimit();
         }
+
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var body = new MemoryStream();
         var buffer = new byte[8192];
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var count = await stream.ReadAsync(buffer.AsMemory(0, Math.Min(buffer.Length, budget.BytesRemaining == int.MaxValue
-                ? buffer.Length : budget.BytesRemaining + 1)), cancellationToken).ConfigureAwait(false);
+
+            // One byte past the remaining budget is enough to detect overflow without buffering more.
+            var readSize = budget.BytesRemaining < buffer.Length ? budget.BytesRemaining + 1 : buffer.Length;
+            var count = await stream.ReadAsync(buffer.AsMemory(0, readSize), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (count == 0)
             {
                 return body.ToArray();
             }
+
             if (count > budget.BytesRemaining)
             {
                 throw StrictLimit();
             }
+
             budget.BytesRemaining -= count;
             body.Write(buffer, 0, count);
         }
@@ -188,90 +202,100 @@ public sealed partial class GenieClient
         {
             ValidateIdentity(statement?.StatementId, expectedStatementId);
         }
+
         if (StatementState(statement?.Status) is { } state && state != "SUCCEEDED")
         {
             if (state is "PENDING" or "RUNNING" && statement?.Manifest is null)
             {
                 return null;
             }
+
             throw StrictIncomplete();
         }
+
         if (statement?.Manifest?.Schema?.Columns is not { } columns)
         {
             return null;
         }
+
         if (statement.Manifest.Truncated == true || statement.Manifest.TotalRowCount < 0)
         {
             throw StrictIncomplete();
         }
+
         if (columns.Any(column => column is null))
         {
             throw StrictMalformed();
         }
 
+        // A zero-row statement may omit its result; only an explicit zero total makes that complete.
+        var chunk = statement.Result
+            ?? (statement.Manifest.TotalRowCount == 0 ? new ResultDataWire { DataArray = [] } : throw StrictIncomplete());
         var rows = new List<IReadOnlyList<string?>>();
-        var chunk = statement.Result;
         var seenLinks = new HashSet<Uri>();
         var expectedChunkIndex = 0;
         while (true)
         {
-            if (chunk is null || chunk.ExternalLinks is { Count: > 0 } || chunk.DataArray is null)
+            if (chunk.ExternalLinks is { Count: > 0 })
             {
                 throw StrictIncomplete();
             }
-            if (chunk.RowCount is { } rowCount && rowCount != chunk.DataArray.Count)
+
+            IReadOnlyList<IReadOnlyList<string?>> data = chunk.DataArray
+                ?? (chunk.RowCount == 0 ? [] : throw StrictIncomplete());
+            if (chunk.RowCount is { } rowCount && rowCount != data.Count)
             {
                 throw StrictIncomplete();
             }
+
             if ((chunk.ChunkIndex is { } chunkIndex && chunkIndex != expectedChunkIndex)
-                || chunk.DataArray.Any(row => row is null || row.Count != columns.Count))
+                || data.Any(row => row is null || row.Count != columns.Count))
             {
                 throw StrictMalformed();
             }
-            if (chunk.DataArray.Count > budget.RowsRemaining)
+
+            if (data.Count > budget.RowsRemaining)
             {
                 throw StrictLimit();
             }
-            budget.RowsRemaining -= chunk.DataArray.Count;
-            rows.AddRange(chunk.DataArray);
-            if (chunk.NextChunkIndex is null)
+
+            budget.RowsRemaining -= data.Count;
+            rows.AddRange(data);
+            if (chunk.NextChunkIndex is not { } nextChunkIndex)
             {
                 if (chunk.NextChunkInternalLink is not null)
                 {
                     throw StrictIncomplete();
                 }
+
                 break;
             }
-            if (budget.RowsRemaining == 0 || ++budget.ChunkFetches > MaxChunkFetches)
+
+            if (++budget.ChunkFetches > MaxChunkFetches)
             {
                 throw StrictLimit();
             }
-            if (chunk.NextChunkIndex <= expectedChunkIndex)
+
+            if (nextChunkIndex != expectedChunkIndex + 1)
             {
                 throw StrictMalformed();
             }
-            expectedChunkIndex = chunk.NextChunkIndex.Value;
-            var link = chunk.NextChunkInternalLink;
-            if (string.IsNullOrEmpty(link))
-            {
-                if (statement.StatementId is not { Length: > 0 } id || id is "." or "..")
-                {
-                    throw StrictIncomplete();
-                }
-                link = $"/api/2.0/sql/statements/{Esc(id)}/result/chunks/" + chunk.NextChunkIndex.Value.ToString(CultureInfo.InvariantCulture);
-            }
-            if (!ResolvesToWorkspace(link, out var uri) || uri.UserInfo.Length != 0 || !seenLinks.Add(uri))
+
+            expectedChunkIndex = nextChunkIndex;
+            if (!TryResolveNextChunk(chunk.NextChunkInternalLink, nextChunkIndex, statement.StatementId, seenLinks, out var uri, out _))
             {
                 throw StrictIncomplete();
             }
+
             using var nextResponse = await SendAsync(HttpMethod.Get, uri.AbsoluteUri, null, cancellationToken).ConfigureAwait(false);
             chunk = await ReadStrictAsync<ResultDataWire>(nextResponse, budget, cancellationToken).ConfigureAwait(false);
         }
+
         if (statement.Manifest.TotalRowCount is { } total && total != rows.Count)
         {
             throw StrictIncomplete();
         }
-        return new GenieQueryResult(columns.Select(c => new GenieColumn(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName)).ToList(),
-            rows, false, statement.Manifest.TotalRowCount);
+
+        return new GenieQueryResult(columns.Select(NormalizeColumn).ToList(), rows, false, statement.Manifest.TotalRowCount);
     }
 }

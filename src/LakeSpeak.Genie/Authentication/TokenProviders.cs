@@ -86,9 +86,11 @@ public sealed class DatabricksCliTokenProvider : IGenieTokenProvider, IDisposabl
 
     private async Task<(string Token, DateTimeOffset? Expiry)> FetchAsync(CancellationToken cancellationToken)
     {
+        var executable = ResolveExecutable(_executable, Environment.GetEnvironmentVariable("PATH"))
+            ?? throw CliUnavailable(innerException: null);
         var psi = new ProcessStartInfo
         {
-            FileName = _executable,
+            FileName = executable,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -111,12 +113,7 @@ public sealed class DatabricksCliTokenProvider : IGenieTokenProvider, IDisposabl
         }
         catch (Exception ex)
         {
-            throw new GenieException(
-                GenieFailureKind.Authentication,
-                $"Could not run the Databricks CLI ('{_executable}'). Install it from " +
-                "https://docs.databricks.com/dev-tools/cli/install.html and run " +
-                "`databricks auth login` before using LakeSpeak.",
-                innerException: ex);
+            throw CliUnavailable(ex);
         }
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
@@ -208,6 +205,48 @@ public sealed class DatabricksCliTokenProvider : IGenieTokenProvider, IDisposabl
     }
 
     private static string Truncate(string s) => s.Length <= 500 ? s.Trim() : s[..500].Trim() + "…";
+
+    private GenieException CliUnavailable(Exception? innerException) => new(
+        GenieFailureKind.Authentication,
+        $"Could not run the Databricks CLI ('{_executable}'). Install it from " +
+        "https://docs.databricks.com/dev-tools/cli/install.html and run " +
+        "`databricks auth login` before using LakeSpeak.",
+        innerException: innerException);
+
+    /// <summary>
+    /// Resolves a bare executable name against the absolute directories on PATH only.
+    /// </summary>
+    /// <remarks>
+    /// On Linux and macOS, <see cref="Process.Start()"/> looks in the current directory before
+    /// PATH, so a bare <c>databricks</c> would run a file planted in an untrusted checkout, such
+    /// as a cloned pull request that carries a Question Pack. A name containing a directory is
+    /// the caller's explicit choice and is used as given.
+    /// </remarks>
+    internal static string? ResolveExecutable(string executable, string? pathVariable)
+    {
+        if (Path.IsPathRooted(executable) || executable.AsSpan().ContainsAny('/', '\\'))
+        {
+            return executable;
+        }
+
+        var name = OperatingSystem.IsWindows() && !Path.HasExtension(executable) ? executable + ".exe" : executable;
+        foreach (var entry in (pathVariable ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.TrimEntries))
+        {
+            var directory = entry.Trim('"');
+            if (Path.IsPathFullyQualified(directory) && IsExecutable(Path.Combine(directory, name)))
+            {
+                return Path.Combine(directory, name);
+            }
+        }
+
+        return null;
+    }
+
+    // Shells skip a PATH match that lacks an execute bit and keep looking; so does this.
+    private static bool IsExecutable(string path) =>
+        File.Exists(path)
+        && (OperatingSystem.IsWindows()
+            || (File.GetUnixFileMode(path) & (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0);
 
     public void Dispose() => _gate.Dispose();
 

@@ -6,6 +6,39 @@ here rather than left to be discovered.
 
 ## Unreleased
 
+### Added
+
+- `GenieErrorCodes.StrictResultLimit` and `GenieErrorCodes.StrictResultIncomplete`, so strict
+  callers match published constants instead of string literals.
+
+### Fixed
+
+- Strict results accept non-identity numeric `*_id` fields such as Genie's `user_id`. Only the
+  identity fields strict mode validates must be non-empty strings; duplicate names are still
+  rejected everywhere.
+- Strict HTTP failures are classified by status code without reading the error body, so a 401,
+  403, 404 or 429 with a large or unreadable body is no longer reported as a strict limit or a
+  network failure.
+- Strict chunk walking requires consecutive chunk indices, fetches an advertised trailing chunk
+  even when the row budget is exactly used, accepts explicit zero-row results without
+  `data_array`, and reports a query attachment without an id as incomplete rather than malformed.
+- Both result paths share one next-chunk link resolver. Legacy results now also refuse links that
+  carry user info and detect repeats on the resolved URL.
+- The Databricks CLI broker resolves `databricks` from absolute `PATH` directories only. On Linux
+  and macOS, .NET otherwise checks the current directory first, which let a binary planted in an
+  untrusted checkout receive the user's session.
+- CSV and other raw output written to a terminal has control characters replaced; redirected
+  output is unchanged.
+- Markdown output escapes `&`, `<` and `|` in table cells and the Agent line, and fences
+  generated SQL with a backtick run longer than any it contains.
+
+### Changed
+
+- Update `actions/dependency-review-action` to 5.0.1, and the test-only `coverlet.collector` to
+  10.1.1 and `WireMock.Net` to 2.32.0.
+- Correct the release documentation: the signed-tag check stops mistaken or under-privileged tag
+  pushes, not a compromised maintainer account.
+
 ## 0.5.0 — 2026-11-18
 
 ### Added

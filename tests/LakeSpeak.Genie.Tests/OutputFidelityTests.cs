@@ -296,6 +296,37 @@ public class OutputFidelityTests
     }
 
     [Fact]
+    public void Markdown_escapes_html_so_a_cell_cannot_hide_or_embed_content()
+    {
+        // Arrange
+        var response = Response(null, Result(("col", "<!-- hide --><img src=x> &lt;")));
+
+        // Act
+        var markdown = MarkdownWriter.Write(response);
+
+        // Assert
+        markdown.ShouldContain("&lt;!-- hide -->&lt;img src=x> &amp;lt;");
+        markdown.ShouldNotContain("<!--");
+    }
+
+    [Fact]
+    public void Markdown_sql_fence_outlasts_backticks_in_the_generated_sql()
+    {
+        // Arrange
+        var builder = new System.Text.StringBuilder();
+        var query = new GenieQuery("SELECT 1\n````\n</details><img src=x>", null, null, null, null);
+
+        // Act
+        MarkdownWriter.WriteSql(builder, query);
+
+        // Assert
+        var lines = builder.ToString().ReplaceLineEndings("\n").Split('\n');
+        lines.ShouldContain("`````sql");
+        lines.Count(line => line == "`````").ShouldBe(1);
+        lines.Count(line => line == "</details>").ShouldBe(1);
+    }
+
+    [Fact]
     public void Json_carries_the_values_bound_into_the_sql()
     {
         // Arrange — the bind values were captured from the wire and then dropped before any
