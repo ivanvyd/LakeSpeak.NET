@@ -439,7 +439,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
           "Microsoft.Extensions.Configuration": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.Binder": "[10.0.12, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.12, )",
@@ -450,7 +450,7 @@
       "lakespeak.genie": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.15, )",
           "Microsoft.Extensions.Http": "[10.0.12, )",
           "Microsoft.Extensions.Http.Resilience": "[10.10.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.12, )",
@@ -460,15 +460,15 @@
       "lakespeak.questionpacks": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
-          "LakeSpeak.Rendering": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
+          "LakeSpeak.Rendering": "[0.6.0, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
@@ -504,18 +504,18 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "2LzcuVjemeXR+WdY9wGIr8iGb7fYsDAit+IScxXX2XJnX0b++mWcE/WO6fEGIqhdMfSQM2ZS5JGMHYZix7YXZg==",
+        "requested": "[10.0.15, )",
+        "resolved": "10.0.15",
+        "contentHash": "7DUIgHeJpBs1RG0hYwWDOImXP03+uPrV5KtyUPxrZsiWadlg95aYijNKCZ2j2UmufQAmN6XEQfx4B/J6TuE7lg==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15"
         }
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "QtpQzuSZVyTPCuHW058yCs9Nj0394uUkNyFHS813nOmK9UgUdBdaprJ5PPsBgsQIpxADTsTkbaMMonykem6qdw=="
+        "requested": "[10.0.15, )",
+        "resolved": "10.0.15",
+        "contentHash": "KczR2nV7ooeimtZxAawPht/FJUHnX+uoWy7y4pba+iaRQBwUM2NwtiqZg+/FpZDHUf2RkkzveGkhMTWDNzmDUA=="
       },
       "Microsoft.Extensions.Http": {
         "type": "CentralTransitive",
@@ -1037,7 +1037,7 @@
       "lakespeak.configuration": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
           "Microsoft.Extensions.Configuration": "[8.0.0, )",
           "Microsoft.Extensions.Configuration.Binder": "[8.0.2, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[8.0.0, )",
@@ -1058,15 +1058,15 @@
       "lakespeak.questionpacks": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
-          "LakeSpeak.Rendering": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
+          "LakeSpeak.Rendering": "[0.6.0, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "lakespeak.rendering": {
         "type": "Project",
         "dependencies": {
-          "LakeSpeak.Genie": "[0.4.0, )",
+          "LakeSpeak.Genie": "[0.6.0, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
