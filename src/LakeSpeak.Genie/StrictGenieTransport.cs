@@ -1,9 +1,12 @@
 using System.Text.Json;
 using LakeSpeak.Genie.Wire;
+using Microsoft.Extensions.Logging;
 
 namespace LakeSpeak.Genie;
 
-public sealed partial class GenieClient
+internal sealed class StrictGenieTransport(
+    HttpClient http, GenieClientOptions options, TimeProvider time, ILogger logger, GenieResultLimits limits)
+    : GenieTransport(http, options, time, logger)
 {
     // Only the identities strict mode compares. Other *_id fields are not identities this client
     // checks, and some are not strings: Genie messages carry a numeric user_id.
@@ -19,55 +22,23 @@ public sealed partial class GenieClient
         internal int ChunkFetches { get; set; }
     }
 
-    private static GenieException StrictLimit() => new(
-        GenieFailureKind.UnsupportedResult, "The strict result budget was exceeded.",
-        errorCode: GenieErrorCodes.StrictResultLimit);
+    protected override HttpCompletionOption CompletionOption => HttpCompletionOption.ResponseHeadersRead;
 
-    private static GenieException StrictIncomplete() => new(
-        GenieFailureKind.UnsupportedResult, "A complete inline query result was not available.",
-        errorCode: GenieErrorCodes.StrictResultIncomplete);
+    internal override void ValidateAgent(SpaceWire wire, string agentId) => ValidateIdentity(wire.SpaceId, agentId);
 
-    private static GenieException StrictMalformed() => new(
-        GenieFailureKind.MalformedResponse, "The response contained invalid or conflicting identity or result metadata.");
-
-    private static GenieQuery NormalizeQuery(QueryAttachmentWire q) => new(
-        q.Query, q.Title, q.Description, q.StatementId,
-        q.Parameters?.Select(p => new GenieQueryParameter(p.Keyword, p.SqlType, p.Value)).ToList());
-
-    private static GenieColumn NormalizeColumn(ColumnWire c) => new(c.Name ?? string.Empty, c.TypeText ?? c.TypeName, c.TypeName);
-
-    private static string? StatementState(JsonElement? status)
+    internal override void ValidateStartConversation(
+        StartConversationWire wire, string agentId, string conversationId, string messageId)
     {
-        if (status is not { } value)
+        ValidateIdentity(wire.SpaceId?.GetString(), agentId);
+        ValidateIdentity(wire.Conversation?.SpaceId, agentId);
+        ValidateIdentity(wire.Conversation?.ConversationId, conversationId);
+        if (wire.Message is { } message)
         {
-            return null;
-        }
-
-        if (value.ValueKind != JsonValueKind.Object)
-        {
-            throw StrictMalformed();
-        }
-
-        foreach (var property in value.EnumerateObject())
-        {
-            if (property.Name.Equals("state", StringComparison.OrdinalIgnoreCase))
-            {
-                return property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() : throw StrictMalformed();
-            }
-        }
-
-        return null;
-    }
-
-    private static void ValidateIdentity(string? actual, string expected)
-    {
-        if (actual is not null && !string.Equals(actual, expected, StringComparison.Ordinal))
-        {
-            throw StrictMalformed();
+            ValidateMessage(message, agentId, conversationId, messageId);
         }
     }
 
-    private static void ValidateMessageIdentity(MessageWire wire, string agentId, string conversationId, string messageId)
+    internal override void ValidateMessage(MessageWire wire, string agentId, string conversationId, string messageId)
     {
         ValidateIdentity(wire.SpaceId, agentId);
         ValidateIdentity(wire.ConversationId, conversationId);
@@ -86,6 +57,40 @@ public sealed partial class GenieClient
                 throw StrictMalformed();
             }
         }
+    }
+
+    internal override MessageErrorWire? ReportedError(MessageWire wire) => null;
+
+    internal override async Task<GenieResponse> AttachQueryResultsAsync(
+        GenieResponse response, CancellationToken cancellationToken)
+    {
+        if (response.QueryAttachments.Count == 0)
+        {
+            return response;
+        }
+
+        if (response.State != GenieMessageState.Completed)
+        {
+            throw StrictIncomplete();
+        }
+
+        var budget = new ResultBudget(limits);
+        var queries = new List<GenieQueryAttachment>();
+        foreach (var attachment in response.QueryAttachments)
+        {
+            // An omitted attachment id is valid message metadata, but leaves no way to fetch the table.
+            if (attachment.IsTruncated || string.IsNullOrEmpty(attachment.AttachmentId))
+            {
+                throw StrictIncomplete();
+            }
+
+            var table = await FetchQueryResultAsync(
+                ResultUrl(response, attachment.AttachmentId),
+                HttpMethod.Get, budget, cancellationToken, attachment.Query.StatementId).ConfigureAwait(false);
+            queries.Add(attachment with { Result = table ?? throw StrictIncomplete() });
+        }
+
+        return response.WithQueryAttachments(queries);
     }
 
     internal static void ValidateJsonProperties(JsonElement element)
@@ -120,14 +125,79 @@ public sealed partial class GenieClient
         }
     }
 
-    private async Task<byte[]> ReadBoundedBodyAsync(
-        HttpResponseMessage response, ResultBudget budget, CancellationToken cancellationToken)
+    protected override async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken) =>
+        Parse<T>(await ReadBoundedBodyAsync(response, limits.MaxBytes, cancellationToken).ConfigureAwait(false));
+
+    // Strict mode reports no server error text, so it never reads the body: an oversized or
+    // failing body cannot then displace the status classification.
+    protected override Task<ApiErrorWire?> ReadErrorAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken) => Task.FromResult<ApiErrorWire?>(null);
+
+    // Strict errors carry no transport exception details.
+    protected override GenieException NetworkFailure(string message, Exception cause) =>
+        new(GenieFailureKind.Network, message);
+
+    protected override GenieException Unreachable(HttpRequestException cause) =>
+        NetworkFailure("Could not reach the Databricks workspace.", cause);
+
+    protected override ResultFetch BeginResultFetch()
     {
-        using var deadline = new CancellationTokenSource(_options.RequestTimeout, _time);
+        var budget = new ResultBudget(limits);
+        return (url, method, cancellationToken) => FetchQueryResultAsync(url, method, budget, cancellationToken);
+    }
+
+    protected override GenieQueryResult? ReExecuteTimedOut() => throw StrictIncomplete();
+
+    private static GenieException StrictLimit() => new(
+        GenieFailureKind.UnsupportedResult, "The strict result budget was exceeded.",
+        errorCode: GenieErrorCodes.StrictResultLimit);
+
+    private static GenieException StrictIncomplete() => new(
+        GenieFailureKind.UnsupportedResult, "A complete inline query result was not available.",
+        errorCode: GenieErrorCodes.StrictResultIncomplete);
+
+    private static GenieException StrictMalformed() => new(
+        GenieFailureKind.MalformedResponse, "The response contained invalid or conflicting identity or result metadata.");
+
+    private static string? StatementState(JsonElement? status)
+    {
+        if (status is not { } value)
+        {
+            return null;
+        }
+
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            throw StrictMalformed();
+        }
+
+        foreach (var property in value.EnumerateObject())
+        {
+            if (property.Name.Equals("state", StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() : throw StrictMalformed();
+            }
+        }
+
+        return null;
+    }
+
+    private static void ValidateIdentity(string? actual, string expected)
+    {
+        if (actual is not null && !string.Equals(actual, expected, StringComparison.Ordinal))
+        {
+            throw StrictMalformed();
+        }
+    }
+
+    private async Task<byte[]> ReadBoundedBodyAsync(
+        HttpResponseMessage response, int maxBytes, CancellationToken cancellationToken)
+    {
+        using var deadline = new CancellationTokenSource(Options.RequestTimeout, Time);
         using var bodyCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         try
         {
-            return await ReadBoundedBodyCoreAsync(response, budget, bodyCancellation.Token).ConfigureAwait(false);
+            return await ReadBoundedBodyCoreAsync(response, maxBytes, bodyCancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
@@ -140,9 +210,9 @@ public sealed partial class GenieClient
     }
 
     private static async Task<byte[]> ReadBoundedBodyCoreAsync(
-        HttpResponseMessage response, ResultBudget budget, CancellationToken cancellationToken)
+        HttpResponseMessage response, int maxBytes, CancellationToken cancellationToken)
     {
-        if (response.Content.Headers.ContentLength > budget.BytesRemaining)
+        if (response.Content.Headers.ContentLength > maxBytes)
         {
             throw StrictLimit();
         }
@@ -150,12 +220,13 @@ public sealed partial class GenieClient
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var body = new MemoryStream();
         var buffer = new byte[8192];
+        var remaining = maxBytes;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // One byte past the remaining budget is enough to detect overflow without buffering more.
-            var readSize = budget.BytesRemaining < buffer.Length ? budget.BytesRemaining + 1 : buffer.Length;
+            var readSize = remaining < buffer.Length ? remaining + 1 : buffer.Length;
             var count = await stream.ReadAsync(buffer.AsMemory(0, readSize), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (count == 0)
@@ -163,20 +234,18 @@ public sealed partial class GenieClient
                 return body.ToArray();
             }
 
-            if (count > budget.BytesRemaining)
+            if (count > remaining)
             {
                 throw StrictLimit();
             }
 
-            budget.BytesRemaining -= count;
+            remaining -= count;
             body.Write(buffer, 0, count);
         }
     }
 
-    private async Task<T> ReadStrictAsync<T>(
-        HttpResponseMessage response, ResultBudget budget, CancellationToken cancellationToken)
+    private static T Parse<T>(byte[] body)
     {
-        var body = await ReadBoundedBodyAsync(response, budget, cancellationToken).ConfigureAwait(false);
         try
         {
             using var json = JsonDocument.Parse(body);
@@ -191,12 +260,20 @@ public sealed partial class GenieClient
         }
     }
 
-    private async Task<GenieQueryResult?> FetchStrictQueryResultAsync(
+    private async Task<T> ReadResultAsync<T>(
+        HttpResponseMessage response, ResultBudget budget, CancellationToken cancellationToken)
+    {
+        var body = await ReadBoundedBodyAsync(response, budget.BytesRemaining, cancellationToken).ConfigureAwait(false);
+        budget.BytesRemaining -= body.Length;
+        return Parse<T>(body);
+    }
+
+    private async Task<GenieQueryResult?> FetchQueryResultAsync(
         string url, HttpMethod method, ResultBudget budget, CancellationToken cancellationToken,
         string? expectedStatementId = null)
     {
         using var response = await SendAsync(method, url, null, cancellationToken).ConfigureAwait(false);
-        var wire = await ReadStrictAsync<QueryResultWire>(response, budget, cancellationToken).ConfigureAwait(false);
+        var wire = await ReadResultAsync<QueryResultWire>(response, budget, cancellationToken).ConfigureAwait(false);
         var statement = wire.StatementResponse;
         if (expectedStatementId is not null)
         {
@@ -288,7 +365,7 @@ public sealed partial class GenieClient
             }
 
             using var nextResponse = await SendAsync(HttpMethod.Get, uri.AbsoluteUri, null, cancellationToken).ConfigureAwait(false);
-            chunk = await ReadStrictAsync<ResultDataWire>(nextResponse, budget, cancellationToken).ConfigureAwait(false);
+            chunk = await ReadResultAsync<ResultDataWire>(nextResponse, budget, cancellationToken).ConfigureAwait(false);
         }
 
         if (statement.Manifest.TotalRowCount is { } total && total != rows.Count)

@@ -358,7 +358,7 @@ public class StrictResultsTests
     public void Duplicate_identity_is_rejected_before_typed_deserialization_without_http()
     {
         using var json = JsonDocument.Parse("""{"message_id":"other","MESSAGE_ID":"message"}""");
-        Should.Throw<GenieException>(() => GenieClient.ValidateJsonProperties(json.RootElement))
+        Should.Throw<GenieException>(() => StrictGenieTransport.ValidateJsonProperties(json.RootElement))
             .Kind.ShouldBe(GenieFailureKind.MalformedResponse);
     }
 
@@ -369,7 +369,7 @@ public class StrictResultsTests
         var error = await Should.ThrowAsync<GenieException>(() => Create(handler, new(5, 1_000_000))
             .GetQueryResultAsync("agent", "conversation", "message", "a", Ct));
         error.ErrorCode.ShouldBe(Limit);
-        handler.Requests.ShouldBe(GenieClient.MaxChunkFetches + 1);
+        handler.Requests.ShouldBe(GenieTransport.MaxChunkFetches + 1);
     }
 
     [Fact]
