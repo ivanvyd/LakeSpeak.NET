@@ -14,9 +14,10 @@ public sealed record AgentResolution(GenieAgent? Agent, IReadOnlyList<GenieAgent
 /// Turns whatever the user typed into a single Agent.
 /// </summary>
 /// <remarks>
-/// Resolution order is exact id, configured alias, exact title, then case-insensitive title.
-/// Ambiguity is returned rather than guessed: picking the first of two Agents called "Finance"
-/// would silently answer a question against the wrong data, which is worse than an error.
+/// Resolution order is configured alias, exact id, then title compared case-insensitively.
+/// Ambiguity is returned rather than guessed: picking the first of two Agents called "Finance",
+/// or "Finance" over "finance", would silently answer a question against the wrong data, which
+/// is worse than an error.
 /// </remarks>
 public sealed class AgentResolver(IGenieClient client, LakeSpeakConfig config)
 {
@@ -62,24 +63,15 @@ public sealed class AgentResolver(IGenieClient client, LakeSpeakConfig config)
             agents.Add(agent);
         }
 
-        var exact = agents.Where(a => string.Equals(a.Title, nameOrId, StringComparison.Ordinal)).ToList();
-        if (exact.Count == 1)
-        {
-            return new AgentResolution(exact[0], []);
-        }
-
-        if (exact.Count > 1)
-        {
-            return new AgentResolution(null, exact);
-        }
-
-        var loose = agents
+        // One case-insensitive pass, not an exact-case tier first: any workspace user can share an
+        // Agent, so an exact-case winner over the intended "Sales" could be a co-user's "sales".
+        var matches = agents
             .Where(a => string.Equals(a.Title, nameOrId, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        return loose.Count == 1
-            ? new AgentResolution(loose[0], [])
-            : new AgentResolution(null, loose);
+        return matches.Count == 1
+            ? new AgentResolution(matches[0], [])
+            : new AgentResolution(null, matches);
     }
 
     /// <summary>

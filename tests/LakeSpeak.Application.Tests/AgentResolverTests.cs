@@ -141,20 +141,23 @@ public class AgentResolverTests
     }
 
     [Fact]
-    public async Task An_exact_title_wins_over_a_case_insensitive_near_match()
+    public async Task Titles_differing_only_by_case_are_ambiguous_even_with_an_exact_match()
     {
-        // Arrange — one exact match and one that differs by case. The exact one must win rather
-        // than the pair being treated as ambiguous.
+        // Arrange — any workspace user can share an Agent, and its managers see every prompt sent
+        // to it. Letting an exact-case "finance" win over the intended "Finance" would route the
+        // question to whoever created the look-alike, so the pair must be an error instead.
         var client = ClientReturning(
-            new GenieAgent("01f-exact", "Finance"),
-            new GenieAgent("01f-loose", "FINANCE"));
+            new GenieAgent("01f-intended", "Finance"),
+            new GenieAgent("01f-lookalike", "finance"));
         var resolver = new AgentResolver(client, ConfigWith());
 
         // Act
-        var resolution = await resolver.ResolveAsync("Finance", Ct);
+        var resolution = await resolver.ResolveAsync("finance", Ct);
 
         // Assert
-        resolution.Agent!.AgentId.ShouldBe("01f-exact");
+        resolution.Agent.ShouldBeNull();
+        resolution.IsAmbiguous.ShouldBeTrue();
+        resolution.Candidates.Select(a => a.AgentId).ShouldBe(["01f-intended", "01f-lookalike"], ignoreOrder: true);
     }
 
     [Fact]

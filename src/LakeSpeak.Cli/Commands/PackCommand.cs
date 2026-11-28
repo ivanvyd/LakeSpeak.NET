@@ -276,7 +276,7 @@ internal static class PackCommand
           description: Daily summary of Databricks platform health
 
         spec:
-          # Agent id, exact title, or an alias from your LakeSpeak config.
+          # Agent id, title (case-insensitive), or an alias from your LakeSpeak config.
           agent: platform-operations
 
           questions:

@@ -144,6 +144,42 @@ public sealed class LiveGenieTests : IDisposable
     }
 
     /// <summary>
+    /// Strict results accept what a real workspace sends.
+    /// </summary>
+    /// <remarks>
+    /// The strict validator was first written against fixtures only, and rejected every live
+    /// message because Genie's <c>user_id</c> is numeric. A fixture cannot say which fields a
+    /// workspace actually returns, so the strict path is exercised end to end here: an Ask with
+    /// every query result fetched, a follow-up in the same conversation, and a re-execution.
+    /// </remarks>
+    [Fact(SkipUnless = nameof(LiveWorkspaceConfigured), Skip = NoWorkspace)]
+    public async Task Strict_results_complete_against_a_live_workspace()
+    {
+        // Arrange — generous limits: this checks acceptance of real envelopes, not the budget.
+        var services = new ServiceCollection();
+        services.AddLakeSpeak(options => options.StrictResults = new GenieResultLimits(MaxRows: 100_000, MaxBytes: 64 * 1024 * 1024));
+        using var provider = services.BuildServiceProvider();
+        var strict = provider.GetRequiredService<IGenieClient>();
+        var agent = await ResolveAgentAsync();
+
+        // Act
+        var response = await strict.AskAsync(agent.AgentId, "Total revenue by region", cancellationToken: Ct);
+        var followUp = await strict.FollowUpAsync(
+            agent.AgentId, response.ConversationId!, "Now only the top region", cancellationToken: Ct);
+        var reExecuted = await strict.ReExecuteQueryAsync(
+            agent.AgentId, response.ConversationId!, response.MessageId!, response.Metadata.AttachmentId!, Ct);
+
+        // Assert
+        response.State.ShouldBe(GenieMessageState.Completed);
+        response.QueryAttachments.ShouldNotBeEmpty();
+        response.QueryAttachments.ShouldAllBe(a => a.Result != null && !a.Result.IsTruncated);
+        followUp.State.ShouldBe(GenieMessageState.Completed);
+        followUp.ConversationId.ShouldBe(response.ConversationId);
+        reExecuted.ShouldNotBeNull();
+        reExecuted.Columns.Count.ShouldBe(response.Result!.Columns.Count);
+    }
+
+    /// <summary>
     /// The claim this project makes most loudly: a value is never reformatted on its way out.
     /// Asserted against a live warehouse rather than a fixture, because a fixture cannot catch a
     /// serialiser deciding to parse a DECIMAL somewhere in the middle.

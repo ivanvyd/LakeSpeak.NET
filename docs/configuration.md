@@ -102,9 +102,11 @@ For the Agent, highest priority first:
 2. `defaults.agent` in this file
 3. Nothing — the command reports that no Agent was specified
 
-Whatever that yields is then resolved as: a configured alias, then an exact Agent id, then an exact
-Agent title, then a case-insensitive title match. An ambiguous name lists the candidates and exits
-rather than picking one.
+Whatever that yields is then resolved as: a configured alias, then an exact Agent id, then an Agent
+title compared case-insensitively. An ambiguous name lists the candidates and exits rather than
+picking one. Titles that differ only by case are ambiguous too: any workspace user can share an
+Agent and its managers see the prompts sent to it, so a look-alike title must not win silently.
+Use the Agent id or an alias when titles collide.
 
 For the profile used by a new command, highest priority first:
 
